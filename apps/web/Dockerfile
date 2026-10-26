@@ -1,7 +1,7 @@
 # syntax=docker/dockerfile:1
 # Build context is the repository root:  docker build -f apps/web/Dockerfile .
 
-FROM node:24-alpine@sha256:06d7adf3e0ef61a13f1d28682726366f97a15aa1888c934d3ecec86c33918b53 AS base
+FROM node:26-alpine@sha256:40cd011b55415bc894e45b02fdd5a5dfde056921b7d23a64c74f80497af48797 AS base
 ENV PNPM_HOME=/pnpm \
     PATH=/pnpm:$PATH \
     HUSKY=0 \
@@ -30,7 +30,7 @@ COPY apps/web apps/web
 RUN pnpm --filter @dpt/web build
 
 # Next's standalone output keeps the monorepo layout: the server lives at apps/web/server.js.
-FROM node:24-alpine@sha256:06d7adf3e0ef61a13f1d28682726366f97a15aa1888c934d3ecec86c33918b53 AS runtime
+FROM node:26-alpine@sha256:40cd011b55415bc894e45b02fdd5a5dfde056921b7d23a64c74f80497af48797 AS runtime
 ARG IMAGE_SOURCE=https://github.com/blaquetribe/deal-pipeline-tracker
 LABEL org.opencontainers.image.source=${IMAGE_SOURCE} \
       org.opencontainers.image.title="dpt-web"
