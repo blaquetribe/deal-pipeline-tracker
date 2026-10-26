@@ -16,8 +16,9 @@ select set_eq(
   $$select p.proname::text from pg_proc p join pg_namespace n on n.oid = p.pronamespace
     where n.nspname = 'public' and has_function_privilege('api_service', p.oid, 'EXECUTE')$$,
   $$values ('session_create'), ('session_lookup'), ('session_update_tokens'), ('session_set_tenant'),
-           ('session_revoke'), ('session_revoke_user'), ('token_issue'), ('token_consume')$$,
-  'api_service can execute exactly the eight session and token functions'
+           ('session_revoke'), ('session_revoke_user'), ('token_issue'), ('token_consume'),
+           ('invitation_preview'), ('invitation_accept')$$,
+  'api_service can execute exactly the session, token and invitation functions'
 );
 select is(
   (select count(*) from pg_proc p join pg_namespace n on n.oid = p.pronamespace
