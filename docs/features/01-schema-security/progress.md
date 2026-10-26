@@ -1,6 +1,6 @@
 # 01 Schema and security: progress
 
-Status: in progress (slices 1 and 2 green; slice 3 next)
+Status: in progress (slices 1-3 green; slice 4 next)
 Owner/branch: feat/01-schema-security
 Depends on: 00
 
@@ -10,7 +10,8 @@ Tenancy, RBAC tables, deals, immutable notes, RLS, SQL tests. Covers GOTCHAS row
 ## Scope
 - In (slice 1): `tenants`, `memberships`, `deals`, `deal_events` (hash-chained ledger), forced RLS, no direct write grants, `post_event`, `verify_ledger`, function-grant allowlist test.
 - Slice 2 (done): `permissions` catalogue and `permission_conflicts` (global reference data, no `tenant_id`, by design), per-tenant `roles`, `role_permissions`, `membership_roles`, `app.has_permission`, static SoD triggers, immutable system roles, six system roles via `app.seed_system_roles`; reads of deals and the ledger need `deal.view`, `post_event` needs `deal.note`.
-- Slice 3 (next): `create_deal`, `move_stage` with the stage machine and required fields (parity fixtures with `packages/shared`), optimistic `version` (409), tenant creation function that seeds roles (shared with feature 02), self-escalation and last-owner rules (need the membership-management functions).
+- Slice 3 (done): deal fields (`sector`, `amount` bigint minor units, `currency` default ZAR, `expected_close_date`, optional `expected_close_time`), `stage_transitions` and `stage_requirements` as data, `create_deal` (needs `deal.create`), `move_stage` (needs `deal.edit`, row lock, `version` check, transition check, required fields, ledger event). Errors: `DP409` stale version, `DP422` rule violation, `42501`, `P0002`, `55000`. `ic_review -> signed` is deliberately not a legal move: it arrives with the approval decision (feature 04), so until then nobody can reach `signed`.
+- Slice 4 (next): tenant-creation function that seeds roles (shared with feature 02), membership-management functions with self-escalation and last-owner rules, `update_deal` (field edits with ledger events), parity fixtures (E1: `packages/shared/fixtures` run through a TS mirror and through the SQL tests), assignees if feature 03 needs them in the schema.
 - Out (and where it goes): approvals and quorum (04), auth flows and invitations (02), seed data (06).
 
 ## Design notes
@@ -39,6 +40,7 @@ Contract the tests fix (names and behaviour the migration must satisfy): `deals.
 
 ## Log
 - 2026-10-26: slice 1 tests written and run red (14 passed from file 00, 9 failed, files 01 and 02 abort at the first fixture insert).
+- 2026-10-26: slice 3 tests (`04_stage_machine.test.sql`, 33) and migration `20261029000000_stage_machine.sql`; suite green, 124 assertions. Honest note: the migration was written after the tests but the tests were not run red first this time. Sabotage runs (open `ic_review -> signed`, empty `stage_requirements`, drop the version check) each failed the intended test; a transitions sabotage aborted the file at the fixture step. Concurrent moves are not tested (needs two sessions); the row lock is by inspection only.
 - 2026-10-26: slice 2 (RBAC) tests written first (`03_rbac.test.sql`, 35), migration `20261028000000_rbac.sql`; suite green, 91 assertions. Sabotage run (SoD and system-role triggers dropped) failed exactly the 7 intended tests. Slice 1 fixtures now assign an observer role because reads are default deny.
 - 2026-10-26: slice 1 migration written; all green. Found that `auth.uid()` returns null under our PostgREST settings; added `app.uid()` (GOTCHAS 98). Owner roles bypass RLS in this image (GOTCHAS 99), so the ledger relies on privileges plus triggers. Owner roles bypass RLS in this image (GOTCHAS 99), so the ledger's protection is privileges plus triggers.
 

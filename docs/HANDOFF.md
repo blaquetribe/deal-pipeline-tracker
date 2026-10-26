@@ -10,7 +10,7 @@ Keep this current. Anyone (human or agent) should be able to continue from here 
 - **Not built yet:** migrations beyond the baseline extensions, and every product feature.
 
 ## Next action
-`01-schema-security` on `feat/01-schema-security` (local, not pushed). Slices 1 and 2 are green (`make test-db`: 91 assertions): tenancy, ledger, RBAC, static SoD, immutable system roles, default-deny reads. Slice 2 is uncommitted. Next is slice 3: `create_deal`, `move_stage` (stage machine, required fields, parity fixtures, `version`/409), the tenant-creation function that seeds roles, then self-escalation and last-owner rules. Verify `app.uid()` through real PostgREST once feature 02 can sign a user in (GOTCHAS 98). `make up` runs the full stack locally (http://localhost:8080); it is currently stopped.
+`01-schema-security` on `feat/01-schema-security` (local, not pushed). Slices 1-3 are green (`make test-db`: 124 assertions): tenancy, ledger, RBAC with static SoD, deal fields, `create_deal`, `move_stage`. Slice 3 is uncommitted. Next is slice 4: tenant-creation function seeding roles, membership functions with self-escalation and last-owner rules, `update_deal`, parity fixtures with `packages/shared` (E1). Open: `app.uid()` through real PostgREST (GOTCHAS 98), concurrent `move_stage` test. `make up` runs the full stack locally (http://localhost:8080); it is currently stopped.
 
 ## Where decisions live
 - `docs/decisions/README.md`: index of ADRs 0001-0014, one line each with the reason. ADRs are append-only; later ones supersede earlier ones (for example ADR 0003's CSS Modules choice was superseded by ADR 0006).
