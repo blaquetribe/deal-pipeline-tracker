@@ -1,13 +1,16 @@
 -- Feature 01, slice 4: tenant creation, role grants with the escalation rules, deactivation, the
 -- last-owner invariant, ownership transfer and the append-only tenant_events trail. Tests first.
 begin;
-select plan(37);
+select plan(38);
 
--- Fixtures: u1..u4 confirmed, u5 unconfirmed -----------------------------------------------------------------
-insert into auth.users (id, instance_id, aud, role, email, confirmed_at)
+-- Fixtures: u1..u4 confirmed, u5 unconfirmed, u6 confirmed by phone only (auth.users.confirmed_at is
+-- generated as LEAST(email_confirmed_at, phone_confirmed_at), so only email_confirmed_at proves the email) -----------------------------------------------------------------
+insert into auth.users (id, instance_id, aud, role, email, email_confirmed_at)
 select ('aaaaaaaa-0000-4000-8000-00000000000' || n)::uuid, '00000000-0000-0000-0000-000000000000', 'authenticated', 'authenticated',
        'u' || n || '@example.test', case when n = 5 then null else now() end
 from generate_series(1, 5) as n;
+insert into auth.users (id, instance_id, aud, role, email, phone_confirmed_at)
+values ('aaaaaaaa-0000-4000-8000-000000000006', '00000000-0000-0000-0000-000000000000', 'authenticated', 'authenticated', 'u6@example.test', now());
 create temp table ids (k text primary key, id uuid);
 
 -- create_tenant ---------------------------------------------------------------------------------------------------
@@ -24,6 +27,8 @@ select is((select count(*) from public.tenant_events where kind = 'tenant_create
 select throws_ok($$select public.create_tenant('')$$, '23514', null, 'a tenant needs a name');
 select set_config('request.jwt.claims', '{"sub":"aaaaaaaa-0000-4000-8000-000000000005"}', true);
 select throws_ok($$select public.create_tenant('Unverified Ltd')$$, '42501', 'email not verified', 'an unverified user cannot create a tenant');
+select set_config('request.jwt.claims', '{"sub":"aaaaaaaa-0000-4000-8000-000000000006"}', true);
+select throws_ok($$select public.create_tenant('Phone Only Ltd')$$, '42501', 'email not verified', 'a phone confirmation does not verify the email');
 select set_config('request.jwt.claims', '{}', true);
 select throws_ok($$select public.create_tenant('Nobody Ltd')$$, '42501', 'permission denied', 'nor can a request with no user');
 

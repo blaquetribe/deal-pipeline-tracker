@@ -3,7 +3,7 @@
 begin;
 select plan(15);
 
-insert into auth.users (id, instance_id, aud, role, email, confirmed_at)
+insert into auth.users (id, instance_id, aud, role, email, email_confirmed_at)
 select ('aaaaaaaa-0000-4000-8000-00000000000' || n)::uuid, '00000000-0000-0000-0000-000000000000', 'authenticated', 'authenticated',
        'u' || n || '@example.test', now()
 from generate_series(1, 3) as n;

@@ -17,7 +17,7 @@ select set_eq(
 );
 
 -- Fixture: one tenant, a deal lead.
-insert into auth.users (id, instance_id, aud, role, email, confirmed_at) values
+insert into auth.users (id, instance_id, aud, role, email, email_confirmed_at) values
   ('aaaaaaaa-0000-4000-8000-000000000001', '00000000-0000-0000-0000-000000000000', 'authenticated', 'authenticated', 'u1@example.test', now());
 insert into public.tenants (id, name) values ('bbbbbbbb-0000-4000-8000-00000000000a', 'Tenant A');
 select app.seed_system_roles(id) from public.tenants;
