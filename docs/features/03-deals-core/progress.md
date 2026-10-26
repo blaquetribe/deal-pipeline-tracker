@@ -8,7 +8,7 @@ Depends on: 01, 02
 Deal CRUD, stage state machine, notes UI, pipeline overview, closing soon. Covers GOTCHAS rows 8, 9, 10.
 
 ## Scope
-- In:
+- In: deals CRUD, stage machine with required fields per stage, notes/decisions via the ledger, Dashboard (KPI row, pipeline overview, closing soon 60 days default, per-currency totals), Deals list (stage tabs, filters, server-side pagination), Deal detail (Overview, Activity with integrity cue). UI direction: ADR 0009 and `docs/design/mockup-review.md`.
 - Out (and where it goes):
 
 ## Design notes

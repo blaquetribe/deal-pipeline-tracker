@@ -55,7 +55,9 @@ pnpm test               # Vitest, all projects (web, api, shared, ui)
 pnpm build              # next build + tsup
 ```
 
-Git hooks (Husky): pre-commit runs lint-staged (oxfmt, oxlint, stylelint on staged files), commit-msg runs commitlint (Conventional Commits), pre-push runs typecheck and tests. CI is the real gate.
+`make help` lists every developer target (`make check`, `make dev`, `make up`, `make smoke`, `make hadolint`, `make trivy`, `make secrets`, `make ci-local`). UI work: read `docs/design/mockup-review.md` and ADR 0009 first. Next 16 calls middleware `proxy.ts`; the installed Next docs are in `apps/web/node_modules/next/dist/docs`.
+
+Git hooks (Husky):
 
 Containers: `pnpm docker:build` builds the images; `pnpm compose:smoke` builds, starts the stack and tests it through the gateway (needs Docker or Podman with compose, plus `jq`). `docker compose up --build` starts the stack; only the gateway publishes a port (default 8080).
 

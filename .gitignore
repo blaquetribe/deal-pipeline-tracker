@@ -79,3 +79,7 @@ CLAUDE.local.md
 scratch/
 *.orig
 *.rej
+
+# Written by `next dev` from a dependency (generated agent instructions). Our own
+# AGENTS.md files are the only authoritative ones, so this is never committed.
+apps/web/AGENTS.md

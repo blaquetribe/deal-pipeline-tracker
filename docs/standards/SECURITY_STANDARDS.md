@@ -25,7 +25,7 @@ Financial deal data, multi-tenant. Fail closed. Every rule below needs a test or
 - A test enumerates every registered route and asserts 401 when signed out unless allowlisted.
 - `/ws`: authenticated on upgrade (cookie), Origin validated (prevents cross-site WebSocket hijacking), bound to one tenant, message schema validated, size and rate limited.
 - **Network exposure:** only the gateway publishes a host port. Postgres, Auth, PostgREST/Kong, Realtime, Studio, Mailpit and the API sit on internal networks. A test inspects the resolved compose config and fails if any other port is published.
-- Next.js middleware is UX only (redirects), never the authorization boundary. Pin a patched Next.js version (verify the fix version for the March 2025 middleware-bypass advisory, CVE-2025-29927, when pinning) and have the gateway strip client-supplied internal headers such as `x-middleware-subrequest`.
+- Next.js `proxy.ts` (formerly middleware) is UX only (redirects), never the authorization boundary. Pin a patched Next.js version (verify the fix version for the March 2025 middleware-bypass advisory, CVE-2025-29927, when pinning) and have the gateway strip client-supplied internal headers such as `x-middleware-subrequest`.
 
 ## Multi-tenancy
 - `tenant_id NOT NULL` on every business table. RLS enabled AND forced.
@@ -71,9 +71,9 @@ Financial deal data, multi-tenant. Fail closed. Every rule below needs a test or
 - File uploads: see "Files and object storage" below.
 
 ## Browser security headers and CSP
-- **Pages:** a nonce-based CSP set per request by Next middleware (headers only; middleware is still not an authorization boundary):
+- **Pages:** a nonce-based CSP set per request by Next `proxy.ts` (Next 16's name for middleware; headers only, and still not an authorization boundary):
   `default-src 'self'; script-src 'self' 'nonce-<n>' 'strict-dynamic'; style-src 'self' 'nonce-<n>'; img-src 'self' data: blob:; connect-src 'self' <ws origin from config>; font-src 'self'; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'`.
-  `'unsafe-eval'` only in development builds. No inline event handlers, no third-party origins, fonts self-hosted.
+  `'unsafe-eval'` only in development builds. Do not add `upgrade-insecure-requests` until TLS terminates in front of the gateway (local dev is plain HTTP). No inline event handlers, no third-party origins, fonts self-hosted.
 - **API responses (Hono):** `Content-Security-Policy: default-src 'none'; frame-ancestors 'none'`, `X-Content-Type-Options: nosniff`, and `Cache-Control: no-store` on authenticated JSON.
 - **Gateway, every response:** `nosniff`, `Referrer-Policy: strict-origin-when-cross-origin`, a `Permissions-Policy` disabling camera, microphone, geolocation and payment, `Cross-Origin-Opener-Policy: same-origin`, HSTS when served over TLS.
 - The WebSocket origin in `connect-src` is explicit from config; do not rely on `'self'` matching `ws:`/`wss:` in every browser (verify in the spike).

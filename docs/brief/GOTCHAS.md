@@ -56,7 +56,7 @@ Each row: what the brief says, the trap, how we handle it, which feature owns it
 
 | # | Trap | Resolution | Feature |
 |---|---|---|---|
-| 41 | No CSP or security headers anywhere; XSS and clickjacking exposure. | Nonce-based CSP via Next middleware, locked-down API CSP, gateway hardening headers; tests in smoke and headless load. | 00, 02 |
+| 41 | No CSP or security headers anywhere; XSS and clickjacking exposure. | Nonce-based CSP via Next `proxy.ts`, locked-down API CSP, gateway hardening headers; tests in smoke and headless load. | 00, 02 |
 | 42 | A CSP report endpoint would be an unauthenticated write route, contradicting "nothing reachable while signed out". | No report endpoint; CI headless load fails on violations; reporting is a next step. | 00 |
 | 43 | R2 needs a Cloudflare account and secrets; the reviewer has neither. | `ObjectStore` port: `fs` default in compose, R2 by config; shared contract tests. | 08 |
 | 44 | Presigned URLs force browser-to-storage traffic: CSP hole, CORS, a published port. | BFF streams all file bytes; no presigned URLs for now. | 08 |
@@ -75,5 +75,12 @@ Each row: what the brief says, the trap, how we handle it, which feature owns it
 | 57 | The Node base image bundles npm, whose dependencies carry HIGH CVEs. | Delete npm/corepack/yarn from the runtime image (never needed there); scans clean. | 00 |
 | 58 | Upstream Caddy binary has HIGH Go-stdlib CVEs with no rebuilt image. | `.trivyignore.yaml` entries with reason, scope and expiry 2026-11-30; CDN/WAF note; Dependabot bump removes them. | 00 |
 | 59 | Dependabot cannot see a base image behind `ARG` in `FROM`. | Literal digest-pinned `FROM` lines. | 00 |
-| 60 | Local engine is Podman (no BuildKit, no buildx, arm64, 4 GiB VM); CI is real Docker. | Document it; treat the first CI run as the real verification; measure Supabase stack memory before promising one-command setup. | 00, 06 |
+| 60 | Local engine is Podman (no BuildKit, no buildx, arm64, 4 GiB VM); CI is real Docker. | Document it; the first CI run (real Docker, amd64) was green, so only the `publish` job remains unproven; measure Supabase stack memory before promising one-command setup. | 00, 06 |
 | 61 | tmpfs `uid=` options are not portable across Docker and Podman. | Use default tmpfs; no ownership options. | 00 |
+| 62 | In Next 16 `middleware` is renamed `proxy` (`proxy.ts`); our notes said middleware. | Corrected in living docs, recorded in ADR 0009. | 02 |
+| 63 | Nonce CSP needs dynamic rendering; Next's example includes `upgrade-insecure-requests`, which breaks plain-HTTP localhost. | Layout is dynamic (theme cookie); omit the directive until TLS fronts the gateway; prove with a test. | 02 |
+| 64 | The supplied mockup's palette fails AA in places (gold text 2.10:1, white on green 2.54:1, gray placeholder 2.56:1, light border 1.23:1). | Re-derive text-safe tokens; the contrast test enforces. | 03 |
+| 65 | The mockup sums mixed deals into one currency figure, shows an SSO button and a magic-link tab, and uses CVC branding and a photograph. | Per-currency totals; no SSO/magic link; neutral brand; no copied assets. | 03 |
+| 66 | "Forgot password?" is shown but no reset flow was designed. | Add password reset to feature 02. | 02 |
+| 67 | `next dev` writes an agent-instruction file from a dependency. | Gitignore `apps/web/AGENTS.md`; our own AGENTS.md files are authoritative. | 00 |
+| 68 | An AI PR reviewer reads untrusted diffs (prompt injection) and sends code to a model. | Comment-only token, no secrets, advisory and non-blocking, `pull_request` not `pull_request_target` (ADR 0010). | CI |

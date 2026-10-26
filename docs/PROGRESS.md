@@ -26,6 +26,8 @@ CSP and security headers are **core** security work, scheduled in 00 (gateway, H
 6. Custom role editor (04) - system roles only
 7. Stretch (07)
 
+Not planned (mockup review, ADR 0009): Calendar and Reports pages, Next-steps checklist, Financials tab, SSO, Magic link.
+
 Anything cut must be written in the README "what I'd do next" section.
 
 ## Log
@@ -33,3 +35,5 @@ Anything cut must be written in the README "what I'd do next" section.
 - ADR 0002 and 0003 written; org engineering standards adopted with a project overlay; markup, testing and container standards added; GOTCHAS and security standards synced.
 - ADR 0005-0007: oxlint/oxfmt + hooks, Tailwind + `packages/ui` design layer, TanStack Query kept over alova; onboarding flow designed (feature 02).
 - ADR 0008: Dockerfiles, Caddy gateway, hardened compose, smoke test and CI written and verified locally on Podman; the workflow has not run on GitHub.
+- First CI run on PR #1 green (every job; publish skipped by design).
+- Mockup reviewed (ADR 0009); AI PR-review options researched (ADR 0010, proposed); Makefile added; PR #1 opened to trigger the first CI run.

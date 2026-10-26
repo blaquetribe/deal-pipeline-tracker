@@ -32,8 +32,10 @@ Part 2 (not started):
 - [x] Gateway (Caddy) with hardening headers; compose with only the gateway published (internal network comes with Supabase)
 - [x] `.env.example`; `scripts/compose-smoke.sh` (17 checks, proven to fail on a leaked port)
 - [ ] Supabase stack in compose; `migrate` one-shot; `supabase test db` wiring (CLI not installed locally)
-- [x] CI workflow written and actionlint-clean (`quality`, `secrets`, `docker`, `smoke`, `publish`); Dependabot. **Never run on GitHub yet.** `test-db` job waits for the Supabase stack
-- [ ] (part 2b) CI first-run verification on GitHub, fixes
+- [x] CI workflow written and actionlint-clean (`quality`, `secrets`, `docker`, `smoke`, `publish`); Dependabot. **First run on PR #1 was green (all jobs; publish skipped by design).** `test-db` job waits for the Supabase stack
+- [x] Makefile (`make help`): dev, check, up/down/smoke, hadolint, trivy, secrets, actionlint, ci-local; all targets run locally
+- [x] CI first-run verification on GitHub: green
+- [ ] (part 2b) `publish` job proven on the first merge to main or tag
 - [ ] Spikes: WebSocket through gateway, Realtime with server-held JWT, sharp on Alpine/arm64, S3-compatible container for CI
 - [ ] `.claude/` project hooks/commands
 

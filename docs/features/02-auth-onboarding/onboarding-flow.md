@@ -36,7 +36,7 @@ Status: design (no code yet). Owner feature: `02-auth-onboarding`. Covers the fi
 `POST /auth/signup`, `POST /auth/verify`, `POST /auth/resend`, `GET /onboarding/state`, `PUT /onboarding/profile`, `POST /onboarding/organisation`, `PUT /onboarding/defaults`, `POST /onboarding/invitations`, `POST /onboarding/skip/:step`, `POST /onboarding/complete`. Everything except sign-up, verify, resend and login requires a session; the signed-out route sweep keeps the allowlist honest.
 
 ## Guards
-- Next layout/middleware redirects signed-in users with incomplete onboarding to their current step (UX only). The BFF independently refuses business endpoints until required steps are done.
+- Next layout/`proxy.ts` redirects signed-in users with incomplete onboarding to their current step (UX only). The BFF independently refuses business endpoints until required steps are done.
 - Double submit is harmless: org creation and invitation acceptance are idempotent.
 
 ## Tests

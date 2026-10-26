@@ -3,11 +3,11 @@
 Keep this current. Anyone (human or agent) should be able to continue from here without the chat history.
 
 ## Current state
-- Phase: `00-foundation` parts 1 and 2a done on branch `feat/00-foundation`: tooling, design layer and hooks (committed `7ea7d09`); Dockerfiles for web/api/gateway, hardened compose, `scripts/compose-smoke.sh`, CI workflow and Dependabot (uncommitted). Verified locally: all gates, 207 tests, hadolint, Trivy, 17 smoke checks, actionlint, gitleaks. **Not verified: the workflow has never run on GitHub; local engine is Podman (no BuildKit, arm64 only).** No Supabase stack or migrations yet.
+- Phase: `00-foundation` parts 1 and 2a done on branch `feat/00-foundation`: tooling, design layer and hooks (committed `7ea7d09`); Dockerfiles for web/api/gateway, hardened compose, `scripts/compose-smoke.sh`, CI workflow and Dependabot (uncommitted). Verified locally: all gates, 207 tests, hadolint, Trivy, 17 smoke checks, actionlint, gitleaks. **CI verified on GitHub: PR #1's first run was green end to end (about 3 min). Still unproven: the `publish` job (multi-arch, SBOM/provenance, GHCR), which only runs on `main` and tags.** No Supabase stack or migrations yet.
 - Repo: local only (`git init` done, nothing committed, no GitHub remote). Do not push or create the GitHub repo without the owner's go-ahead.
 
 ## Next action
-`00-foundation` part 2b (see its `progress.md`): Supabase stack in compose (internal network, `migrate`), `test-db` CI job, spikes (WebSocket through gateway, Realtime with server-held JWT, sharp), `.claude/` hooks. Push the branch and check the first CI run. Then `01-schema-security`.
+PR #1's CI is green. Next: `00-foundation` part 2b
 
 ## Key decisions
 See `docs/decisions/0001-architecture.md` and `docs/decisions/0002-gateway-ledger-and-hardening.md` (0002 supersedes parts of 0001). Presentation material: `docs/PRESENTATION_NOTES.md`. `docs/decisions/0003-tooling-and-standards.md` records tooling (Vitest, Dockerfiles, CI docker build, CSS Modules). `GOTCHAS.md` rows 19-40 and the security standards now reflect ADR 0002. Items marked *verify* (Next WS proxying, Next patched version, Realtime with server-held JWTs, Vitest projects syntax, axe package) are unconfirmed until a spike in 00/05. Summary: Next.js UI that knows nothing of Supabase; separate Hono API as sole Supabase client; Supabase CLI migrations; Hono WebSocket relaying RLS-filtered Realtime events; multi-tenant with multi-membership; public sign-up creates Owner; invitations; permission-based RBAC with SoD; k-of-N approvals with absence handling.

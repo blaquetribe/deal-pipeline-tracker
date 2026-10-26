@@ -12,6 +12,8 @@ One line per ADR: what we decided and why. ADRs are never edited after acceptanc
 | [0006](0006-tailwind-design-layer.md) | Tailwind v4; DoorSprint tokens in `packages/ui`; cookie theme; feature layering with lint boundaries | Accessible, themeable design system with a tested contrast matrix; strict CSP; Next has no Nuxt-style layers so we use packages + boundaries |
 | [0007](0007-request-layer-tanstack-query-vs-alova.md) | Keep TanStack Query; alova not adopted | Our realtime/tenant/optimistic needs are documented in TanStack; alova's App Router and cache behaviour are unverified |
 | [0008](0008-container-images-and-ci.md) | Digest-pinned multi-stage Dockerfiles, bundled API, Next standalone, Caddy gateway, hardened compose, CI with hadolint/Trivy/gitleaks/smoke and gated GHCR publish | Smallest runtime surface and a delivery path that fails closed; every claim was run, and what could not be run is listed |
+| [0009](0009-ui-direction-from-mockup.md) | Take the mockup's structure, not its assets; re-derive palette for contrast; per-currency totals; no SSO/magic link/CVC branding; Next 16 `proxy.ts`, nonce CSP confirmed | The mockup's own palette fails WCAG AA in several uses (measured); a literal copy would ship accessibility failures, a misleading total and someone else's brand |
+| [0010](0010-ai-assisted-pr-review.md) | Proposed: free advisory PR review with GitHub Models (`actions/ai-inference`), non-blocking | Zero cost and no sign-up; free options elsewhere are unconfirmed or need another vendor to read private code |
 
 ## How we record a decision (so every step has its reason)
 Context, decision, why, alternatives, what we verified locally versus only read, known gaps, and when to revisit. Anything unconfirmed is marked **verify**.

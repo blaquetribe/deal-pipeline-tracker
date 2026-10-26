@@ -37,3 +37,10 @@ The dev VM here has 4 GiB RAM. The full Supabase stack (10+ containers) may not 
 
 ## Revisit when
 Upstream Caddy publishes a rebuilt image (remove the ignore entries); a native module enters the API (switch to `pnpm deploy`); the first CI run exposes differences between Podman and Docker.
+
+## Update 2026-10-26: first CI run on GitHub (PR #1, run 40302040164)
+Ubuntu runners (amd64, real Docker with BuildKit) ran every job green in about three minutes: quality (typecheck, lint, stylelint, format, coverage, build, and commitlint over the PR commit range), gitleaks, hadolint, Buildx build with the GHA cache, Trivy (via the Docker socket), and the compose smoke test (this exercised the `docker compose` plugin branch of the script). `publish` was skipped by design (it runs only on `main` and `v*` tags).
+
+Now verified: amd64, BuildKit, GHA cache, Trivy in CI, commitlint range, the smoke test on a real Docker engine. The same Dockerfiles passed on Podman and on Docker.
+
+**Still unproven:** the `publish` job (QEMU multi-arch build, SBOM and provenance attestations, GHCR push and the `packages: write` permission). It will first run on the merge to `main`; expect small fixes there. Docker Desktop on a reviewer's machine remains untested (Podman locally, Linux Docker in CI).

@@ -85,7 +85,7 @@ Supabase (Postgres, Auth, Realtime, Mailpit) is on an internal network and never
 
 ### 10. Next.js middleware is not an auth boundary
 - **Problem:** Next middleware-only authorization was bypassable via a forged header (CVE-2025-29927, March 2025; verify the exact patched versions when pinning).
-- **Resolution:** the API is the gate. Next middleware is UX only (redirects). Pin a patched Next version; strip internal headers at the gateway.
+- **Resolution:** the API is the gate. Next `proxy.ts` (Next 16's renamed middleware) is UX only (redirects). Pin a patched Next version; strip internal headers at the gateway.
 - **Proof:** signed-out route sweep hits the API directly.
 
 ### 11. Open sign-up plus invitations = abuse surface
@@ -166,7 +166,14 @@ Supabase (Postgres, Auth, Realtime, Mailpit) is on an internal network and never
 - **One public port:** only the Caddy gateway publishes a port; web and API are reachable only through it. `scripts/compose-smoke.sh` proves this and fails if a port leaks (we tested that it does).
 - **Found by running, not reading:** `cap_drop: ALL` made the stock Caddy image fail to start because of a file capability on its binary; fixed without weakening hardening. Trivy also found Go CVEs in the upstream Caddy binary; they are tracked with reasons and a 2026-11-30 expiry.
 - **Delivery path:** first-party actions pinned to SHAs, tool images pinned by digest, gitleaks, hadolint, Trivy, smoke test, and publishing only from main/tags after every gate.
-- **Honest limits:** verified on Podman (no BuildKit, arm64 only); the workflow has not run on GitHub yet. The first CI run is the real test.
+- **Honest limits:** locally verified on Podman (arm64); the first GitHub run (real Docker, amd64) was green end to end. Unproven until the first merge: the publish job (multi-arch, SBOM/provenance, GHCR push).
+
+## H. UI direction and AI review (ADRs 0009-0010)
+- **Mockup as inspiration, applied with judgement:** we kept its structure (nav, dashboard, deal list, detail, audit timeline, mobile stage selector) and re-derived the rest. We measured its palette: gold text on white 2.10:1, white on its green 2.54:1, gray placeholder 2.56:1, light border 1.23:1 all fail WCAG AA. Our contrast test now guards the re-derived tokens.
+- **What we rejected and why:** CVC logo/photo/tagline (not ours), SSO button (no IdP), magic-link tab (brief says pick one), Calendar/Reports (outside the brief), a single mixed-currency total (misleading).
+- **What the mockup lacked:** tenant switcher, sign-up and onboarding, password reset, approvals and absence handling, People/roles, empty/error states.
+- **Found in the installed docs:** Next 16 renamed middleware to `proxy.ts`; the nonce CSP mechanism is documented for our version and needs dynamic rendering.
+- **AI PR review, free:** GitHub Models via `actions/ai-inference` (first-party, no extra account, rate-limited) as a non-blocking advisory comment. Copilot code review is not clearly free; other apps are unconfirmed or add another vendor reading private code. Risks named: prompt injection, data sharing, noise.
 
 ## Honest limits (present these proudly, not apologetically)
 - Tamper-evident, not DBA-proof, audit ledger.
