@@ -71,3 +71,9 @@ Each row: what the brief says, the trap, how we handle it, which feature owns it
 | 53 | Tailwind does not scan classes in packages outside the app. | `@source` pointing at `packages/ui/src`; build check that utilities exist in the CSS. | 00 |
 | 54 | Git hooks are bypassable (`--no-verify`) and can be slow. | Hooks are convenience only; CI is the gate; pre-commit limited to staged files. | 00 |
 | 55 | Nuxt-style layers do not exist in Next.js. | Workspace packages as layers plus lint-enforced feature boundaries (ADR 0006). | 00 |
+| 56 | `cap_drop: ALL` makes the stock Caddy image fail to start (file capability on the binary). | Ship a plain copy of the binary (we bind 8080); keep the hardening (found by running it). | 00 |
+| 57 | The Node base image bundles npm, whose dependencies carry HIGH CVEs. | Delete npm/corepack/yarn from the runtime image (never needed there); scans clean. | 00 |
+| 58 | Upstream Caddy binary has HIGH Go-stdlib CVEs with no rebuilt image. | `.trivyignore.yaml` entries with reason, scope and expiry 2026-11-30; CDN/WAF note; Dependabot bump removes them. | 00 |
+| 59 | Dependabot cannot see a base image behind `ARG` in `FROM`. | Literal digest-pinned `FROM` lines. | 00 |
+| 60 | Local engine is Podman (no BuildKit, no buildx, arm64, 4 GiB VM); CI is real Docker. | Document it; treat the first CI run as the real verification; measure Supabase stack memory before promising one-command setup. | 00, 06 |
+| 61 | tmpfs `uid=` options are not portable across Docker and Podman. | Use default tmpfs; no ownership options. | 00 |

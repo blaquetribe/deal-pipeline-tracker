@@ -1,0 +1,26 @@
+# Documented, expiring exceptions only (docs/standards/CONTAINER_STANDARDS.md).
+# Every entry needs a reason, a scope and an expiry; an expired entry fails the scan again.
+#
+# The gateway runs the upstream Caddy binary, built with Go 1.26.8 and x/net 0.59.0.
+# The fixes (Go 1.26.10, x/net 0.60.0) are not yet in the published caddy:2-alpine image,
+# and we cannot patch them by removing anything from the image. All are denial-of-service
+# issues. Mitigation until the image is rebuilt: Dependabot watches the pinned digest;
+# in production put the gateway behind a CDN/WAF that terminates HTTP/2 and applies
+# request limits. Revisit on every Dependabot image bump.
+vulnerabilities:
+  - id: CVE-2026-78669
+    paths: ['usr/local/bin/caddy']
+    statement: 'Go net/http2 SETTINGS flood (DoS) in upstream Caddy build; awaiting rebuilt image'
+    expired_at: 2026-11-30
+  - id: CVE-2026-78667
+    paths: ['usr/local/bin/caddy']
+    statement: 'Go net/http crafted Range headers (DoS) in upstream Caddy build; awaiting rebuilt image'
+    expired_at: 2026-11-30
+  - id: CVE-2026-97031
+    paths: ['usr/local/bin/caddy']
+    statement: 'Go crypto/tls ECH extension references (DoS); TLS is not terminated by the gateway here (auto_https off)'
+    expired_at: 2026-11-30
+  - id: CVE-2026-111943
+    paths: ['usr/local/bin/caddy']
+    statement: 'Go crypto/x509 intermediate-certificate handling; the gateway does no client-certificate or upstream TLS verification in this deployment'
+    expired_at: 2026-11-30

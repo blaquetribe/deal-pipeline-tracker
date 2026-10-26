@@ -161,6 +161,13 @@ Supabase (Postgres, Auth, Realtime, Mailpit) is on an internal network and never
 - **alova:** evaluated and not adopted. TanStack Query documents every behaviour we need (realtime cache patches, tenant-keyed caches, optimistic moves, App Router hydration); alova's App Router and cache behaviour could not be verified. A half-day spike is defined if the team still wants it.
 - **Onboarding:** a server-driven, resumable, accessible flow. Nothing is created before email verification; the organisation is created once per owner. See `docs/features/02-auth-onboarding/onboarding-flow.md`.
 
+## G. Containers and CI (ADR 0008)
+- **Smallest surface:** the API ships as one bundled file (no `node_modules`, no pnpm); npm, corepack and yarn are deleted from runtime images because Trivy found HIGH CVEs inside npm's own dependencies. Result: api and web images scan clean.
+- **One public port:** only the Caddy gateway publishes a port; web and API are reachable only through it. `scripts/compose-smoke.sh` proves this and fails if a port leaks (we tested that it does).
+- **Found by running, not reading:** `cap_drop: ALL` made the stock Caddy image fail to start because of a file capability on its binary; fixed without weakening hardening. Trivy also found Go CVEs in the upstream Caddy binary; they are tracked with reasons and a 2026-11-30 expiry.
+- **Delivery path:** first-party actions pinned to SHAs, tool images pinned by digest, gitleaks, hadolint, Trivy, smoke test, and publishing only from main/tags after every gate.
+- **Honest limits:** verified on Podman (no BuildKit, arm64 only); the workflow has not run on GitHub yet. The first CI run is the real test.
+
 ## Honest limits (present these proudly, not apologetically)
 - Tamper-evident, not DBA-proof, audit ledger.
 - Tenant-level visibility only (no per-deal barriers).

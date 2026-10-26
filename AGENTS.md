@@ -57,4 +57,6 @@ pnpm build              # next build + tsup
 
 Git hooks (Husky): pre-commit runs lint-staged (oxfmt, oxlint, stylelint on staged files), commit-msg runs commitlint (Conventional Commits), pre-push runs typecheck and tests. CI is the real gate.
 
-Still to come in feature 00:
+Containers: `pnpm docker:build` builds the images; `pnpm compose:smoke` builds, starts the stack and tests it through the gateway (needs Docker or Podman with compose, plus `jq`). `docker compose up --build` starts the stack; only the gateway publishes a port (default 8080).
+
+Still to come in feature 00: Supabase stack in compose, `test:db`.

@@ -17,7 +17,9 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "test:coverage": "vitest run --coverage",
-    "build": "pnpm -r --if-present run build"
+    "build": "pnpm -r --if-present run build",
+    "docker:build": "docker compose build",
+    "compose:smoke": "scripts/compose-smoke.sh"
   },
   "devDependencies": {
     "@commitlint/cli": "^21.2.4",

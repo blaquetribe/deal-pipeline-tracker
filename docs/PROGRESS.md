@@ -5,7 +5,7 @@ Tier: **core** (must ship), **extended** (ship if time allows, else README note)
 
 | # | Feature | Folder | Tier | Depends on | Status |
 |---|---|---|---|---|---|
-| 00 | Foundation: monorepo, tooling, compose, CI | `docs/features/00-foundation` | core | none | in progress (part 1 of 2: workspaces, tooling, Tailwind design layer, hooks done; Docker, compose, CI next) |
+| 00 | Foundation: monorepo, tooling, compose, CI | `docs/features/00-foundation` | core | none | in progress (2a done: tooling, design layer, hooks, Dockerfiles, gateway, compose, CI written; 2b next: Supabase stack, `test-db`, spikes, first CI run) |
 | 01 | Schema and security: tenants, memberships, permissions, roles, deals, notes, RLS, immutability, SQL tests | `docs/features/01-schema-security` | core | 00 | not started |
 | 02 | Auth and onboarding: sign-up, verification, login, sessions, tenant switcher, invitations, Mailer | `docs/features/02-auth-onboarding` | core | 01 | not started |
 | 03 | Deals core: CRUD, stage machine, notes, pipeline overview, closing soon | `docs/features/03-deals-core` | core | 01, 02 | not started |
@@ -32,3 +32,4 @@ Anything cut must be written in the README "what I'd do next" section.
 - Planning complete; docs scaffold created. No application code yet.
 - ADR 0002 and 0003 written; org engineering standards adopted with a project overlay; markup, testing and container standards added; GOTCHAS and security standards synced.
 - ADR 0005-0007: oxlint/oxfmt + hooks, Tailwind + `packages/ui` design layer, TanStack Query kept over alova; onboarding flow designed (feature 02).
+- ADR 0008: Dockerfiles, Caddy gateway, hardened compose, smoke test and CI written and verified locally on Podman; the workflow has not run on GitHub.

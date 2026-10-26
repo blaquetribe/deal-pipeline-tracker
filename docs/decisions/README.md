@@ -11,6 +11,7 @@ One line per ADR: what we decided and why. ADRs are never edited after acceptanc
 | [0005](0005-oxc-toolchain-and-git-hooks.md) | oxlint + oxfmt, TypeScript 7, Husky + lint-staged + commitlint | Removes the TypeScript pin, faster, same rule coverage we need; hooks help but CI decides |
 | [0006](0006-tailwind-design-layer.md) | Tailwind v4; DoorSprint tokens in `packages/ui`; cookie theme; feature layering with lint boundaries | Accessible, themeable design system with a tested contrast matrix; strict CSP; Next has no Nuxt-style layers so we use packages + boundaries |
 | [0007](0007-request-layer-tanstack-query-vs-alova.md) | Keep TanStack Query; alova not adopted | Our realtime/tenant/optimistic needs are documented in TanStack; alova's App Router and cache behaviour are unverified |
+| [0008](0008-container-images-and-ci.md) | Digest-pinned multi-stage Dockerfiles, bundled API, Next standalone, Caddy gateway, hardened compose, CI with hadolint/Trivy/gitleaks/smoke and gated GHCR publish | Smallest runtime surface and a delivery path that fails closed; every claim was run, and what could not be run is listed |
 
 ## How we record a decision (so every step has its reason)
 Context, decision, why, alternatives, what we verified locally versus only read, known gaps, and when to revisit. Anything unconfirmed is marked **verify**.

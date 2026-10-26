@@ -11,6 +11,11 @@ One Dockerfile per deployable app: `apps/web/Dockerfile`, `apps/api/Dockerfile`.
 - **Cache-friendly order**: copy lockfile and manifests first, install, then copy source. Use BuildKit cache mounts for the pnpm store.
 - **web**: Next.js `output: "standalone"`; copy only `.next/standalone`, `.next/static`, `public`. `NEXT_PUBLIC_*` must contain no secrets (and the web app needs no Supabase values at all).
 - **api**: compiled JS only; no TypeScript toolchain in runtime. Native modules (`sharp`) must build and run on the chosen base for amd64 and arm64; otherwise use a glibc slim base (verify in the foundation spike).
+- **Runtime images delete npm, corepack and yarn** (`rm -rf /usr/local/lib/node_modules ...`): never needed at runtime, and the stock Node image's npm carries dependency CVEs (ADR 0008).
+- Base images use **literal `FROM` lines pinned by digest**; Dependabot cannot update an image referenced through an `ARG`.
+- Under `cap_drop: ALL`, binaries with file capabilities will not start (stock Caddy). Copy the binary (`cp` drops xattrs) or add back only the single capability needed.
+- Do not use tmpfs `uid=`/`gid=` options (not portable between Docker and Podman).
+- Trivy exceptions live in `.trivyignore.yaml` only, each with reason, path scope and an `expired_at`.
 - **Non-root**: `USER node` (or dedicated uid); files owned accordingly; read-only root filesystem where feasible with explicit writable tmp.
 - **Signals**: run with an init (`tini`/compose `init: true`); handle SIGTERM with graceful shutdown (close HTTP server, WebSockets, DB connections).
 - **No secrets** in `ARG`, `ENV`, or layers. Build-time secrets via BuildKit `--mount=type=secret`. Runtime config via environment from compose/CI.
