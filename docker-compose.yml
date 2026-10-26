@@ -115,6 +115,7 @@ services:
       - ./supabase/db/init/jwt.sql:/docker-entrypoint-initdb.d/init-scripts/99-jwt.sql:ro
       # pgTAP tests, run with `make test-db`.
       - ./supabase/tests:/tests:ro
+      - ./packages/shared/fixtures:/fixtures:ro
     environment:
       POSTGRES_HOST: /var/run/postgresql
       PGPORT: '5432'

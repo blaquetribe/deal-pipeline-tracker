@@ -1,0 +1,131 @@
+{
+  "transitions": [
+    ["sourcing", "screening"],
+    ["screening", "due_diligence"],
+    ["due_diligence", "ic_review"],
+    ["ic_review", "due_diligence"],
+    ["signed", "closed"],
+    ["sourcing", "passed"],
+    ["screening", "passed"],
+    ["due_diligence", "passed"],
+    ["ic_review", "passed"],
+    ["signed", "passed"]
+  ],
+  "requirements": {
+    "screening": ["amount", "sector"],
+    "due_diligence": ["amount", "expected_close_date", "sector"],
+    "ic_review": ["amount", "expected_close_date", "sector"],
+    "signed": ["amount", "expected_close_date", "sector"],
+    "closed": ["amount", "expected_close_date", "sector"]
+  },
+  "cases": [
+    {
+      "name": "sourcing to screening with its fields",
+      "from": "sourcing",
+      "to": "screening",
+      "present": ["sector", "amount"],
+      "expected": "ok"
+    },
+    {
+      "name": "sourcing to screening with nothing",
+      "from": "sourcing",
+      "to": "screening",
+      "present": [],
+      "expected": "missing_fields",
+      "missing": ["amount", "sector"]
+    },
+    {
+      "name": "sourcing to screening with only a sector",
+      "from": "sourcing",
+      "to": "screening",
+      "present": ["sector"],
+      "expected": "missing_fields",
+      "missing": ["amount"]
+    },
+    {
+      "name": "sourcing cannot skip to due diligence",
+      "from": "sourcing",
+      "to": "due_diligence",
+      "present": ["sector", "amount", "expected_close_date"],
+      "expected": "transition_not_allowed"
+    },
+    {
+      "name": "screening to due diligence with its fields",
+      "from": "screening",
+      "to": "due_diligence",
+      "present": ["sector", "amount", "expected_close_date"],
+      "expected": "ok"
+    },
+    {
+      "name": "screening to due diligence without a close date",
+      "from": "screening",
+      "to": "due_diligence",
+      "present": ["sector", "amount"],
+      "expected": "missing_fields",
+      "missing": ["expected_close_date"]
+    },
+    {
+      "name": "due diligence to IC review",
+      "from": "due_diligence",
+      "to": "ic_review",
+      "present": ["sector", "amount", "expected_close_date"],
+      "expected": "ok"
+    },
+    {
+      "name": "IC review can be sent back",
+      "from": "ic_review",
+      "to": "due_diligence",
+      "present": ["sector", "amount", "expected_close_date"],
+      "expected": "ok"
+    },
+    {
+      "name": "IC review to signed needs the approval decision",
+      "from": "ic_review",
+      "to": "signed",
+      "present": ["sector", "amount", "expected_close_date"],
+      "expected": "transition_not_allowed"
+    },
+    {
+      "name": "signed to closed",
+      "from": "signed",
+      "to": "closed",
+      "present": ["sector", "amount", "expected_close_date"],
+      "expected": "ok"
+    },
+    {
+      "name": "a deal can be passed from sourcing",
+      "from": "sourcing",
+      "to": "passed",
+      "present": [],
+      "expected": "ok"
+    },
+    {
+      "name": "closed is terminal",
+      "from": "closed",
+      "to": "passed",
+      "present": ["sector", "amount", "expected_close_date"],
+      "expected": "transition_not_allowed"
+    },
+    {
+      "name": "passed is terminal",
+      "from": "passed",
+      "to": "sourcing",
+      "present": [],
+      "expected": "transition_not_allowed"
+    },
+    {
+      "name": "signed cannot move backwards",
+      "from": "signed",
+      "to": "sourcing",
+      "present": ["sector", "amount", "expected_close_date"],
+      "expected": "transition_not_allowed"
+    },
+    {
+      "name": "an unknown stage is refused",
+      "from": "sourcing",
+      "to": "bogus",
+      "present": [],
+      "expected": "transition_not_allowed"
+    }
+  ]
+}
