@@ -5,11 +5,11 @@ Owner/branch: feat/02-auth-onboarding
 Depends on: 01
 
 ## Goal
-Sign-up with verification, sessions, tenant switcher, invitations, Mailer. Covers GOTCHAS rows 1, 5, 14, 18.
+Sign-up with verification, sessions, tenant switcher, invitations, Mailer. Covers GOTCHAS rows 1, 5, 14, 18, 21, 24, 28, 29, 31, 41.
 
 ## Scope
-- In:
-- Out (and where it goes):
+- In: sign-up, email verification, login, server-side sessions with single-flight refresh, tenant switcher, invitations, Mailer and Mailpit, rate limits, nonce-based CSP in Next middleware (headers only), signed-out route sweep.
+- Out (and where it goes): avatars (08), approvals (04).
 
 ## Design notes
 Key decisions, schema/API shape, links to ADRs.

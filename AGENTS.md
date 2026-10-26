@@ -20,6 +20,8 @@ Deal Pipeline Tracker: multi-tenant, realtime, auth-gated deal pipeline for a fi
 - Consequential rules (stage machine, quorum, SoD, immutability) are enforced in Postgres functions and privileges; TS copies are mirrors with parity tests.
 - Only the gateway publishes a host port. Supabase is never reachable from the host.
 - Tests are Vitest (unit and component) plus pgTAP; every app has a Dockerfile; CI builds, scans and smoke-tests the images.
+- `apps/api` is the BFF: the browser never talks to Supabase or to object storage. Files go through the `ObjectStore` port (fs default, Cloudflare R2 by config), authorised by the tenant-scoped `files` table, streamed through the BFF; no presigned URLs.
+- CSP (nonce-based, Next middleware) and hardening headers (gateway, Hono) are mandatory; no inline scripts, no third-party origins, no CSP report endpoint.
 
 ## Layout
 ```

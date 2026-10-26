@@ -51,3 +51,17 @@ Each row: what the brief says, the trap, how we handle it, which feature owns it
 | 38 | 20 | Seed credentials in a financial context; real names. | Dev-flag gated, documented dev-only, fictional data, no CVC branding. | 06 |
 | 39 | 21 | Users must correct mistakes in an immutable trail. | `amends_event_id`. | 03 |
 | 40 | 22 | AI use must be core, not bolt-on. | Small commits, `.claude/` hooks/commands, `AI_USAGE.md`. | all |
+
+## Added with ADR 0004 (CSP, storage, BFF)
+
+| # | Trap | Resolution | Feature |
+|---|---|---|---|
+| 41 | No CSP or security headers anywhere; XSS and clickjacking exposure. | Nonce-based CSP via Next middleware, locked-down API CSP, gateway hardening headers; tests in smoke and headless load. | 00, 02 |
+| 42 | A CSP report endpoint would be an unauthenticated write route, contradicting "nothing reachable while signed out". | No report endpoint; CI headless load fails on violations; reporting is a next step. | 00 |
+| 43 | R2 needs a Cloudflare account and secrets; the reviewer has neither. | `ObjectStore` port: `fs` default in compose, R2 by config; shared contract tests. | 08 |
+| 44 | Presigned URLs force browser-to-storage traffic: CSP hole, CORS, a published port. | BFF streams all file bytes; no presigned URLs for now. | 08 |
+| 45 | User-uploaded images: SVG scripts, polyglots, EXIF GPS. | Magic-byte validation, re-encode to 256x256 WebP, no SVG/GIF. | 08 |
+| 46 | DB row and object can diverge (orphans, dangling rows). | pending -> ready states, orphan cleanup, content-addressed objects. | 08 |
+| 47 | Dev/prod mixups and over-broad storage credentials. | Separate buckets and bucket-scoped tokens; startup guard on environment mismatch; no storage credentials in CI. | 08 |
+| 48 | Avatars leak profile data across tenants. | Visible only to users sharing a tenant; user-level key prefix; initials for deactivated users. | 08 |
+| 49 | `sharp` is a native module; Alpine/arm64 builds can fail. | Verify in the foundation spike; fall back to a glibc slim base. | 00, 08 |

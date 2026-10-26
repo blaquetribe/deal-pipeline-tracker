@@ -44,6 +44,8 @@ Extends ENGINEERING_STANDARDS §8 (behaviour over implementation, deterministic,
 - SoD and approvals: self-approval blocked, duplicate decision blocked, quorum reached exactly once under parallel transactions, stale `version` rejected.
 - Sessions: parallel requests across token expiry cause one refresh; revoking a session closes its sockets.
 - Compose: only the gateway publishes a host port.
+- Headers: CSP and hardening headers present on `/`, `/login` and `/api/health`; a headless load of the login page reports zero CSP violations.
+- Storage: the `ObjectStore` contract suite passes on the `fs` driver and, in CI, on the `s3` driver against a local S3-compatible container; cross-tenant file access returns 404; spoofed image types are rejected; stored avatars are always 256x256 WebP; an environment/bucket mismatch refuses to start.
 
 ## 6. CI wiring
 - Job `test`: install with frozen lockfile, `pnpm typecheck`, `lint`, `stylelint`, `format:check`, `pnpm test --coverage`.

@@ -146,6 +146,13 @@ Supabase (Postgres, Auth, Realtime, Mailpit) is on an internal network and never
 - **Containers and CI:** multi-stage non-root Dockerfiles per app; CI lints (hadolint), builds with Buildx, scans (Trivy), smoke-tests the whole stack, and pushes multi-arch images to GHCR from main. No hosted deployment, by design.
 - **Verify before presenting as fact:** Next.js WebSocket proxying (moot with the gateway), patched Next version, Realtime with server-held JWTs, Vitest projects syntax, axe package, Server Component test limits.
 
+## E. Browser hardening and files (ADR 0004)
+- **BFF:** the Hono service is the only thing the browser talks to (via the gateway); it alone holds Supabase and storage credentials.
+- **CSP:** nonce-based policy from Next middleware, locked-down policy on API responses, hardening headers at the gateway; no third-party origins and no report endpoint (it would be an unauthenticated write route). CI proves it with a headless load that must show zero violations.
+- **Storage:** one `ObjectStore` port, `fs` driver for the reviewer path, Cloudflare R2 (S3 API) by config with separate dev/prod buckets and bucket-scoped tokens. Files are authorised by a tenant-scoped `files` row, keys are server-derived, and bytes stream through the BFF, so no presigned URLs, no CSP hole, no published storage port.
+- **Avatars:** initials by default; optional upload is re-encoded (256x256 WebP, EXIF stripped) so SVG scripts and polyglot files never reach other users; visible only to people sharing a tenant; no Gravatar (it leaks an email hash).
+- **Honest trade-off:** proxying costs API bandwidth; presigned URLs for large files are a next step.
+
 ## Honest limits (present these proudly, not apologetically)
 - Tamper-evident, not DBA-proof, audit ledger.
 - Tenant-level visibility only (no per-deal barriers).

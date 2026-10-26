@@ -12,14 +12,19 @@ Tier: **core** (must ship), **extended** (ship if time allows, else README note)
 | 04 | Approvals: gates, quorum, decisions, absence, delegation, custom roles + SoD | `docs/features/04-approvals` | extended | 03 | not started |
 | 05 | Realtime: WebSocket relay, live cache updates, presence | `docs/features/05-realtime` | core (user requirement) | 03 | not started |
 | 06 | Seed and polish: two tenants, all roles, sample deals, README | `docs/features/06-seed-polish` | core | 03-05 | not started |
-| 07 | Stretch: document extraction | `docs/features/07-stretch-extraction` | stretch | 03 | not started |
+| 07 | Stretch: document extraction | `docs/features/07-stretch-extraction` | stretch | 03, 08 | not started |
+| 08 | Storage and avatars: ObjectStore port (fs + R2), files table, BFF-proxied files, avatars | `docs/features/08-storage-avatars` | extended | 02, 03 | not started |
+
+CSP and security headers are **core** security work, scheduled in 00 (gateway, Hono headers) and 02 (nonce CSP in Next middleware); they are not on the cut list.
 
 ## Cut list (if time runs out, in this order)
 1. Presence (05)
-2. SLA escalation notification (04)
-3. Delegation UI (04) - keep schema/API
-4. Custom role editor (04) - system roles only
-5. Stretch (07)
+2. R2 driver (08) - keep the `fs` driver and the port
+3. Avatar upload (08) - keep generated initials
+4. SLA escalation notification (04)
+5. Delegation UI (04) - keep schema/API
+6. Custom role editor (04) - system roles only
+7. Stretch (07)
 
 Anything cut must be written in the README "what I'd do next" section.
 

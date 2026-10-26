@@ -2,7 +2,7 @@
 
 Status: not started
 Owner/branch: feat/07-stretch-extraction
-Depends on: 03
+Depends on: 03, 08 (uploads go through the ObjectStore port and BFF; see ADR 0004)
 
 ## Goal
 Upload pdf/word/image and auto-populate fields. Covers GOTCHAS row 17.

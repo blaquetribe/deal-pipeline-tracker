@@ -8,7 +8,7 @@ Depends on: none
 Monorepo, tooling, compose skeleton, CI. Covers GOTCHAS rows 3, 6, 7, 19, 20, 25, 36, 37.
 
 ## Scope
-- In: pnpm workspaces; `tsconfig.base.json` (overlay E5); ESLint, Prettier, Stylelint; Vitest root config with web/api/shared projects; `supabase test db` wiring; Dockerfiles for web and api; gateway config; compose with internal networks and only the gateway published; `.env.example`; CI jobs `test`, `test-db`, `docker` (hadolint, Buildx build, Trivy, compose smoke, GHCR push on main/tags); secret scan; Dependabot; spikes for the *verify* items (WS through gateway, Next patched version, Realtime with server-held JWT, Vitest projects syntax).
+- In: pnpm workspaces; `tsconfig.base.json` (overlay E5); ESLint, Prettier, Stylelint; Vitest root config with web/api/shared projects; `supabase test db` wiring; Dockerfiles for web and api; gateway config; compose with internal networks and only the gateway published; `.env.example`; CI jobs `test`, `test-db`, `docker` (hadolint, Buildx build, Trivy, compose smoke, GHCR push on main/tags); secret scan; Dependabot; gateway hardening headers and Hono API headers (ADR 0004); `sharp` build check on Alpine and arm64; spikes for the *verify* items (WS through gateway, Next patched version, Realtime with server-held JWT, Vitest projects syntax).
 - Out (and where it goes): schema (01), auth (02), app features (03+).
 
 ## Design notes
