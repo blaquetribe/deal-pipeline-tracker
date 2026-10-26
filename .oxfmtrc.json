@@ -8,5 +8,15 @@
   "sortTailwindcss": {
     "stylesheet": "./apps/web/src/styles/globals.css"
   },
-  "ignorePatterns": ["node_modules", ".next", "dist", "coverage", "pnpm-lock.yaml", "docs", "*.md"]
+  "ignorePatterns": [
+    "node_modules",
+    ".next",
+    "dist",
+    "coverage",
+    "pnpm-lock.yaml",
+    "docs",
+    "*.md",
+    "supabase/gateway",
+    "supabase/db"
+  ]
 }

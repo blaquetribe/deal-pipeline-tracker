@@ -1,0 +1,3 @@
+-- Development seed data. Applied by the `migrate` service when SEED_DEV_DATA=true.
+-- MUST be idempotent (safe to run on every start). Empty until feature 06 adds realistic data.
+-- Seed users are created through the auth admin API by a script, not by SQL.
