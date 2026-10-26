@@ -1,6 +1,6 @@
 # 01 Schema and security: progress
 
-Status: in progress (slice 1 done and green; slice 2 not started)
+Status: in progress (slices 1 and 2 green; slice 3 next)
 Owner/branch: feat/01-schema-security
 Depends on: 00
 
@@ -9,7 +9,8 @@ Tenancy, RBAC tables, deals, immutable notes, RLS, SQL tests. Covers GOTCHAS row
 
 ## Scope
 - In (slice 1): `tenants`, `memberships`, `deals`, `deal_events` (hash-chained ledger), forced RLS, no direct write grants, `post_event`, `verify_ledger`, function-grant allowlist test.
-- Slice 2 (next): permission catalogue, system roles, `has_permission`, static SoD, `move_stage`; `post_event` must then require a permission (slice 1 only checks membership, which is not enough for default-deny).
+- Slice 2 (done): `permissions` catalogue and `permission_conflicts` (global reference data, no `tenant_id`, by design), per-tenant `roles`, `role_permissions`, `membership_roles`, `app.has_permission`, static SoD triggers, immutable system roles, six system roles via `app.seed_system_roles`; reads of deals and the ledger need `deal.view`, `post_event` needs `deal.note`.
+- Slice 3 (next): `create_deal`, `move_stage` with the stage machine and required fields (parity fixtures with `packages/shared`), optimistic `version` (409), tenant creation function that seeds roles (shared with feature 02), self-escalation and last-owner rules (need the membership-management functions).
 - Out (and where it goes): approvals and quorum (04), auth flows and invitations (02), seed data (06).
 
 ## Design notes
@@ -38,6 +39,7 @@ Contract the tests fix (names and behaviour the migration must satisfy): `deals.
 
 ## Log
 - 2026-10-26: slice 1 tests written and run red (14 passed from file 00, 9 failed, files 01 and 02 abort at the first fixture insert).
+- 2026-10-26: slice 2 (RBAC) tests written first (`03_rbac.test.sql`, 35), migration `20261028000000_rbac.sql`; suite green, 91 assertions. Sabotage run (SoD and system-role triggers dropped) failed exactly the 7 intended tests. Slice 1 fixtures now assign an observer role because reads are default deny.
 - 2026-10-26: slice 1 migration written; all green. Found that `auth.uid()` returns null under our PostgREST settings; added `app.uid()` (GOTCHAS 98). Owner roles bypass RLS in this image (GOTCHAS 99), so the ledger relies on privileges plus triggers. Owner roles bypass RLS in this image (GOTCHAS 99), so the ledger's protection is privileges plus triggers.
 
 ## Deviations / debt
