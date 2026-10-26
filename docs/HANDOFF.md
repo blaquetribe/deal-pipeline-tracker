@@ -10,7 +10,7 @@ Keep this current. Anyone (human or agent) should be able to continue from here 
 - **Not built yet:** migrations beyond the baseline extensions, and every product feature.
 
 ## Next action
-Feature 01 is merged (PR 10). Feature 02 is in progress on `feat/02-auth-onboarding` (local, not pushed): ADR 0015 is committed; slice A (api_service role, sessions, email tokens, profiles) is written and green but uncommitted (`make test-db`: 240 assertions; smoke gained a PostgREST role-switching check). Next: slice B in the database (tenant settings, `create_organisation`, onboarding state machine, invitations), then the API auth module and the web pages. `app.uid()` through PostgREST is now verified (GOTCHAS 98). `make smoke` fails locally only if something on the host already listens on port 3001; CI is unaffected.
+Feature 02 on `feat/02-auth-onboarding`: PR 11 (slice A) is open and green; slice B (tenant settings, onboarding state machine, `create_organisation`, invitations) is written and green but uncommitted (`make test-db`: 313 assertions). Next: the API auth module under `apps/api/src/auth/` (sign-up, verify, resend, login, logout, session cookie, single-flight refresh, CSRF, rate limits, Mailer, the `api_service` JWT, token encryption), the signed-out route sweep, then the web pages and nonce CSP. Open: confirm the 30-day closing-soon default against ADR 0011's 60-day window; onboarding parity fixture. `make smoke` fails locally only if a host process already listens on port 3001.
 
 ## Where decisions live
 - `docs/decisions/README.md`: index of ADRs 0001-0014, one line each with the reason. ADRs are append-only; later ones supersede earlier ones (for example ADR 0003's CSS Modules choice was superseded by ADR 0006).
