@@ -118,10 +118,10 @@ select throws_ok($$delete from public.tenant_events$$, 'P0001', 'tenant_events i
 -- Function exposure ----------------------------------------------------------------------------------------------------------------------
 select is(
   (select count(*) from unnest(array[
-    'public.create_tenant(text)', 'public.grant_role(uuid,uuid,text)', 'public.revoke_role(uuid,uuid,text)',
+    'public.grant_role(uuid,uuid,text)', 'public.revoke_role(uuid,uuid,text)',
     'public.deactivate_member(uuid,uuid)', 'public.transfer_ownership(uuid,uuid)']) as f(sig)
    where has_function_privilege('authenticated', f.sig, 'EXECUTE') and not has_function_privilege('anon', f.sig, 'EXECUTE')),
-  5::bigint, 'the five functions are for authenticated only'
+  4::bigint, 'the four administration functions are for authenticated only (tenants come from create_organisation)'
 );
 
 select * from finish();
