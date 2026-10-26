@@ -1,6 +1,6 @@
 # 02 Auth and onboarding: progress
 
-Status: not started
+Status: in progress (slice A, database, green; API and web not started)
 Owner/branch: feat/02-auth-onboarding
 Depends on: 01
 
@@ -12,11 +12,16 @@ Sign-up with verification, sessions, tenant switcher, invitations, Mailer. Cover
 - Out (and where it goes): avatars (08), approvals (04).
 
 ## Design notes
-Key decisions, schema/API shape, links to ADRs.
+- ADR 0015: sessions in a Postgres table; JWT-less work through a narrow `api_service` role reached via PostgREST. Decided by the owner on 2026-10-26.
+- Slice A (database, done): `api_service` role (no table privileges, EXECUTE on eight functions), `api_sessions` and `email_tokens` (RLS forced, no policies, reachable only through the functions), `session_*` and `token_*` functions, `profiles` with a tenant-scoped directory (`app.shares_tenant_with`) and `profile_upsert`.
+- Token consumption sets `auth.users.email_confirmed_at` in the database, atomically with consuming the token, instead of calling the GoTrue admin API afterwards (a crash between two calls would strand the user). The auth module still owns everything else about GoTrue.
+- Slice B (next, database): tenant settings (`timezone`, `default_currency`, `closing_soon_days`), `create_organisation` (verified, once per user, owner flow), `onboarding_progress` state machine with a shared fixture, invitations (hashed, email-bound, capped per tenant) and acceptance.
+- Then: API auth module (sign-up, verify, resend, login, logout, refresh single-flight, CSRF, rate limits, Mailer), signed-out route sweep, web pages and nonce CSP.
 
 ## Tasks
-- [ ] Failing tests written (security/negative first)
-- [ ] Migration(s)
+- [x] Slice A tests written first (`supabase/tests/08_api_service.test.sql`, 46 assertions), run red, then green
+- [ ] Slice B tests (onboarding, organisation, invitations)
+- [x] Migration slice A: `20261101000000_api_service_sessions_tokens_profiles.sql`
 - [ ] API
 - [ ] Web
 - [ ] Docs updated
@@ -33,8 +38,11 @@ What is covered, where it lives, how to run it.
 - [ ] No secrets, tokens, or PII in logs.
 - [ ] Web still has no Supabase dependency.
 
+## Tests
+`make test-db` (240 assertions in total, slice A is `08_api_service`) and the compose smoke test, which now also proves PostgREST switches roles from the JWT.
+
 ## Log
-Dated notes: what changed, what was learned, problems.
+- 2026-10-26: ADR 0015. Slice A written test-first (red: role missing), migration, green. pgTAP lives in the `extensions` schema, so the test grants `api_service` usage on it inside its own rolled-back transaction; production does not. Real PostgREST check: role switching and `app.uid()` work. Smoke script extended (not sabotage-tested; `shellcheck` not installed locally, CI runs it).
 
 ## Deviations / debt
 Anything that differs from the plan or is deferred (also mirror in README "next steps").

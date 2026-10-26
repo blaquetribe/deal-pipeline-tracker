@@ -10,7 +10,7 @@ Keep this current. Anyone (human or agent) should be able to continue from here 
 - **Not built yet:** migrations beyond the baseline extensions, and every product feature.
 
 ## Next action
-PR 10 (`feat/01-schema-security`) is open; slice 4 is committed locally only if the owner has asked (check `git status`). Feature 01 is feature-complete for the schema: tenancy, ledger, RBAC with SoD, deals, stage machine, tenant and role administration, `update_deal`, SQL/TS parity (`make test-db`: 193 assertions). Before merging: watch CI (`test-db`, smoke with the new `/fixtures` mount; `make smoke` not run locally since the mount was added). Then feature 02 (auth and onboarding), which also verifies `app.uid()` through real PostgREST (GOTCHAS 98) and decides the per-user tenant cap. `make up` runs the stack locally (http://localhost:8080); it is currently stopped.
+Feature 01 is merged (PR 10). Feature 02 is in progress on `feat/02-auth-onboarding` (local, not pushed): ADR 0015 is committed; slice A (api_service role, sessions, email tokens, profiles) is written and green but uncommitted (`make test-db`: 240 assertions; smoke gained a PostgREST role-switching check). Next: slice B in the database (tenant settings, `create_organisation`, onboarding state machine, invitations), then the API auth module and the web pages. `app.uid()` through PostgREST is now verified (GOTCHAS 98). `make smoke` fails locally only if something on the host already listens on port 3001; CI is unaffected.
 
 ## Where decisions live
 - `docs/decisions/README.md`: index of ADRs 0001-0014, one line each with the reason. ADRs are append-only; later ones supersede earlier ones (for example ADR 0003's CSS Modules choice was superseded by ADR 0006).
