@@ -230,6 +230,44 @@ ws.onmessage = (e) => { const m = JSON.parse(e.data);
   && pass "api opens a realtime WebSocket through the internal gateway" \
   || fail "api opens a realtime WebSocket through the internal gateway"
 
+# PostgREST must switch to the roles named in a JWT (ADR 0015): api_service reaches only the session
+# functions, a signed-in user reaches their own data through app.uid(), and neither can do the other's job.
+dc_exec db psql -U supabase_admin -tA -c "insert into auth.users (id, instance_id, aud, role, email, email_confirmed_at) values ('aaaaaaaa-1111-4000-8000-000000000001', '00000000-0000-0000-0000-000000000000', 'authenticated', 'authenticated', 'roles-smoke@example.test', now())" >/dev/null
+roles_js='
+const { createHmac } = require("node:crypto");
+const b64 = (t) => Buffer.from(t).toString("base64url");
+const sign = (claims) => { const h = b64("{\"alg\":\"HS256\",\"typ\":\"JWT\"}"), p = b64(JSON.stringify(claims));
+  return `${h}.${p}.${createHmac("sha256", process.env.JWT_SECRET).update(`${h}.${p}`).digest("base64url")}`; };
+const now = Math.floor(Date.now() / 1000), uid = "aaaaaaaa-1111-4000-8000-000000000001";
+const anon = sign({ role: "anon", iss: "supabase", iat: 1700000000, exp: 4102444800 });
+const svc = sign({ role: "api_service", iat: now, exp: now + 60 });
+const usr = sign({ role: "authenticated", sub: uid, iat: now, exp: now + 60 });
+const call = async (method, path, token, body) => {
+  const r = await fetch(`http://supabase-gateway:8000/rest/v1${path}`, { method, body: body && JSON.stringify(body),
+    headers: { apikey: anon, Authorization: `Bearer ${token}`, "Content-Type": "application/json" } });
+  return { status: r.status, text: await r.text() }; };
+(async () => {
+  const hash = "a".repeat(64);
+  const results = [
+    [(await call("POST", "/rpc/session_create", svc, { p_session_hash: hash, p_user: uid, p_tokens_enc: "\\x0102" })).status, 200],
+    [(await call("POST", "/rpc/session_lookup", svc, { p_session_hash: hash })).text.includes(uid), true],
+    [(await call("GET", "/profiles", svc)).status, 403],
+    [(await call("POST", "/rpc/session_lookup", usr, { p_session_hash: hash })).status, 403],
+    [(await call("POST", "/rpc/profile_upsert", usr, { p_display_name: "Smoke User" })).status, 204],
+    [(await call("GET", "/profiles?select=display_name", usr)).text.includes("Smoke User"), true],
+    [(await call("GET", "/profiles?select=display_name", anon)).status, 401],
+  ];
+  const bad = results.map(([got, want], i) => (got === want ? null : `#${i + 1} got ${got} want ${want}`)).filter(Boolean);
+  console.log(bad.length === 0 ? "ok" : bad.join("; "));
+  process.exit(bad.length === 0 ? 0 : 1);
+})();
+'
+roles_out=$(JWT_SECRET="$JWT_SECRET" dc_exec -e JWT_SECRET api node -e "$roles_js" 2>&1 | tail -n 1)
+[ "$roles_out" = ok ] \
+  && pass "PostgREST switches to api_service and to the signed-in user from the JWT role (app.uid works)" \
+  || fail "PostgREST role switching: ${roles_out}"
+dc_exec db psql -U supabase_admin -tA -c "delete from public.api_sessions; delete from public.profiles; delete from auth.users where id = 'aaaaaaaa-1111-4000-8000-000000000001'" >/dev/null
+
 echo "== database =="
 recorded=$(dc_exec db psql -U postgres -tA -c "select count(*) from supabase_migrations.schema_migrations" 2>/dev/null | tr -d '[:space:]')
 [ "${recorded:-0}" -ge 1 ] && pass "migrations are recorded (${recorded})" || fail "migrations are recorded"
