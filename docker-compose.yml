@@ -104,7 +104,7 @@ services:
 
   db:
     <<: *vendor
-    image: supabase/postgres:17.6.1.136@sha256:f371b5f3f2ac0a05703f33d6e6134515fb2498cab708fb948a0aeb7481467c00
+    image: supabase/postgres:17.11.0.007@sha256:b0463b9ab930a3535478d529b915d37def49d5a8fb0cb1927929e96af992b519
     networks: [internal]
     volumes:
       - db-data:/var/lib/postgresql/data
@@ -142,7 +142,7 @@ services:
   # One-shot: applies supabase/migrations (checksummed, never edited) and the optional dev seed.
   migrate:
     <<: *vendor
-    image: supabase/postgres:17.6.1.136@sha256:f371b5f3f2ac0a05703f33d6e6134515fb2498cab708fb948a0aeb7481467c00
+    image: supabase/postgres:17.11.0.007@sha256:b0463b9ab930a3535478d529b915d37def49d5a8fb0cb1927929e96af992b519
     restart: 'no'
     networks: [internal]
     depends_on:
