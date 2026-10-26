@@ -1,0 +1,11 @@
+title = "deal-pipeline-tracker gitleaks config"
+
+[extend]
+useDefault = true
+
+# The smoke test signs up throwaway users on the local, internal-only stack with this fixed,
+# non-secret test password.
+[[allowlists]]
+description = "smoke test throwaway password"
+paths = ['''scripts/compose-smoke\.sh''']
+regexes = ['''Smoke-Pass-123456''']
