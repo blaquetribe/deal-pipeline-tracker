@@ -1,0 +1,99 @@
+/*
+ * Primitives: raw palette and scales. Components never read these;
+ * themes.css maps them onto semantic tokens. Radius and font live in
+ * main.css's @theme block (Tailwind owns those namespaces).
+ */
+:root {
+  /* Brand blue */
+  --brand-50: #eef6ff;
+  --brand-100: #d9eaff;
+  --brand-200: #bcdcff;
+  --brand-300: #8fc6ff;
+  --brand-400: #5ca8ff;
+  --brand-500: #3488f5;
+  --brand-600: #2569db;
+  --brand-700: #2054b3;
+  --brand-800: #214890;
+  --brand-900: #203d72;
+  --brand-950: #172a4f;
+
+  /* Accent violet: secondary emphasis */
+  --accent-50: #f4f1ff;
+  --accent-100: #ebe5ff;
+  --accent-200: #d8ccff;
+  --accent-300: #bba6ff;
+  --accent-400: #9a78fb;
+  --accent-500: #7c5cf5;
+  --accent-600: #6842e0;
+  --accent-700: #5733bd;
+  --accent-800: #482b99;
+  --accent-900: #3c277a;
+  --accent-950: #241651;
+
+  /* Teal: info, second chart series */
+  --teal-50: #effcfa;
+  --teal-100: #c9f5ee;
+  --teal-300: #5fdcc9;
+  --teal-500: #14b8a6;
+  --teal-600: #0d9488;
+  --teal-700: #0f766e;
+  --teal-800: #115e59;
+  --teal-900: #134e4a;
+
+  /* Pink: sparing highlights, chart series */
+  --pink-50: #fdf2f8;
+  --pink-100: #fce7f3;
+  --pink-300: #f9a8d4;
+  --pink-500: #ec4899;
+  --pink-600: #db2777;
+  --pink-700: #be185d;
+  --pink-900: #831843;
+
+  /* Ink: neutrals */
+  --ink-0: #fff;
+  --ink-50: #f5f7fa;
+  --ink-100: #edf1f7;
+  --ink-200: #dde2ea;
+  --ink-300: #c0c5ce;
+  --ink-400: #a4a7ad;
+  --ink-500: #8e95a2;
+  --ink-600: #73777f;
+  --ink-700: #5f6570;
+  --ink-800: #4d5158;
+  --ink-850: #151820;
+  --ink-900: #17191c;
+  --ink-950: #090b10;
+
+  /* Status */
+  --green-400: #4ade80;
+  --green-600: #16a34a;
+  --green-700: #15803d;
+  --green-800: #166534;
+  --amber-400: #fbbf24;
+  --amber-600: #d97706;
+  --amber-700: #b45309;
+  --amber-800: #92400e;
+  --red-400: #f87171;
+  --red-600: #dc2626;
+  --red-700: #b91c1c;
+
+  /* Spacing, motion, blur */
+  --space-1: 0.25rem;
+  --space-2: 0.5rem;
+  --space-3: 0.75rem;
+  --space-4: 1rem;
+  --space-5: 1.25rem;
+  --space-6: 1.5rem;
+  --space-8: 2rem;
+  --space-10: 2.5rem;
+  --space-12: 3rem;
+  --duration-fast: 120ms;
+  --duration-normal: 180ms;
+  --duration-slow: 320ms;
+  --ease-standard: cubic-bezier(0.2, 0, 0, 1);
+  --ease-emphasized: cubic-bezier(0.16, 1, 0.3, 1);
+  --blur-subtle: 8px;
+  --blur-medium: 16px;
+  --blur-strong: 28px;
+  --blur-acrylic: 40px;
+}

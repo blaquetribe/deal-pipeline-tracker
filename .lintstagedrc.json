@@ -1,0 +1,5 @@
+{
+  "*.{ts,tsx,mjs,js,json,css}": "oxfmt --no-error-on-unmatched-pattern",
+  "*.{ts,tsx}": "oxlint --type-aware --fix",
+  "*.css": "stylelint --fix"
+}

@@ -85,7 +85,7 @@ Supabase (Postgres, Auth, Realtime, Mailpit) is on an internal network and never
 
 ### 10. Next.js middleware is not an auth boundary
 - **Problem:** Next middleware-only authorization was bypassable via a forged header (CVE-2025-29927, March 2025; verify the exact patched versions when pinning).
-- **Resolution:** the API is the gate. Next middleware is UX only (redirects). Pin a patched Next version; strip internal headers at the gateway.
+- **Resolution:** the API is the gate. Next `proxy.ts` (Next 16's renamed middleware) is UX only (redirects). Pin a patched Next version; strip internal headers at the gateway.
 - **Proof:** signed-out route sweep hits the API directly.
 
 ### 11. Open sign-up plus invitations = abuse surface
@@ -145,6 +145,44 @@ Supabase (Postgres, Auth, Realtime, Mailpit) is on an internal network and never
 - **Markup:** semantic, accessible JSX with a keyboard path for stage moves, live-region announcements for realtime changes, and escaped, typed HTML email templates.
 - **Containers and CI:** multi-stage non-root Dockerfiles per app; CI lints (hadolint), builds with Buildx, scans (Trivy), smoke-tests the whole stack, and pushes multi-arch images to GHCR from main. No hosted deployment, by design.
 - **Verify before presenting as fact:** Next.js WebSocket proxying (moot with the gateway), patched Next version, Realtime with server-held JWTs, Vitest projects syntax, axe package, Server Component test limits.
+
+## E. Browser hardening and files (ADR 0004)
+- **BFF:** the Hono service is the only thing the browser talks to (via the gateway); it alone holds Supabase and storage credentials.
+- **CSP:** nonce-based policy from Next middleware, locked-down policy on API responses, hardening headers at the gateway; no third-party origins and no report endpoint (it would be an unauthenticated write route). CI proves it with a headless load that must show zero violations.
+- **Storage:** one `ObjectStore` port, `fs` driver for the reviewer path, Cloudflare R2 (S3 API) by config with separate dev/prod buckets and bucket-scoped tokens. Files are authorised by a tenant-scoped `files` row, keys are server-derived, and bytes stream through the BFF, so no presigned URLs, no CSP hole, no published storage port.
+- **Avatars:** initials by default; optional upload is re-encoded (256x256 WebP, EXIF stripped) so SVG scripts and polyglot files never reach other users; visible only to people sharing a tenant; no Gravatar (it leaks an email hash).
+- **Honest trade-off:** proxying costs API bandwidth; presigned URLs for large files are a next step.
+
+## F. Tooling, design system and request layer (ADRs 0005-0007)
+- **Why Oxc:** type-aware linting is stable and tracks TypeScript 7.0.2, so adopting oxlint removed a real problem (typescript-eslint could not run TypeScript 7). Verified, not assumed: every boundary rule (no Supabase in web, feature encapsulation, no `dangerouslySetInnerHTML`, no-floating-promises, a11y) was proven with deliberate violations. Honest caveat: oxfmt is beta.
+- **Hooks:** Husky + lint-staged + commitlint, proven to block a bad commit message and a lint violation. They are convenience; CI is the gate.
+- **Design system:** DoorSprint's three-tier tokens, themes and glass materials reused in a `packages/ui` layer, with its WCAG contrast matrix running in CI for both themes. Theme is a server-set cookie class, which keeps the CSP free of inline scripts.
+- **"Layers like Nuxt":** Next.js has no `extends`/auto-merge. We get the useful part with workspace packages (`ui`, `shared`) and feature folders whose boundaries lint enforces. We say plainly what we cannot replicate (auto-merged pages and components).
+- **alova:** evaluated and not adopted. TanStack Query documents every behaviour we need (realtime cache patches, tenant-keyed caches, optimistic moves, App Router hydration); alova's App Router and cache behaviour could not be verified. A half-day spike is defined if the team still wants it.
+- **Onboarding:** a server-driven, resumable, accessible flow. Nothing is created before email verification; the organisation is created once per owner. See `docs/features/02-auth-onboarding/onboarding-flow.md`.
+
+## G. Containers and CI (ADR 0008)
+- **Smallest surface:** the API ships as one bundled file (no `node_modules`, no pnpm); npm, corepack and yarn are deleted from runtime images because Trivy found HIGH CVEs inside npm's own dependencies. Result: api and web images scan clean.
+- **One public port:** only the Caddy gateway publishes a port; web and API are reachable only through it. `scripts/compose-smoke.sh` proves this and fails if a port leaks (we tested that it does).
+- **Found by running, not reading:** `cap_drop: ALL` made the stock Caddy image fail to start because of a file capability on its binary; fixed without weakening hardening. Trivy also found Go CVEs in the upstream Caddy binary; they are tracked with reasons and a 2026-11-30 expiry.
+- **Delivery path:** first-party actions pinned to SHAs, tool images pinned by digest, gitleaks, hadolint, Trivy, smoke test, and publishing only from main/tags after every gate.
+- **Honest limits:** locally verified on Podman (arm64); the first GitHub run (real Docker, amd64) was green end to end. Unproven until the first merge: the publish job (multi-arch, SBOM/provenance, GHCR push).
+
+## H. UI direction and AI review (ADRs 0009-0010)
+- **Mockup as inspiration, applied with judgement:** we kept its structure (nav, dashboard, deal list, detail, audit timeline, mobile stage selector) and re-derived the rest. We measured its palette: gold text on white 2.10:1, white on its green 2.54:1, gray placeholder 2.56:1, light border 1.23:1 all fail WCAG AA. Our contrast test now guards the re-derived tokens.
+- **What we rejected and why:** CVC logo/photo/tagline (not ours), SSO button (no IdP), magic-link tab (brief says pick one), Calendar/Reports (outside the brief), a single mixed-currency total (misleading).
+- **What the mockup lacked:** tenant switcher, sign-up and onboarding, password reset, approvals and absence handling, People/roles, empty/error states.
+- **Found in the installed docs:** Next 16 renamed middleware to `proxy.ts`; the nonce CSP mechanism is documented for our version and needs dynamic rendering.
+- **AI PR review, free (and a correction worth presenting):** our first recommendation, GitHub Models via `actions/ai-inference`, turned out to be dead: GitHub retired Models on 2026-07-30 and the action's v3 is Copilot-only. We caught it by checking primary sources before building. The replacement is Cloudflare Workers AI (free 10,000 neurons/day, no training on customer content), advisory and non-blocking, triggered on open/ready and by an `ai-review` label to respect the cap. Built with 30 offline tests against a mock API (mutation-tested). Honest status: the first live run needs the owner's two secrets, and review quality from a free 32B model is unproven. Risks named: prompt injection (delimited diff, comment-only token), untrusted output (mentions defused, marker protected), data sharing (Cloudflare as processor).
+
+## I. Closing soon: countdown and the 5-day alert (ADR 0011)
+- **Requirement:** a real countdown, and at 5 days the team and the assignee are notified.
+- **Why the alert is server-side:** it must fire when nobody is logged in. An hourly, idempotent database scan judges each tenant on its own local date; a unique key per (deal, close date, threshold) means retries never duplicate, and `<=` means late-created or missed-run deals still alert exactly once.
+- **Never silent:** unassigned deals or deactivated assignees fall back to Owner/Admins; absent assignees still get it and their delegate too.
+- **Auditable:** each alert is a ledger event with actor *system*, so the timeline shows who was told and when.
+- **Honest about the countdown:** it counts down in days and rolls over at the tenant's local midnight; a per-second ticker on a date field would be false precision.
+- **Decisions confirmed:** the team is the deal's assignees and team members (fallback Owner/Admins); the final day counts hours and minutes when a close time is set; alert emails have a generic subject, the body carries the deal details and a link to the deal (no token, normal sign-in); alerts fire at 5 days, 1 day and when overdue.
+- **Hard parts we planned for:** time zones and DST, a wrong laptop clock (offset from the API `Date` header), no duplicate alerts when only the time is edited, and an overdue alert that can be up to an hour late because the scan is hourly.
 
 ## Honest limits (present these proudly, not apologetically)
 - Tamper-evident, not DBA-proof, audit ledger.

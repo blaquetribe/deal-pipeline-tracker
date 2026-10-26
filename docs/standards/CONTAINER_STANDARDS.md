@@ -10,7 +10,12 @@ One Dockerfile per deployable app: `apps/web/Dockerfile`, `apps/api/Dockerfile`.
 - **Pinned bases**: Node LTS by exact tag and digest (e.g. `node:<lts>-alpine@sha256:...`), updated by Dependabot. pnpm via Corepack at a pinned version. `pnpm install --frozen-lockfile`.
 - **Cache-friendly order**: copy lockfile and manifests first, install, then copy source. Use BuildKit cache mounts for the pnpm store.
 - **web**: Next.js `output: "standalone"`; copy only `.next/standalone`, `.next/static`, `public`. `NEXT_PUBLIC_*` must contain no secrets (and the web app needs no Supabase values at all).
-- **api**: compiled JS only; no TypeScript toolchain in runtime.
+- **api**: compiled JS only; no TypeScript toolchain in runtime. Native modules (`sharp`) must build and run on the chosen base for amd64 and arm64; otherwise use a glibc slim base (verify in the foundation spike).
+- **Runtime images delete npm, corepack and yarn** (`rm -rf /usr/local/lib/node_modules ...`): never needed at runtime, and the stock Node image's npm carries dependency CVEs (ADR 0008).
+- Base images use **literal `FROM` lines pinned by digest**; Dependabot cannot update an image referenced through an `ARG`.
+- Under `cap_drop: ALL`, binaries with file capabilities will not start (stock Caddy). Copy the binary (`cp` drops xattrs) or add back only the single capability needed.
+- Do not use tmpfs `uid=`/`gid=` options (not portable between Docker and Podman).
+- Trivy exceptions live in `.trivyignore.yaml` only, each with reason, path scope and an `expired_at`.
 - **Non-root**: `USER node` (or dedicated uid); files owned accordingly; read-only root filesystem where feasible with explicit writable tmp.
 - **Signals**: run with an init (`tini`/compose `init: true`); handle SIGTERM with graceful shutdown (close HTTP server, WebSockets, DB connections).
 - **No secrets** in `ARG`, `ENV`, or layers. Build-time secrets via BuildKit `--mount=type=secret`. Runtime config via environment from compose/CI.
@@ -22,7 +27,7 @@ One Dockerfile per deployable app: `apps/web/Dockerfile`, `apps/api/Dockerfile`.
 - Pinned image tags (digests for the bases we control) for every service; multi-arch (amd64 + arm64) must work.
 - Startup order by health, not sleep: `depends_on: condition: service_healthy`; `migrate` and `seed` are one-shot (`restart: "no"`, dependents wait on `service_completed_successfully`). Seed is idempotent and gated by a dev flag.
 - `.env.example` committed with obviously fake, dev-only values; compose has working defaults so no manual `.env` step is required for the reviewer path. Real secrets are never committed.
-- Named volumes for Postgres only; document `docker compose down -v` to reset.
+- Named volumes: Postgres data, and the `fs` file store (`/data/files`, mounted only into the api container). Document `docker compose down -v` to reset. Storage credentials for R2 are optional env vars, never in `.env.example` values.
 - `docker compose config` is validated in CI. Document RAM/disk needs and first-run time in the README.
 
 ## 3. CI: docker build step

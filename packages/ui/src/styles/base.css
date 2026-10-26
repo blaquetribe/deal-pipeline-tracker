@@ -1,0 +1,46 @@
+@layer base {
+  html {
+    min-height: 100%;
+    background: var(--ambient-base);
+  }
+
+  body {
+    min-height: 100vh;
+    margin: 0;
+    font-synthesis: none;
+    text-rendering: optimizelegibility;
+    -webkit-font-smoothing: antialiased;
+
+    @apply bg-canvas font-sans text-fg;
+  }
+
+  ::selection {
+    background: var(--brand-soft);
+  }
+
+  * {
+    @apply border-line outline-focus/50;
+  }
+
+  :focus-visible {
+    outline: 2px solid var(--focus);
+    outline-offset: 2px;
+  }
+}
+
+/*
+ * Reduced motion must beat inline and component animation durations, which
+ * is the one legitimate use of !important (docs/standards/MARKUP_STANDARDS.md).
+ */
+/* stylelint-disable declaration-no-important */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    scroll-behavior: auto !important;
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+/* stylelint-enable declaration-no-important */

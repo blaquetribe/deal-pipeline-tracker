@@ -9,6 +9,7 @@ Extends ENGINEERING_STANDARDS §8 (behaviour over implementation, deterministic,
 | Database | pgTAP via `supabase test db` | `supabase/tests/*.sql` | RLS per role and per tenant, grants, immutability, function privileges, hash chain, concurrency of decision functions |
 | Unit | **Vitest** (node) | co-located `*.test.ts` | Pure logic: stage machine mirror, quorum maths, token generation, money parsing, validators, email escaping |
 | Parity | Vitest + SQL tests sharing `packages/shared/fixtures` | shared + `supabase/tests` | TS mirrors and DB functions agree on the same cases (overlay E1) |
+| Design tokens | Vitest (node) | `packages/ui/src/styles/contrast.test.ts` | WCAG AA (4.5:1) for every text/surface pair, soft fills and status colours in both themes; fails if a token change breaks accessibility |
 | Component | **Vitest** + React Testing Library + jsdom + user-event | `apps/web` `*.test.tsx` | Behaviour, accessibility, states of client components and hooks |
 | API integration | Vitest + Hono `app.request()` against real Supabase Postgres | `apps/api` | Auth gating, permission checks, validation, error mapping, cross-tenant denial through the HTTP layer |
 | WebSocket | Vitest with real `ws` client against the running API | `apps/api` | Origin check, tenant binding, no cross-tenant events, reconnect/resync, revoke closes socket |
@@ -44,6 +45,8 @@ Extends ENGINEERING_STANDARDS §8 (behaviour over implementation, deterministic,
 - SoD and approvals: self-approval blocked, duplicate decision blocked, quorum reached exactly once under parallel transactions, stale `version` rejected.
 - Sessions: parallel requests across token expiry cause one refresh; revoking a session closes its sockets.
 - Compose: only the gateway publishes a host port.
+- Headers: CSP and hardening headers present on `/`, `/login` and `/api/health`; a headless load of the login page reports zero CSP violations.
+- Storage: the `ObjectStore` contract suite passes on the `fs` driver and, in CI, on the `s3` driver against a local S3-compatible container; cross-tenant file access returns 404; spoofed image types are rejected; stored avatars are always 256x256 WebP; an environment/bucket mismatch refuses to start.
 
 ## 6. CI wiring
 - Job `test`: install with frozen lockfile, `pnpm typecheck`, `lint`, `stylelint`, `format:check`, `pnpm test --coverage`.

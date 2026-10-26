@@ -20,12 +20,15 @@ Deal Pipeline Tracker: multi-tenant, realtime, auth-gated deal pipeline for a fi
 - Consequential rules (stage machine, quorum, SoD, immutability) are enforced in Postgres functions and privileges; TS copies are mirrors with parity tests.
 - Only the gateway publishes a host port. Supabase is never reachable from the host.
 - Tests are Vitest (unit and component) plus pgTAP; every app has a Dockerfile; CI builds, scans and smoke-tests the images.
+- `apps/api` is the BFF: the browser never talks to Supabase or to object storage. Files go through the `ObjectStore` port (fs default, Cloudflare R2 by config), authorised by the tenant-scoped `files` table, streamed through the BFF; no presigned URLs.
+- CSP (nonce-based, Next middleware) and hardening headers (gateway, Hono) are mandatory; no inline scripts, no third-party origins, no CSP report endpoint.
 
 ## Layout
 ```
 apps/web          Next.js UI (no Supabase)
 apps/api          Hono API + WebSocket (only Supabase client)
 packages/shared   zod schemas and types (the web/api contract)
+packages/ui       design layer: tokens, themes, materials, contrast test (Tailwind v4)
 gateway/          reverse proxy config (only published port)
 supabase/         migrations, seed, SQL tests
 .github/          CI workflows (test, test-db, docker)
@@ -40,4 +43,22 @@ docs/             handoff, progress, features/<NN-name>/, standards, brief, deci
 - If the plan conflicts with the brief or standards, stop and raise it; do not silently deviate. Record decisions as a new ADR in `docs/decisions/`.
 
 ## Commands
-Filled in during feature 00-foundation (install, dev, test, lint, typecheck, `docker compose up`, migrations).
+Node 24 (`.nvmrc`), pnpm 12 (no `-s` flag). From the repo root:
+
+```bash
+pnpm install            # frozen lockfile in CI
+pnpm typecheck          # tsc --noEmit in every workspace (TypeScript 7)
+pnpm lint               # oxlint --type-aware (boundaries, a11y, hooks rules)
+pnpm stylelint          # CSS in apps/web and packages/ui (Tailwind-aware)
+pnpm format:check       # oxfmt --check (pnpm format to fix; sorts imports and Tailwind classes)
+pnpm test               # Vitest, all projects (web, api, shared, ui)
+pnpm build              # next build + tsup
+```
+
+`make help` lists every developer target (also `make shellcheck`, `make ai-review-test`, `make ai-review-dry`; the AI review is documented in `.github/ai-review/README.md`). Highlights:
+
+Git hooks (Husky):
+
+Containers: `pnpm docker:build` builds the images; `pnpm compose:smoke` builds, starts the stack and tests it through the gateway (needs Docker or Podman with compose, plus `jq`). `docker compose up --build` starts the stack; only the gateway publishes a port (default 8080).
+
+Still to come in feature 00: Supabase stack in compose, `test:db`.

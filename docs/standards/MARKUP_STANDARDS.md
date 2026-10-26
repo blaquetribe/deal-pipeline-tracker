@@ -39,7 +39,7 @@ Applies to every JSX/TSX that renders HTML in `apps/web`, and to HTML emails ren
 - One component per file; PascalCase component files, kebab-case for everything else (base §2.2). Props typed explicitly; no `any`; no spreading unknown props onto DOM elements.
 - Stable `key`s from ids, never array index for reorderable lists.
 - No `dangerouslySetInnerHTML` (security). User text (notes, names) renders as plain text only.
-- No inline `style` except to set a CSS custom property for a dynamic value. Styles come from CSS Modules and tokens (overlay E3).
+- No inline `style` (a CSP `style-src` concern). Styling is Tailwind semantic utilities from the `packages/ui` token layer (overlay E3); use `style` only to set a CSS custom property for a genuinely dynamic value. Never use raw colour values in class names (`bg-[#fff]`).
 - No direct DOM manipulation; effects only for synchronisation with external systems; derived state is computed, not stored.
 - Links to external sites: `rel="noopener noreferrer"`. Internal navigation via the framework `Link`.
 - Use `data-testid` only when no role/label/text query is possible (see TESTING_STANDARDS).
@@ -52,7 +52,13 @@ Applies to every JSX/TSX that renders HTML in `apps/web`, and to HTML emails ren
 - Invitation email names the inviter (verified email) and states that the organisation name is self-declared.
 - Tests: unit tests assert escaping (e.g. `<script>` in a tenant name), presence of the text part, and link shape; the Mailpit inbox is the manual check.
 
-## 8. Checklist (copy into PRs touching markup)
+## 8. Avatars and images
+- The avatar component renders an `img` (served by the BFF at `/api/users/:id/avatar?v=<hash>`) or generated initials. Initials are decorative (`aria-hidden`) when the person's name appears as text beside them; otherwise the avatar has an accessible name.
+- Initials colours come from tokens and meet AA contrast; colour is deterministic per user id.
+- Images set `width`/`height` to avoid layout shift, `alt=""` when decorative, and `loading="lazy"` below the fold. Image sources are same-origin only (CSP `img-src 'self' data: blob:`).
+- Upload UI: a labelled file input with accepted types and size shown as text, progress and errors announced in a live region, and preview via `blob:` URL revoked on unmount.
+
+## 9. Checklist (copy into PRs touching markup)
 - [ ] Semantic elements; one `main`/`h1`; heading order correct
 - [ ] Keyboard path and visible focus for every interaction
 - [ ] Labels, errors, `autocomplete` on forms

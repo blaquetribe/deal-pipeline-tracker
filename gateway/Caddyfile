@@ -1,0 +1,36 @@
+{
+	admin off
+	auto_https off
+}
+
+:8080 {
+	encode zstd gzip
+
+	header {
+		X-Content-Type-Options nosniff
+		Referrer-Policy strict-origin-when-cross-origin
+		Permissions-Policy "camera=(), microphone=(), geolocation=(), payment=()"
+		Cross-Origin-Opener-Policy same-origin
+		-Server
+	}
+
+	# Clients must never set internal framework headers (Next.js middleware-bypass advisory).
+	request_header -x-middleware-subrequest
+
+	# Data-free liveness for the gateway itself.
+	handle /healthz {
+		respond "ok" 200
+	}
+
+	# The BFF owns /api and /ws; the prefix is stripped for /api.
+	handle_path /api/* {
+		reverse_proxy api:3001
+	}
+	handle /ws {
+		reverse_proxy api:3001
+	}
+
+	handle {
+		reverse_proxy web:3000
+	}
+}

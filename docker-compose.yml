@@ -1,0 +1,73 @@
+name: deal-pipeline-tracker
+
+# Only the gateway publishes a host port. Everything else is reachable only on
+# the compose networks (docs/standards/CONTAINER_STANDARDS.md).
+
+x-hardening: &hardening
+  init: true
+  read_only: true
+  cap_drop: [ALL]
+  security_opt: ['no-new-privileges:true']
+  restart: unless-stopped
+
+services:
+  gateway:
+    <<: *hardening
+    build:
+      context: .
+      dockerfile: gateway/Dockerfile
+    image: dpt-gateway:local
+    ports:
+      - '${GATEWAY_PORT:-8080}:8080'
+    tmpfs: [/tmp]
+    networks: [edge]
+    depends_on:
+      web: { condition: service_healthy }
+      api: { condition: service_healthy }
+    healthcheck:
+      test: ['CMD', 'wget', '-q', '--spider', 'http://127.0.0.1:8080/healthz']
+      interval: 10s
+      timeout: 3s
+      retries: 5
+      start_period: 3s
+
+  web:
+    <<: *hardening
+    build:
+      context: .
+      dockerfile: apps/web/Dockerfile
+    image: dpt-web:local
+    environment:
+      PORT: '3000'
+      HOSTNAME: 0.0.0.0
+    # Next writes its runtime cache here; everything else stays read-only.
+    tmpfs: [/tmp, /app/apps/web/.next/cache]
+    networks: [edge]
+    expose: ['3000']
+    healthcheck:
+      test: ['CMD', 'wget', '-q', '--spider', 'http://127.0.0.1:3000/']
+      interval: 10s
+      timeout: 3s
+      retries: 5
+      start_period: 10s
+
+  api:
+    <<: *hardening
+    build:
+      context: .
+      dockerfile: apps/api/Dockerfile
+    image: dpt-api:local
+    environment:
+      PORT: '3001'
+    tmpfs: [/tmp]
+    networks: [edge]
+    expose: ['3001']
+    healthcheck:
+      test: ['CMD', 'wget', '-q', '--spider', 'http://127.0.0.1:3001/health']
+      interval: 10s
+      timeout: 3s
+      retries: 5
+      start_period: 5s
+
+networks:
+  edge: {}

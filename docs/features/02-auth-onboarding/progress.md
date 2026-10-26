@@ -5,11 +5,11 @@ Owner/branch: feat/02-auth-onboarding
 Depends on: 01
 
 ## Goal
-Sign-up with verification, sessions, tenant switcher, invitations, Mailer. Covers GOTCHAS rows 1, 5, 14, 18.
+Sign-up with verification, sessions, tenant switcher, invitations, Mailer. Covers GOTCHAS rows 1, 5, 14, 18, 21, 24, 28, 29, 31, 41.
 
 ## Scope
-- In:
-- Out (and where it goes):
+- In: sign-up, email verification, login, **password reset** (token flow; the mockup shows "Forgot password?" but nothing designs it), server-side sessions with single-flight refresh, tenant switcher, invitations, Mailer and Mailpit, rate limits, nonce-based CSP in Next `proxy.ts` (headers only; mechanism confirmed in the installed Next docs, proven by a test here), signed-out route sweep, and the registration onboarding flow (owner and invitee) designed in `onboarding-flow.md`. No SSO, no magic link.
+- Out (and where it goes): avatars (08), approvals (04).
 
 ## Design notes
 Key decisions, schema/API shape, links to ADRs.

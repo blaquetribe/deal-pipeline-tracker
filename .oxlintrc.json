@@ -1,0 +1,102 @@
+{
+  "$schema": "./node_modules/oxlint/configuration_schema.json",
+  "plugins": ["typescript", "react", "jsx-a11y", "import", "oxc", "unicorn", "vitest"],
+  "categories": {
+    "correctness": "error",
+    "suspicious": "error",
+    "perf": "warn"
+  },
+  "options": {
+    "typeAware": true
+  },
+  "ignorePatterns": [
+    "**/node_modules/**",
+    "**/dist/**",
+    "**/.next/**",
+    "**/coverage/**",
+    "docs/**"
+  ],
+  "rules": {
+    "typescript/consistent-type-imports": "error",
+    "typescript/no-floating-promises": "error",
+    "typescript/no-explicit-any": "error",
+    "typescript/no-non-null-assertion": "error",
+    "import/no-cycle": "error",
+    "import/no-duplicates": "error",
+    "eqeqeq": "error",
+    "no-console": "off",
+    "react/react-in-jsx-scope": "off",
+    "import/no-unassigned-import": "off",
+    "no-restricted-properties": [
+      "error",
+      { "object": "it", "property": "only", "message": "Remove .only before committing." },
+      { "object": "test", "property": "only", "message": "Remove .only before committing." },
+      { "object": "describe", "property": "only", "message": "Remove .only before committing." }
+    ]
+  },
+  "overrides": [
+    {
+      "files": ["packages/**/*.ts"],
+      "rules": {
+        "no-restricted-imports": [
+          "error",
+          {
+            "patterns": [
+              {
+                "group": ["@supabase/*"],
+                "message": "Supabase may only be imported under apps/api/src/auth and apps/api/src/db."
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "files": ["apps/api/**/*.ts"],
+      "rules": {
+        "no-restricted-imports": [
+          "error",
+          {
+            "patterns": [
+              {
+                "group": ["@supabase/*"],
+                "message": "Supabase may only be imported under apps/api/src/auth and apps/api/src/db."
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "files": ["apps/api/src/auth/**", "apps/api/src/db/**"],
+      "rules": { "no-restricted-imports": "off" }
+    },
+    {
+      "files": ["apps/web/**/*.{ts,tsx}"],
+      "rules": {
+        "react/no-danger": "error",
+        "react/rules-of-hooks": "error",
+        "react/exhaustive-deps": "error",
+        "no-restricted-imports": [
+          "error",
+          {
+            "patterns": [
+              {
+                "group": ["@supabase/*"],
+                "message": "apps/web must never import Supabase. Talk to the API (BFF) instead."
+              },
+              {
+                "group": ["**/features/*/*"],
+                "message": "Import a feature through its index.ts, not its internals."
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "files": ["**/*.test.ts", "**/*.test.tsx"],
+      "rules": { "typescript/no-non-null-assertion": "off" }
+    }
+  ]
+}

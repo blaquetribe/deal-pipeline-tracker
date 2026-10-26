@@ -1,9 +1,85 @@
+# Dependencies
 node_modules/
-.env
-.env.local
+.pnpm-store/
+.pnp.*
+.yarn/
+
+# Build output
 .next/
+out/
 dist/
+build/
 .turbo/
+*.tsbuildinfo
+next-env.d.ts
+
+# Environment and secrets (only the example file is committed)
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+*.p12
+*.crt
+secrets/
+service-account*.json
+
+# Test, coverage and reports
 coverage/
-.DS_Store
+.nyc_output/
+playwright-report/
+test-results/
+.vitest-cache/
+junit.xml
+
+# Logs and runtime files
+logs/
+*.log
+npm-debug.log*
+pnpm-debug.log*
+*.pid
+
+# Supabase local state (migrations, seed and tests ARE committed)
 supabase/.temp/
+supabase/.branches/
+supabase/volumes/
+supabase/.env
+
+# Docker and compose local state
+docker-compose.override.yml
+compose.override.yml
+.docker-cache/
+volumes/
+pgdata/
+
+# Local mail/uploads/data created while running the stack
+mailpit-data/
+uploads/
+tmp/
+.cache/
+
+# Editors and OS
+.DS_Store
+.idea/
+.vscode/*
+!.vscode/extensions.json
+!.vscode/settings.json
+*.swp
+*.swo
+Thumbs.db
+
+# Claude Code: personal/local state is ignored; shared project config
+# (.claude/settings.json, commands, agents, hooks) is committed
+.claude/settings.local.json
+.claude/worktrees/
+.claude/scheduled_tasks.lock
+CLAUDE.local.md
+
+# Scratch files
+scratch/
+*.orig
+*.rej
+
+# Written by `next dev` from a dependency (generated agent instructions). Our own
+# AGENTS.md files are the only authoritative ones, so this is never committed.
+apps/web/AGENTS.md

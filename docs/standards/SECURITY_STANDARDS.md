@@ -25,7 +25,7 @@ Financial deal data, multi-tenant. Fail closed. Every rule below needs a test or
 - A test enumerates every registered route and asserts 401 when signed out unless allowlisted.
 - `/ws`: authenticated on upgrade (cookie), Origin validated (prevents cross-site WebSocket hijacking), bound to one tenant, message schema validated, size and rate limited.
 - **Network exposure:** only the gateway publishes a host port. Postgres, Auth, PostgREST/Kong, Realtime, Studio, Mailpit and the API sit on internal networks. A test inspects the resolved compose config and fails if any other port is published.
-- Next.js middleware is UX only (redirects), never the authorization boundary. Pin a patched Next.js version (verify the fix version for the March 2025 middleware-bypass advisory, CVE-2025-29927, when pinning) and have the gateway strip client-supplied internal headers such as `x-middleware-subrequest`.
+- Next.js `proxy.ts` (formerly middleware) is UX only (redirects), never the authorization boundary. Pin a patched Next.js version (verify the fix version for the March 2025 middleware-bypass advisory, CVE-2025-29927, when pinning) and have the gateway strip client-supplied internal headers such as `x-middleware-subrequest`.
 
 ## Multi-tenancy
 - `tenant_id NOT NULL` on every business table. RLS enabled AND forced.
@@ -68,7 +68,29 @@ Financial deal data, multi-tenant. Fail closed. Every rule below needs a test or
 - Output encoding by React; no `dangerouslySetInnerHTML`. Note bodies treated as plain text.
 - Error responses carry a code and message, never stack traces, SQL, or internal ids not already authorised.
 - Logs: no passwords, tokens, cookies, or full request bodies. Include request id, tenant id, user id.
-- File uploads (stretch): type/size allowlist, tenant-scoped storage, virus-scan note, never executed or served inline from the app origin.
+- File uploads: see "Files and object storage" below.
+
+## Browser security headers and CSP
+- **Pages:** a nonce-based CSP set per request by Next `proxy.ts` (Next 16's name for middleware; headers only, and still not an authorization boundary):
+  `default-src 'self'; script-src 'self' 'nonce-<n>' 'strict-dynamic'; style-src 'self' 'nonce-<n>'; img-src 'self' data: blob:; connect-src 'self' <ws origin from config>; font-src 'self'; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'`.
+  `'unsafe-eval'` only in development builds. Do not add `upgrade-insecure-requests` until TLS terminates in front of the gateway (local dev is plain HTTP). No inline event handlers, no third-party origins, fonts self-hosted.
+- **API responses (Hono):** `Content-Security-Policy: default-src 'none'; frame-ancestors 'none'`, `X-Content-Type-Options: nosniff`, and `Cache-Control: no-store` on authenticated JSON.
+- **Gateway, every response:** `nosniff`, `Referrer-Policy: strict-origin-when-cross-origin`, a `Permissions-Policy` disabling camera, microphone, geolocation and payment, `Cross-Origin-Opener-Policy: same-origin`, HSTS when served over TLS.
+- The WebSocket origin in `connect-src` is explicit from config; do not rely on `'self'` matching `ws:`/`wss:` in every browser (verify in the spike).
+- **Theme without inline script:** the light/dark class is set server-side from a `theme` cookie in the root layout, so no anti-flash inline script is needed and the CSP stays free of script exceptions. Tailwind emits a stylesheet, so no inline styles are required.
+- **No CSP report endpoint:** it would be an unauthenticated write route. Violations are caught in CI by a headless page load that fails on any CSP console violation. Reporting is a README next step.
+- Tests: policy-builder unit tests; compose smoke asserts the headers on `/`, `/login` and `/api/health`; headless load has zero violations.
+
+## Files and object storage
+- **BFF rule:** the browser never talks to storage. All file bytes pass through the Hono BFF (uploads and downloads streamed). No presigned URLs, no public bucket, no storage origin in the CSP.
+- **One `ObjectStore` port** in `apps/api` with two drivers: `fs` (default, compose named volume) and `s3` (Cloudflare R2 via the S3 API, config only). One contract test suite runs against both. CI holds no storage credentials; real R2 is a documented manual check.
+- **Buckets:** separate dev and prod buckets with separate bucket-scoped API tokens (object read/write only, no admin). Config declares the environment and the app refuses to start on a mismatch (for example the prod bucket in a non-production environment).
+- **Keys** are server-derived, never client-supplied: `tenants/{tenant_id}/{kind}/{uuid}` for account files; `users/{user_id}/avatar/{uuid}` for avatars (a user belongs to many tenants, so avatars are user-level).
+- **Authorization is the `files` row** (RLS, `tenant_id`), not the key. Objects are readable only when a `ready` row exists and the caller may see it. An avatar is visible only to viewers who share at least one tenant with its owner.
+- **Uploads:** allowlist by detected content (magic bytes), size cap, filename never used as a path. Images are decoded and re-encoded (avatars: PNG/JPEG/WebP in, 256x256 WebP out, EXIF stripped; no SVG, no animated GIF). Documents are served with `Content-Disposition: attachment` and `nosniff`, never inline from the app origin.
+- **Consistency:** write the object, insert the row as `pending`, mark it `ready`; a cleanup job removes orphans. Objects are content-addressed (sha256) and never overwritten; ledger events reference file id and sha256.
+- **Hardening to evaluate:** R2 bucket retention/object lock; per-tenant encryption keys (next step). R2 encrypts at rest by default (verify).
+- **Tests:** cross-tenant file request returns 404; avatar visibility rule; an SVG or HTML file named `.png` is rejected; oversize rejected; stored avatar is always 256x256 WebP; bucket/environment mismatch refuses to start.
 
 ## Secrets and supply chain
 - No real secrets in the repo or history. `.env.example` holds clearly fake dev-only values; real deployments inject their own.
@@ -87,3 +109,5 @@ Financial deal data, multi-tenant. Fail closed. Every rule below needs a test or
 - [ ] New functions are revoked from PUBLIC/anon with explicit grants; no direct write grants added on core tables.
 - [ ] No new published host ports (only the gateway).
 - [ ] Email and HTML templates escape every interpolated value.
+- [ ] Files go through the `ObjectStore` port and the BFF; the browser never reaches storage; no new origin in the CSP.
+- [ ] CSP and security headers still present on pages, API and gateway responses.
