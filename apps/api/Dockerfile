@@ -6,7 +6,10 @@ ENV PNPM_HOME=/pnpm \
     PATH=/pnpm:$PATH \
     HUSKY=0 \
     CI=true
-RUN corepack enable
+# Node 25+ images no longer bundle Corepack, so pnpm is installed directly. Keep the version equal
+# to "packageManager" in package.json (scripts/dockerfile-pnpm.test.mjs enforces it).
+ARG PNPM_VERSION=12.3.4
+RUN npm install --global "pnpm@${PNPM_VERSION}"
 WORKDIR /repo
 
 # Install with only the manifests copied, so source changes do not bust this layer.
