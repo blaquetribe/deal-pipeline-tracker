@@ -166,7 +166,7 @@ Supabase (Postgres, Auth, Realtime, Mailpit) is on an internal network and never
 - **One public port:** only the Caddy gateway publishes a port; web and API are reachable only through it. `scripts/compose-smoke.sh` proves this and fails if a port leaks (we tested that it does).
 - **Found by running, not reading:** `cap_drop: ALL` made the stock Caddy image fail to start because of a file capability on its binary; fixed without weakening hardening. Trivy also found Go CVEs in the upstream Caddy binary; they are tracked with reasons and a 2026-11-30 expiry.
 - **Delivery path:** first-party actions pinned to SHAs, tool images pinned by digest, gitleaks, hadolint, Trivy, smoke test, and publishing only from main/tags after every gate.
-- **Honest limits:** locally verified on Podman (arm64); the first GitHub run (real Docker, amd64) was green end to end. Unproven until the first merge: the publish job (multi-arch, SBOM/provenance, GHCR push).
+- **Honest limits:** locally verified on Podman (arm64); the first GitHub run (real Docker, amd64) was green end to end. The publish job also ran green on the merge to main: three images for amd64 and arm64 with SBOM and provenance, pushed to GHCR.
 
 ## H. UI direction and AI review (ADRs 0009-0010)
 - **Mockup as inspiration, applied with judgement:** we kept its structure (nav, dashboard, deal list, detail, audit timeline, mobile stage selector) and re-derived the rest. We measured its palette: gold text on white 2.10:1, white on its green 2.54:1, gray placeholder 2.56:1, light border 1.23:1 all fail WCAG AA. Our contrast test now guards the re-derived tokens.

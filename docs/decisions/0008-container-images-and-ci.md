@@ -44,3 +44,8 @@ Ubuntu runners (amd64, real Docker with BuildKit) ran every job green in about t
 Now verified: amd64, BuildKit, GHA cache, Trivy in CI, commitlint range, the smoke test on a real Docker engine. The same Dockerfiles passed on Podman and on Docker.
 
 **Still unproven:** the `publish` job (QEMU multi-arch build, SBOM and provenance attestations, GHCR push and the `packages: write` permission). It will first run on the merge to `main`; expect small fixes there. Docker Desktop on a reviewer's machine remains untested (Podman locally, Linux Docker in CI).
+
+## Update 2026-10-26: the publish job ran on merge to main
+PR #1 was merged with a merge commit (`29eb2c7`) and the `main` run was green end to end, including all three `publish` jobs. From the job logs: `platforms: linux/amd64,linux/arm64` (QEMU multi-arch), an SBOM generated per platform, provenance and SBOM attestation manifests exported, layers and manifests pushed, no errors, and each image tagged `ghcr.io/blaquetribe/deal-pipeline-tracker/<web|api|gateway>:latest` and `:sha-29eb2c7`.
+
+Now verified: the multi-arch build, attestations, the `packages: write` permission and the GHCR push. **Not independently verified:** that the packages are visible and pullable from outside the workflow (the local `gh` token lacks `read:packages`; packages from a private repository are private by default). Runner note: GitHub is migrating `ubuntu-latest` to Ubuntu 26 (an annotation on every job); pin or test it before it flips.

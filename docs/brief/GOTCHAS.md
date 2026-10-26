@@ -75,7 +75,7 @@ Each row: what the brief says, the trap, how we handle it, which feature owns it
 | 57 | The Node base image bundles npm, whose dependencies carry HIGH CVEs. | Delete npm/corepack/yarn from the runtime image (never needed there); scans clean. | 00 |
 | 58 | Upstream Caddy binary has HIGH Go-stdlib CVEs with no rebuilt image. | `.trivyignore.yaml` entries with reason, scope and expiry 2026-11-30; CDN/WAF note; Dependabot bump removes them. | 00 |
 | 59 | Dependabot cannot see a base image behind `ARG` in `FROM`. | Literal digest-pinned `FROM` lines. | 00 |
-| 60 | Local engine is Podman (no BuildKit, no buildx, arm64, 4 GiB VM); CI is real Docker. | Document it; the first CI run (real Docker, amd64) was green, so only the `publish` job remains unproven; measure Supabase stack memory before promising one-command setup. | 00, 06 |
+| 60 | Local engine is Podman (no BuildKit, no buildx, arm64, 4 GiB VM); CI is real Docker. | Document it; the first CI run (real Docker, amd64) and the publish job on merge were both green; measure Supabase stack memory before promising one-command setup. | 00, 06 |
 | 61 | tmpfs `uid=` options are not portable across Docker and Podman. | Use default tmpfs; no ownership options. | 00 |
 | 62 | In Next 16 `middleware` is renamed `proxy` (`proxy.ts`); our notes said middleware. | Corrected in living docs, recorded in ADR 0009. | 02 |
 | 63 | Nonce CSP needs dynamic rendering; Next's example includes `upgrade-insecure-requests`, which breaks plain-HTTP localhost. | Layout is dynamic (theme cookie); omit the directive until TLS fronts the gateway; prove with a test. | 02 |

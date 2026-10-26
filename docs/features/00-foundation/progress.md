@@ -36,7 +36,7 @@ Part 2 (not started):
 - [x] Makefile (`make help`): dev, check, up/down/smoke, hadolint, trivy, secrets, actionlint, ci-local; all targets run locally
 - [x] Advisory AI review workflow, scripts and 30 offline tests (ADR 0010); shellcheck gate; live run pending the owner's Cloudflare secrets
 - [x] CI first-run verification on GitHub: green
-- [ ] (part 2b) `publish` job proven on the first merge to main or tag
+- [x] `publish` job proven on the merge to main: 3 images, amd64 and arm64, SBOM and provenance, tags `latest` and `sha-29eb2c7`
 - [ ] Spikes: WebSocket through gateway, Realtime with server-held JWT, sharp on Alpine/arm64, S3-compatible container for CI
 - [ ] `.claude/` project hooks/commands
 
