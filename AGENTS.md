@@ -15,7 +15,7 @@ Deal Pipeline Tracker: multi-tenant, realtime, auth-gated deal pipeline for a fi
 - Notes, approval decisions and other audit records are append-only and must be unmodifiable by any role, including owner and service role.
 - Schema changes only via new migration files in `supabase/migrations`. Never edit applied migrations, never use Studio or ad-hoc SQL.
 - Everything is tenant-scoped. Never trust client-supplied tenant, author, role, or timestamps.
-- No secrets in the repo. No floats for money.
+- No secrets in the repo: `.env.example` holds placeholders only (the commit hook, CI and `make env-check` enforce it); real values live in the untracked `.env`. No floats for money.
 - Fail closed: no auto-approvals, no default-allow.
 - Consequential rules (stage machine, quorum, SoD, immutability) are enforced in Postgres functions and privileges; TS copies are mirrors with parity tests.
 - Only the gateway publishes a host port. Supabase is never reachable from the host.
@@ -61,4 +61,4 @@ Git hooks (Husky):
 
 Containers: `pnpm docker:build` builds the images; `pnpm compose:smoke` builds, starts the stack and tests it through the gateway (needs Docker or Podman with compose, plus `jq`). `docker compose up --build` starts the stack; only the gateway publishes a port (default 8080).
 
-Still to come in feature 00: Supabase stack in compose, `test:db`.
+Database: `make test-db` starts the database, applies `supabase/migrations`, and runs the pgTAP tests in `supabase/tests`. `make env` writes random per-machine secrets into the untracked `.env` (optional; compose has dev-only defaults). Mailpit's inbox is at http://localhost:8080/mail/ in the dev stack. `supabase/gateway` and `supabase/db` are vendored (see `supabase/UPSTREAM.md`); change them through `scripts/vendor-supabase.py`, not by hand.

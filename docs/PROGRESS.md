@@ -5,7 +5,7 @@ Tier: **core** (must ship), **extended** (ship if time allows, else README note)
 
 | # | Feature | Folder | Tier | Depends on | Status |
 |---|---|---|---|---|---|
-| 00 | Foundation: monorepo, tooling, compose, CI | `docs/features/00-foundation` | core | none | in progress (2a done: tooling, design layer, hooks, Dockerfiles, gateway, compose, CI written; 2b next: Supabase stack, `test-db`, spikes, first CI run) |
+| 00 | Foundation: monorepo, tooling, compose, CI | `docs/features/00-foundation` | core | none | in progress (2a and 2b done locally: tooling, compose with the Supabase stack, `test-db`, spikes, `.claude/`; first CI run of the new jobs pending, branch not pushed) |
 | 01 | Schema and security: tenants, memberships, permissions, roles, deals, notes, RLS, immutability, SQL tests | `docs/features/01-schema-security` | core | 00 | not started |
 | 02 | Auth and onboarding: sign-up, verification, login, sessions, tenant switcher, invitations, Mailer | `docs/features/02-auth-onboarding` | core | 01 | not started |
 | 03 | Deals core: CRUD, stage machine, notes, pipeline overview, closing soon | `docs/features/03-deals-core` | core | 01, 02 | not started |
@@ -36,6 +36,8 @@ Anything cut must be written in the README "what I'd do next" section.
 - ADR 0005-0007: oxlint/oxfmt + hooks, Tailwind + `packages/ui` design layer, TanStack Query kept over alova; onboarding flow designed (feature 02).
 - ADR 0008: Dockerfiles, Caddy gateway, hardened compose, smoke test and CI written and verified locally on Podman; the workflow has not run on GitHub.
 - First CI run on PR #1 green (every job; publish skipped by design).
+- PR #1 merged (`29eb2c7`); the publish job on main was green: 3 images, amd64 and arm64, SBOM and provenance, pushed to GHCR (ADR 0008 update).
+- Coverage implemented (ADR 0012); env-template secret guard added after real-looking R2 credentials appeared in the tracked `.env.example` working tree (never staged or pushed; moved to the gitignored `.env`); owner's R2 layout recorded (ADR 0004 update); Supabase stack measured and trimmed design decided (ADR 0013).
 - AI PR review: GitHub Models found retired (ADR 0010 corrected); advisory review built on Cloudflare Workers AI with 30 offline tests, shellcheck and actionlint clean; live run pending the owner's secrets.
 - Closing soon designed and confirmed by the owner (ADR 0011): live countdown with hours on the final day, 60-day window, alerts at 5 days, 1 day and overdue to the assigned team, in-app plus email digest with deal details and link; design in `docs/features/03-deals-core/closing-soon.md`.
 - Mockup reviewed (ADR 0009); AI PR-review options researched (ADR 0010, proposed); Makefile added; PR #1 opened to trigger the first CI run.

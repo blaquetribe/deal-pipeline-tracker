@@ -19,16 +19,17 @@ ACTIONLINT_IMAGE := rhysd/actionlint@sha256:b1934ee5f1c509618f2508e6eb47ee0d3520
 
 DOCKERFILES := apps/api/Dockerfile apps/web/Dockerfile gateway/Dockerfile
 IMAGES      := api web gateway
-SHELL_SCRIPTS := .github/ai-review/review.sh .github/ai-review/post-comment.sh .github/ai-review/test.sh scripts/compose-smoke.sh
+SHELL_SCRIPTS := .github/ai-review/review.sh .github/ai-review/post-comment.sh .github/ai-review/test.sh scripts/compose-smoke.sh \
+              supabase/migrate.sh supabase/tests/run.sh supabase/gateway/healthcheck.sh supabase/gateway/docker-entrypoint.sh
 SCAN_DIR    := $(CURDIR)/.cache/scan
 
 # Fail with a clear message if a pinned image could not be read from the workflow.
 need = $(if $($(1)),,$(error $(1) is empty: could not read it from .github/workflows/ci.yml))
 
-.PHONY: help install hooks dev check typecheck lint lint-fix stylelint format format-check \
+.PHONY: help install hooks env test-db vendor-supabase dev check typecheck lint lint-fix stylelint format format-check \
         test test-watch coverage build clean distclean \
         up down restart logs ps images smoke \
-        hadolint trivy secrets actionlint shellcheck ai-review-test ai-review-dry ci-local
+        hadolint trivy secrets env-check actionlint shellcheck ai-review-test ai-review-dry ci-local
 
 help: ## List the available targets
 	@awk 'BEGIN {FS = ":.*## "} /^[a-zA-Z0-9_-]+:.*## / {printf "  \033[36m%-14s\033[0m %s\n", $$1, $$2}' $(MAKEFILE_LIST)
@@ -39,6 +40,9 @@ install: ## Install dependencies (frozen lockfile) and git hooks
 
 hooks: ## (Re)install the Husky git hooks
 	pnpm exec husky
+
+env: ## Write random per-machine dev secrets into the untracked .env (optional; compose has dev defaults)
+	node scripts/gen-dev-env.mjs
 
 ## ---- Develop ----------------------------------------------------------------
 dev: ## Run web and api in watch mode (Ctrl-C to stop)
@@ -71,7 +75,7 @@ test: ## Vitest, all projects
 test-watch: ## Vitest in watch mode
 	pnpm test:watch
 
-coverage: ## Vitest with coverage
+coverage: ## Vitest with coverage and thresholds (HTML report: coverage/index.html)
 	pnpm test:coverage
 
 build: ## Build web (Next) and api (tsup)
@@ -101,8 +105,17 @@ ps: ## Show service status and published ports
 images: ## Build the three images
 	$(COMPOSE) build
 
-smoke: ## Build, start and test the stack through the gateway, then tear down
+smoke: ## Build, start and test the whole stack, then tear it down
 	scripts/compose-smoke.sh
+
+test-db: ## Start the database, apply migrations, run the pgTAP tests (leaves the db running; make down)
+	$(COMPOSE) up -d --wait db
+	$(COMPOSE) run --rm migrate
+	$(COMPOSE) exec -T db sh /tests/run.sh
+
+vendor-supabase: ## Re-vendor the Supabase gateway and init files: make vendor-supabase UPSTREAM=<supabase checkout>
+	@test -n "$(UPSTREAM)" || { echo 'usage: make vendor-supabase UPSTREAM=<path to a supabase/supabase checkout>'; exit 1; }
+	python3 -I scripts/vendor-supabase.py "$(UPSTREAM)"
 
 ## ---- Security and CI parity (run in pinned containers) -----------------------
 hadolint: ## Lint the Dockerfiles
@@ -129,6 +142,9 @@ secrets: ## Scan git history for secrets
 	$(call need,GITLEAKS_IMAGE)
 	docker run --rm -v $(CURDIR):/repo $(GITLEAKS_IMAGE) git /repo --redact
 
+env-check: ## Fail if .env.example contains anything but placeholders
+	node scripts/check-env-example.mjs
+
 actionlint: ## Lint the GitHub Actions workflows
 	docker run --rm -v $(CURDIR):/repo -w /repo $(ACTIONLINT_IMAGE) -color=false
 
@@ -142,4 +158,4 @@ ai-review-test: ## Test the AI review scripts offline against a mock API
 ai-review-dry: ## Show what the AI review would send and cost for this branch (no network)
 	BASE_SHA=$$(git merge-base origin/main HEAD) HEAD_SHA=$$(git rev-parse HEAD) DRY_RUN=1 .github/ai-review/review.sh
 
-ci-local: check shellcheck ai-review-test hadolint
+ci-local: check env-check shellcheck ai-review-test hadolint actionlint secrets test-db smoke trivy ## Everything CI runs, locally

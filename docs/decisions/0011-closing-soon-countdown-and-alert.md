@@ -28,3 +28,6 @@ Who "the team" is, hours on the final day, company names in the email body, furt
 4. **More thresholds: yes.** Defaults become **5 days, 1 day and overdue** (one alert when the close date/time passes while the deal is active). Dedupe keys: `d5` and `d1` are per (deal, close date, threshold), so editing only the time does not duplicate them; `overdue` is per (deal, close date, close time).
 
 Consequences: a new optional field and DST/clock-skew tests; the overdue alert can arrive up to an hour late because the scan is hourly (accepted). The design doc is updated accordingly.
+
+## Update 2026-10-26: scheduler verified
+`pg_cron` 1.6.4 is available in the Supabase Postgres 17.6 image and is already in `shared_preload_libraries`, so the hourly `scan_closing_soon` can be a database job enabled by a migration; the BFF-timer fallback is not needed. `pgcrypto` (SHA-256 verified) and `pgTAP` are also available. Evidence: `docs/features/00-foundation/supabase-stack.md`.

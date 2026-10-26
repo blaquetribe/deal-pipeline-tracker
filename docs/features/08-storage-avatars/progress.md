@@ -12,7 +12,7 @@ Object storage behind one `ObjectStore` port (fs default, Cloudflare R2 via S3 A
 - Out (and where it goes): tenant logos (not planned); presigned URLs, per-tenant encryption keys, virus scanning (README next steps); document extraction (07).
 
 ## Design notes
-Key decisions, schema/API shape, links to ADRs.
+Config (ADR 0004 update): `OBJECT_STORE_DRIVER=fs|s3`, `STORAGE_ENDPOINT` (account endpoint, no bucket), `STORAGE_REGION` (`auto`, verify), `STORAGE_BUCKET=deal-pipeline-tracker`, `STORAGE_KEY_PREFIX=Dev/|Prod/`, `STORAGE_FORCE_PATH_STYLE`, `STORAGE_ACCESS_KEY_ID`, `STORAGE_SECRET_ACCESS_KEY`. Startup guard: prefix must match the environment. No public bucket URL. Needs a dedicated token (see HANDOFF).
 
 ## Tasks
 - [ ] Failing tests written (security/negative first)

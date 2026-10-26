@@ -42,11 +42,24 @@ jobs:
         run: pnpm exec commitlint --from "${{ github.event.pull_request.base.sha }}" --to "${{ github.event.pull_request.head.sha }}"
       - run: pnpm typecheck
       - run: pnpm lint
+      - name: Env template holds placeholders only
+        run: node scripts/check-env-example.mjs
       - run: pnpm stylelint
       - run: pnpm format:check
       - run: pnpm test:coverage
+      - name: Coverage summary
+        if: always()
+        run: node scripts/coverage-summary.mjs >> "$GITHUB_STEP_SUMMARY"
+      - name: Upload coverage report
+        if: always()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: coverage
+          path: coverage
+          retention-days: 14
+          if-no-files-found: warn
       - name: shellcheck (warnings and errors)
-        run: docker run --rm -v "$PWD":/mnt -w /mnt "$SHELLCHECK_IMAGE" -S warning .github/ai-review/review.sh .github/ai-review/post-comment.sh .github/ai-review/test.sh scripts/compose-smoke.sh
+        run: docker run --rm -v "$PWD":/mnt -w /mnt "$SHELLCHECK_IMAGE" -S warning .github/ai-review/review.sh .github/ai-review/post-comment.sh .github/ai-review/test.sh scripts/compose-smoke.sh supabase/migrate.sh supabase/tests/run.sh supabase/gateway/healthcheck.sh supabase/gateway/docker-entrypoint.sh
       - name: AI review tooling tests (offline, mock API)
         run: .github/ai-review/test.sh
       - run: pnpm build
@@ -110,11 +123,23 @@ jobs:
       - name: Clean-clone path through the gateway
         run: scripts/compose-smoke.sh
 
+  test-db:
+    name: Database tests (pgTAP)
+    needs: quality
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - name: Migrate a clean database and run the pgTAP tests
+        run: make test-db
+      - name: Show database logs on failure
+        if: failure()
+        run: docker compose logs --no-color db migrate
+
   publish:
     name: Publish (${{ matrix.image }})
     # Images are published only from main and version tags, after every gate is green.
     if: github.event_name == 'push' && (github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/tags/v'))
-    needs: [quality, secrets, docker, smoke]
+    needs: [quality, secrets, docker, smoke, test-db]
     runs-on: ubuntu-latest
     permissions:
       contents: read

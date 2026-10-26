@@ -18,7 +18,7 @@ Extends ENGINEERING_STANDARDS §8 (behaviour over implementation, deterministic,
 
 ## 2. Vitest setup
 - Single root config using multiple **projects** (`web`: jsdom + React plugin; `api`: node; `shared`: node). Newer Vitest uses `test.projects`; older uses `workspace` files. Pin the version and follow its docs (verify at setup).
-- Coverage via V8, reported in CI, **no global threshold gate**. Add thresholds only on `packages/shared` rules and `apps/api` services where they are meaningful.
+- **Coverage** (ADR 0012): V8 provider, counted over **every** source file (`coverage.include`), so untested code shows as 0% instead of being invisible. Thresholds fail the build: global 90% statements/lines/functions and 85% branches, and 95/90/95/95 for `packages/shared` and `apps/api/src`. Exclusions are listed with a reason in `vitest.config.ts` (server entry point, async Server Component layout) and only for code proven another way. Thresholds are a backstop, not proof of quality; mutation testing on domain code is the next step.
 - Path aliases via `vite-tsconfig-paths`. Strict TS applies to tests too.
 - Async Server Components are not supported by Vitest (per Next.js guidance; verify at pin time). Keep logic in plain functions and client components that tests can reach, and cover server-rendered pages through API integration and the compose smoke.
 
