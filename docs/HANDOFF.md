@@ -10,11 +10,11 @@ Keep this current. Anyone (human or agent) should be able to continue from here 
 - **Not built yet:** migrations beyond the baseline extensions, and every product feature.
 
 ## Next action
-`01-schema-security` on `feat/01-schema-security` (local, not pushed). Slices 1-3 are green (`make test-db`: 124 assertions): tenancy, ledger, RBAC with static SoD, deal fields, `create_deal`, `move_stage`. Slice 3 is uncommitted. Next is slice 4: tenant-creation function seeding roles, membership functions with self-escalation and last-owner rules, `update_deal`, parity fixtures with `packages/shared` (E1). Open: `app.uid()` through real PostgREST (GOTCHAS 98), concurrent `move_stage` test. `make up` runs the full stack locally (http://localhost:8080); it is currently stopped.
+PR 10 (`feat/01-schema-security`) is open; slice 4 is committed locally only if the owner has asked (check `git status`). Feature 01 is feature-complete for the schema: tenancy, ledger, RBAC with SoD, deals, stage machine, tenant and role administration, `update_deal`, SQL/TS parity (`make test-db`: 193 assertions). Before merging: watch CI (`test-db`, smoke with the new `/fixtures` mount; `make smoke` not run locally since the mount was added). Then feature 02 (auth and onboarding), which also verifies `app.uid()` through real PostgREST (GOTCHAS 98) and decides the per-user tenant cap. `make up` runs the stack locally (http://localhost:8080); it is currently stopped.
 
 ## Where decisions live
 - `docs/decisions/README.md`: index of ADRs 0001-0014, one line each with the reason. ADRs are append-only; later ones supersede earlier ones (for example ADR 0003's CSS Modules choice was superseded by ADR 0006).
-- `docs/brief/GOTCHAS.md`: the brief's traps and the ones found while building (rows 1-99).
+- `docs/brief/GOTCHAS.md`: the brief's traps and the ones found while building (rows 1-100).
 - `docs/standards/`: engineering (org base), coding (project overlay with exceptions E1-E12), security, markup, testing, container.
 - `docs/design/mockup-review.md`, `docs/features/03-deals-core/closing-soon.md`, `docs/features/02-auth-onboarding/onboarding-flow.md`, `docs/PRESENTATION_NOTES.md`, `docs/AI_USAGE.md`.
 
