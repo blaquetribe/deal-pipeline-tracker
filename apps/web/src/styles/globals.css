@@ -1,0 +1,6 @@
+@import 'tailwindcss';
+
+/* The design layer lives outside this app, so point Tailwind's scanner at it. */
+@source '../../../../packages/ui/src';
+
+@import '@dpt/ui/styles.css';

@@ -1,0 +1,6 @@
+packages:
+  - apps/*
+  - packages/*
+# Dependency build scripts are blocked by default; each entry is a supply-chain decision.
+allowBuilds:
+  esbuild: true

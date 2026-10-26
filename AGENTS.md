@@ -28,6 +28,7 @@ Deal Pipeline Tracker: multi-tenant, realtime, auth-gated deal pipeline for a fi
 apps/web          Next.js UI (no Supabase)
 apps/api          Hono API + WebSocket (only Supabase client)
 packages/shared   zod schemas and types (the web/api contract)
+packages/ui       design layer: tokens, themes, materials, contrast test (Tailwind v4)
 gateway/          reverse proxy config (only published port)
 supabase/         migrations, seed, SQL tests
 .github/          CI workflows (test, test-db, docker)
@@ -42,4 +43,18 @@ docs/             handoff, progress, features/<NN-name>/, standards, brief, deci
 - If the plan conflicts with the brief or standards, stop and raise it; do not silently deviate. Record decisions as a new ADR in `docs/decisions/`.
 
 ## Commands
-Filled in during feature 00-foundation (install, dev, test, lint, typecheck, `docker compose up`, migrations).
+Node 24 (`.nvmrc`), pnpm 12 (no `-s` flag). From the repo root:
+
+```bash
+pnpm install            # frozen lockfile in CI
+pnpm typecheck          # tsc --noEmit in every workspace (TypeScript 7)
+pnpm lint               # oxlint --type-aware (boundaries, a11y, hooks rules)
+pnpm stylelint          # CSS in apps/web and packages/ui (Tailwind-aware)
+pnpm format:check       # oxfmt --check (pnpm format to fix; sorts imports and Tailwind classes)
+pnpm test               # Vitest, all projects (web, api, shared, ui)
+pnpm build              # next build + tsup
+```
+
+Git hooks (Husky): pre-commit runs lint-staged (oxfmt, oxlint, stylelint on staged files), commit-msg runs commitlint (Conventional Commits), pre-push runs typecheck and tests. CI is the real gate.
+
+Still to come in feature 00:

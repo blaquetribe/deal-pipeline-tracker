@@ -1,0 +1,115 @@
+/*
+ * Semantic tokens per theme. Light is :root (and .light); dark overrides
+ * under .dark. The class is set server-side from a cookie (no inline script,
+ * so the CSP needs no script exception). Components read these, never the
+ * primitives in tokens.css.
+ */
+:root,
+.light {
+  color-scheme: light;
+
+  --canvas: var(--ink-50);
+  --ambient-base: var(--ink-100);
+  --ambient-1: rgb(76, 132, 255, 0.34);
+  --ambient-2: rgb(124, 92, 245, 0.28);
+  --ambient-3: rgb(20, 184, 166, 0.2);
+  --ambient-4: rgb(236, 72, 153, 0.14);
+  --ambient-grid: rgb(35, 51, 77, 0.045);
+  --surface: rgb(255, 255, 255, 0.92);
+  --surface-raised: var(--ink-0);
+  --surface-subtle: rgb(255, 255, 255, 0.55);
+  --surface-hover: rgb(23, 25, 28, 0.05);
+  --overlay: rgb(9, 11, 16, 0.4);
+  --glass-fill: rgb(255, 255, 255, 0.62);
+  --glass-fill-strong: rgb(255, 255, 255, 0.84);
+  --glass-border: rgb(255, 255, 255, 0.8);
+  --glass-border-inner: rgb(255, 255, 255, 0.6);
+  --glass-highlight: rgb(255, 255, 255, 0.88);
+  --glass-shadow:
+    0 1px 2px rgb(20, 28, 45, 0.04), 0 8px 24px rgb(20, 28, 45, 0.07),
+    0 24px 64px rgb(20, 28, 45, 0.08);
+  --card-shadow: 0 1px 2px rgb(20, 28, 45, 0.05), 0 4px 14px rgb(20, 28, 45, 0.06);
+  --fg: var(--ink-900);
+  --fg-muted: var(--ink-800);
+  --fg-subtle: var(--ink-700);
+  --fg-disabled: var(--ink-400);
+  --fg-on-brand: var(--ink-0);
+  --fg-on-accent: var(--ink-0);
+  --line: rgb(25, 28, 33, 0.12);
+  --line-subtle: rgb(25, 28, 33, 0.07);
+  --focus: var(--brand-500);
+  --brand: var(--brand-600);
+  --brand-hover: var(--brand-700);
+  --brand-fg: var(--brand-700);
+  --brand-soft: rgb(37, 105, 219, 0.12);
+  --accent: var(--accent-600);
+  --accent-hover: var(--accent-700);
+  --accent-fg: var(--accent-600);
+  --accent-soft: rgb(104, 66, 224, 0.1);
+  --success: var(--green-600);
+  --success-fg: var(--green-800);
+  --success-soft: rgb(22, 163, 74, 0.12);
+  --warning: var(--amber-600);
+  --warning-fg: var(--amber-800);
+  --warning-soft: rgb(217, 119, 6, 0.12);
+  --danger: var(--red-600);
+  --danger-fg: var(--red-700);
+  --danger-soft: rgb(220, 38, 38, 0.1);
+  --info: var(--teal-600);
+  --info-fg: var(--teal-800);
+  --info-soft: rgb(13, 148, 136, 0.12);
+  --chart-1: var(--brand-500);
+  --chart-2: var(--teal-500);
+  --chart-3: var(--accent-500);
+  --chart-4: var(--pink-500);
+  --chart-5: var(--amber-600);
+}
+
+.dark {
+  color-scheme: dark;
+
+  --canvas: var(--ink-950);
+  --ambient-base: var(--ink-950);
+  --ambient-1: rgb(48, 107, 255, 0.3);
+  --ambient-2: rgb(124, 92, 245, 0.28);
+  --ambient-3: rgb(20, 184, 166, 0.18);
+  --ambient-4: rgb(236, 72, 153, 0.14);
+  --ambient-grid: rgb(255, 255, 255, 0.028);
+  --surface: rgb(21, 24, 32, 0.92);
+  --surface-raised: var(--ink-850);
+  --surface-subtle: rgb(26, 30, 40, 0.55);
+  --surface-hover: rgb(255, 255, 255, 0.06);
+  --overlay: rgb(0, 0, 0, 0.6);
+  --glass-fill: rgb(18, 21, 28, 0.62);
+  --glass-fill-strong: rgb(20, 23, 31, 0.84);
+  --glass-border: rgb(255, 255, 255, 0.15);
+  --glass-border-inner: rgb(255, 255, 255, 0.06);
+  --glass-highlight: rgb(255, 255, 255, 0.13);
+  --glass-shadow:
+    0 1px 2px rgb(0, 0, 0, 0.18), 0 12px 32px rgb(0, 0, 0, 0.26), 0 30px 90px rgb(0, 0, 0, 0.3);
+  --card-shadow: 0 1px 2px rgb(0, 0, 0, 0.3), 0 6px 18px rgb(0, 0, 0, 0.28);
+  --fg: var(--ink-50);
+  --fg-muted: var(--ink-300);
+  --fg-subtle: var(--ink-500);
+  --fg-disabled: var(--ink-700);
+  --line: rgb(255, 255, 255, 0.14);
+  --line-subtle: rgb(255, 255, 255, 0.08);
+  --focus: var(--brand-400);
+  --brand-fg: var(--brand-400);
+  --brand-soft: rgb(92, 168, 255, 0.16);
+  --accent-fg: var(--accent-300);
+  --accent-soft: rgb(187, 166, 255, 0.14);
+  --success: var(--green-400);
+  --success-fg: var(--green-400);
+  --warning: var(--amber-400);
+  --warning-fg: var(--amber-400);
+  --danger: var(--red-400);
+  --danger-fg: var(--red-400);
+  --info: var(--teal-300);
+  --info-fg: var(--teal-300);
+  --chart-1: var(--brand-400);
+  --chart-2: var(--teal-300);
+  --chart-3: var(--accent-400);
+  --chart-4: var(--pink-300);
+  --chart-5: var(--amber-400);
+}

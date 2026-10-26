@@ -1,0 +1,13 @@
+/*
+ * Design layer entry. The consuming app imports Tailwind first, points
+ * Tailwind's scanner at this package, then imports this file:
+ *
+ *   @import 'tailwindcss';
+ *   @source '<path to packages/ui/src>';
+ *   @import '@dpt/ui/styles.css';
+ */
+@import './tokens.css';
+@import './themes.css';
+@import './theme.css';
+@import './materials.css';
+@import './base.css';

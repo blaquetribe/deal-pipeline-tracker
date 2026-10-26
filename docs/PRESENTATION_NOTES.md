@@ -153,6 +153,14 @@ Supabase (Postgres, Auth, Realtime, Mailpit) is on an internal network and never
 - **Avatars:** initials by default; optional upload is re-encoded (256x256 WebP, EXIF stripped) so SVG scripts and polyglot files never reach other users; visible only to people sharing a tenant; no Gravatar (it leaks an email hash).
 - **Honest trade-off:** proxying costs API bandwidth; presigned URLs for large files are a next step.
 
+## F. Tooling, design system and request layer (ADRs 0005-0007)
+- **Why Oxc:** type-aware linting is stable and tracks TypeScript 7.0.2, so adopting oxlint removed a real problem (typescript-eslint could not run TypeScript 7). Verified, not assumed: every boundary rule (no Supabase in web, feature encapsulation, no `dangerouslySetInnerHTML`, no-floating-promises, a11y) was proven with deliberate violations. Honest caveat: oxfmt is beta.
+- **Hooks:** Husky + lint-staged + commitlint, proven to block a bad commit message and a lint violation. They are convenience; CI is the gate.
+- **Design system:** DoorSprint's three-tier tokens, themes and glass materials reused in a `packages/ui` layer, with its WCAG contrast matrix running in CI for both themes. Theme is a server-set cookie class, which keeps the CSP free of inline scripts.
+- **"Layers like Nuxt":** Next.js has no `extends`/auto-merge. We get the useful part with workspace packages (`ui`, `shared`) and feature folders whose boundaries lint enforces. We say plainly what we cannot replicate (auto-merged pages and components).
+- **alova:** evaluated and not adopted. TanStack Query documents every behaviour we need (realtime cache patches, tenant-keyed caches, optimistic moves, App Router hydration); alova's App Router and cache behaviour could not be verified. A half-day spike is defined if the team still wants it.
+- **Onboarding:** a server-driven, resumable, accessible flow. Nothing is created before email verification; the organisation is created once per owner. See `docs/features/02-auth-onboarding/onboarding-flow.md`.
+
 ## Honest limits (present these proudly, not apologetically)
 - Tamper-evident, not DBA-proof, audit ledger.
 - Tenant-level visibility only (no per-deal barriers).

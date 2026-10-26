@@ -8,7 +8,7 @@ Depends on: 01
 Sign-up with verification, sessions, tenant switcher, invitations, Mailer. Covers GOTCHAS rows 1, 5, 14, 18, 21, 24, 28, 29, 31, 41.
 
 ## Scope
-- In: sign-up, email verification, login, server-side sessions with single-flight refresh, tenant switcher, invitations, Mailer and Mailpit, rate limits, nonce-based CSP in Next middleware (headers only), signed-out route sweep.
+- In: sign-up, email verification, login, server-side sessions with single-flight refresh, tenant switcher, invitations, Mailer and Mailpit, rate limits, nonce-based CSP in Next middleware (headers only), signed-out route sweep, and the registration onboarding flow (owner and invitee) designed in `onboarding-flow.md`.
 - Out (and where it goes): avatars (08), approvals (04).
 
 ## Design notes

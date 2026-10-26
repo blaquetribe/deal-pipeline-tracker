@@ -77,6 +77,7 @@ Financial deal data, multi-tenant. Fail closed. Every rule below needs a test or
 - **API responses (Hono):** `Content-Security-Policy: default-src 'none'; frame-ancestors 'none'`, `X-Content-Type-Options: nosniff`, and `Cache-Control: no-store` on authenticated JSON.
 - **Gateway, every response:** `nosniff`, `Referrer-Policy: strict-origin-when-cross-origin`, a `Permissions-Policy` disabling camera, microphone, geolocation and payment, `Cross-Origin-Opener-Policy: same-origin`, HSTS when served over TLS.
 - The WebSocket origin in `connect-src` is explicit from config; do not rely on `'self'` matching `ws:`/`wss:` in every browser (verify in the spike).
+- **Theme without inline script:** the light/dark class is set server-side from a `theme` cookie in the root layout, so no anti-flash inline script is needed and the CSP stays free of script exceptions. Tailwind emits a stylesheet, so no inline styles are required.
 - **No CSP report endpoint:** it would be an unauthenticated write route. Violations are caught in CI by a headless page load that fails on any CSP console violation. Reporting is a README next step.
 - Tests: policy-builder unit tests; compose smoke asserts the headers on `/`, `/login` and `/api/health`; headless load has zero violations.
 

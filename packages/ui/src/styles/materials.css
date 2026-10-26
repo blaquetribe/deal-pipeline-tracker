@@ -1,0 +1,81 @@
+.app-background {
+  position: fixed;
+  inset: 0;
+  z-index: -10;
+  overflow: hidden;
+  background:
+    radial-gradient(circle at 12% 18%, var(--ambient-1), transparent 32%),
+    radial-gradient(circle at 82% 16%, var(--ambient-2), transparent 30%),
+    radial-gradient(circle at 68% 78%, var(--ambient-3), transparent 32%),
+    radial-gradient(circle at 18% 84%, var(--ambient-4), transparent 30%), var(--ambient-base);
+}
+
+.app-background::before {
+  content: '';
+  position: absolute;
+  inset: -20%;
+  background:
+    radial-gradient(circle at 30% 40%, var(--ambient-1), transparent 28%),
+    radial-gradient(circle at 70% 60%, var(--ambient-2), transparent 26%);
+  filter: blur(80px);
+  opacity: 0.75;
+  animation: ambient-drift 24s ease-in-out infinite alternate;
+}
+
+.app-background::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background-image:
+    linear-gradient(var(--ambient-grid) 1px, transparent 1px),
+    linear-gradient(90deg, var(--ambient-grid) 1px, transparent 1px);
+  background-size: 48px 48px;
+  mask-image: linear-gradient(to bottom, rgb(0, 0, 0, 0.55), transparent 75%);
+}
+
+/* Chrome: sidebar, header, assistant panel, drawers. */
+.material-glass {
+  background: var(--glass-fill);
+  border: 1px solid var(--glass-border);
+  box-shadow:
+    inset 0 1px 0 var(--glass-highlight),
+    inset 0 0 0 1px var(--glass-border-inner),
+    var(--glass-shadow);
+  backdrop-filter: blur(var(--blur-strong)) saturate(150%);
+}
+
+/* Overlays: dialogs, popovers, the command palette, toasts. */
+.material-glass-strong {
+  background: var(--glass-fill-strong);
+  border: 1px solid var(--glass-border);
+  box-shadow:
+    inset 0 1px 0 var(--glass-highlight),
+    inset 0 0 0 1px var(--glass-border-inner),
+    var(--glass-shadow);
+  backdrop-filter: blur(var(--blur-acrylic)) saturate(165%);
+}
+
+/* Content: near-opaque so text keeps full contrast. */
+.material-card {
+  background: var(--surface);
+  border: 1px solid var(--line-subtle);
+  border-radius: var(--radius-surface);
+  box-shadow: var(--card-shadow);
+}
+
+/*
+|--------------------------------------------------------------------------
+| Motion
+|--------------------------------------------------------------------------
+*/
+
+@keyframes ambient-drift {
+  from {
+    transform: translate3d(-2%, -1%, 0) scale(1);
+  }
+
+  to {
+    transform: translate3d(3%, 2%, 0) scale(1.08);
+  }
+}

@@ -39,7 +39,7 @@ Applies to every JSX/TSX that renders HTML in `apps/web`, and to HTML emails ren
 - One component per file; PascalCase component files, kebab-case for everything else (base §2.2). Props typed explicitly; no `any`; no spreading unknown props onto DOM elements.
 - Stable `key`s from ids, never array index for reorderable lists.
 - No `dangerouslySetInnerHTML` (security). User text (notes, names) renders as plain text only.
-- No inline `style` except to set a CSS custom property for a dynamic value. Styles come from CSS Modules and tokens (overlay E3).
+- No inline `style` (a CSP `style-src` concern). Styling is Tailwind semantic utilities from the `packages/ui` token layer (overlay E3); use `style` only to set a CSS custom property for a genuinely dynamic value. Never use raw colour values in class names (`bg-[#fff]`).
 - No direct DOM manipulation; effects only for synchronisation with external systems; derived state is computed, not stored.
 - Links to external sites: `rel="noopener noreferrer"`. Internal navigation via the framework `Link`.
 - Use `data-testid` only when no role/label/text query is possible (see TESTING_STANDARDS).

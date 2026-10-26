@@ -65,3 +65,9 @@ Each row: what the brief says, the trap, how we handle it, which feature owns it
 | 47 | Dev/prod mixups and over-broad storage credentials. | Separate buckets and bucket-scoped tokens; startup guard on environment mismatch; no storage credentials in CI. | 08 |
 | 48 | Avatars leak profile data across tenants. | Visible only to users sharing a tenant; user-level key prefix; initials for deactivated users. | 08 |
 | 49 | `sharp` is a native module; Alpine/arm64 builds can fail. | Verify in the foundation spike; fall back to a glibc slim base. | 00, 08 |
+| 50 | typescript-eslint did not support TypeScript 7.0, forcing a pin to 6.x. | oxlint type-aware (tracks TS 7.0.2); pin removed. | 00 |
+| 51 | oxfmt is beta; its CSS formatter lowercased font names; `stylelint --fix` stripped hand-written vendor prefixes. | Documented in ADR 0005; Tailwind re-adds prefixes (verified in built CSS); revisit triggers recorded. | 00 |
+| 52 | Anti-flash theme scripts need an inline script, which a strict CSP forbids. | Theme class set server-side from a cookie; no inline script (ADR 0006). | 00, 02 |
+| 53 | Tailwind does not scan classes in packages outside the app. | `@source` pointing at `packages/ui/src`; build check that utilities exist in the CSS. | 00 |
+| 54 | Git hooks are bypassable (`--no-verify`) and can be slow. | Hooks are convenience only; CI is the gate; pre-commit limited to staged files. | 00 |
+| 55 | Nuxt-style layers do not exist in Next.js. | Workspace packages as layers plus lint-enforced feature boundaries (ADR 0006). | 00 |
