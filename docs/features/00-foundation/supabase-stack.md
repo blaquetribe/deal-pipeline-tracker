@@ -2,6 +2,8 @@
 
 Measured 2026-10-26 while starting feature 00 part 2b. Decision: [ADR 0013](../../decisions/0013-supabase-stack-for-compose.md).
 
+> **Version note:** measured on the image versions of 2026-10-26 (postgres 17.6.1.136, PostgREST v14.18, Realtime v2.143.3, Envoy v1.39.1). Pins have since moved; see `docker-compose.yml`. Numbers and the "PostgreSQL 17.6" line below are historical.
+
 ## Method and caveats (read before quoting numbers)
 - Source: Supabase's official self-hosting files (`supabase/supabase`, `docker/`, commit `f4d6d90`, 2026-10-26), run from a scratch copy outside the repo with the demo placeholders from its `.env.example` (used only for this throwaway measurement, never for our own stack).
 - Engine: **Podman 6.1.1** VM (Apple virtualization, 3,887 MB RAM, 7 CPUs). Not Docker Desktop, whose own VM overhead will differ.
@@ -47,3 +49,18 @@ Per container, full stack (MiB): studio 237, realtime 212, pooler 205, meta 125,
 
 ## Cleanup done
 Both stacks stopped, 0 containers running, host ports free. The six images only the full stack needed were removed (about 4.7 GB); the five needed images were kept. The scratch copy lives outside the repo.
+
+## Image bumps after 2026-10-26 (release-note review)
+Reviewed 2026-10-26 from PostgREST's `CHANGELOG.md` and the PostgreSQL 17.7 release notes. Realtime v2.147.1, Envoy v1.40.1 and the supabase/postgres image notes were **not** reviewed (the supabase/postgres release has no published notes; its tag moves Postgres to 17.11).
+
+**PostgREST v14.18 to v16.5** (config in `docker-compose.yml` checked against the v16 migration section):
+- `jwt-role-claim-key` moved to RFC 9535 JSON Path: we do not set it, so the default applies. No change needed.
+- `db-schemas` containing `pg_catalog` or `information_schema` now fails at startup: ours is `public`. No change needed.
+- `Prefer: timezone` is strict and no longer honours `handling=lenient`; v16.5 returns `PGRST129` for timezones over 24 characters on unpatched Postgres. We do not use `Prefer: timezone` (the API is the only client, ADR 0002).
+- Embedding and filtering the same table twice, and filters named after an aliased embedded table, change behaviour unless `url-use-legacy-target-names` is set. We have no embeds yet; revisit when feature 03 adds them, and prefer alias names in filters.
+- PostgreSQL 13 support dropped: irrelevant on 17.
+- v16.1 and v16.3 fix JWT time-validation bugs ("JWT issued at future"), relevant to our short-lived user JWTs.
+
+**PostgreSQL 17.6 to 17.11** (minor releases; no dump/restore needed): security and bug fixes only. Worth knowing for feature 01: `CREATE STATISTICS` now requires `CREATE` on the schema (17.7); `MERGE` and `INSERT ... ON CONFLICT DO UPDATE` need a `REPLICA IDENTITY` on tables in publications that publish updates or deletes (17.7), which matters if Realtime publishes our tables. PostgREST v16.5 notes that 17.11 carries the fix for CVE-2026-14669.
+
+**Not covered:** Supabase's own patches in `17.11.0.00x` (extensions, init scripts), and whether upstream's init SQL at HEAD differs from `f4d6d90`. Re-vendoring and reading that diff is still open.

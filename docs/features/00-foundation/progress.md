@@ -1,6 +1,6 @@
 # 00 Foundation: progress
 
-Status: not started
+Status: done
 Owner/branch: feat/00-foundation
 Depends on: none
 
@@ -27,11 +27,11 @@ Part 1 (done, this branch):
 - [x] Next app shell: skip link, `main`, tokens, `StageBadge` component and test
 - [x] `pnpm build` produces the Next standalone output and the api bundle; api bundle runs
 
-Part 2 (not started):
+Part 2 (done):
 - [x] Dockerfiles (web, api, gateway), `.dockerignore`, hadolint clean, images scan clean in Trivy (4 documented expiring exceptions for the upstream Caddy binary)
 - [x] Gateway (Caddy) with hardening headers; compose with only the gateway published (internal network comes with Supabase)
 - [x] `.env.example`; `scripts/compose-smoke.sh` (17 checks, proven to fail on a leaked port)
-- [ ] Supabase stack in compose; `migrate` one-shot; `supabase test db` wiring (CLI not installed locally)
+- [x] Supabase stack in compose; `migrate` one-shot; pgTAP wiring (own runner, no Supabase CLI)
 - [x] CI workflow written and actionlint-clean (`quality`, `secrets`, `docker`, `smoke`, `publish`); Dependabot. **First run on PR #1 was green (all jobs; publish skipped by design).** `test-db` job waits for the Supabase stack
 - [x] Makefile (`make help`): dev, check, up/down/smoke, hadolint, trivy, secrets, actionlint, ci-local; all targets run locally
 - [x] Advisory AI review workflow, scripts and 30 offline tests (ADR 0010); shellcheck gate; live run pending the owner's Cloudflare secrets
@@ -43,7 +43,7 @@ Part 2 (not started):
 - [x] (part 2b) Supabase stack in compose (ADR 0014): internal network, Mailpit, `migrate` job, vendored init SQL and trimmed gateway, derived keys, `make env`, `test-db` CI job, extended and sabotage-proven smoke test
 - [x] Spikes: WebSocket through Caddy, RLS-filtered Realtime for a user JWT, sharp on Alpine arm64/amd64, S3-compatible container (RustFS), R2 region `auto`
 - [x] `.claude/` Stop hook and commands (hook simulated; loading by Claude Code not verified here)
-- [ ] First CI run of the new `test-db` and smoke jobs
+- [x] First CI run of the new `test-db` and smoke jobs: green (PR 4 and later)
 
 ## Tests
 `pnpm test` runs all Vitest projects (207 tests: stage schema, config parsing, API headers/health, StageBadge, theme parsing, and the full WCAG AA contrast matrix for both themes). Gates: `pnpm typecheck`, `lint`, `stylelint`, `format:check`, `test`, `build`.

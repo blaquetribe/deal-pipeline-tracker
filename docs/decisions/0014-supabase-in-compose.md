@@ -23,3 +23,6 @@ Reviewers get one command and no accounts; the security boundary is the network,
 
 ## Verified versus open
 Verified: full smoke from clean state; sabotage run fails exactly the four intended checks; pgTAP 11/11; migrate idempotent and tamper-refusing; spikes in `docs/features/00-foundation/supabase-stack.md`. Open: Docker Desktop and Linux amd64 behaviour of the whole stack, Trivy scan of third-party Supabase images, memory under load.
+
+## Update 2026-10-26: after merge
+Merged in PR 4; CI was green, so `up --wait` with the exited `migrate` job and `test-db` are now verified on real Docker (amd64). Image pins moved after this ADR (see ADR 0013 update). Vendored files are still from `f4d6d90`: passing CI shows they work with the new images, not that they match what upstream ships for them. Re-vendor and review the diff before relying on this; compatibility notes are in `supabase-stack.md`. Still open: Docker Desktop, Trivy on the third-party Supabase images, memory under load.
