@@ -3,17 +3,18 @@
 Keep this current. Anyone (human or agent) should be able to continue from here without the chat history.
 
 ## Current state
-- **Repo:** private GitHub repository `blaquetribe/deal-pipeline-tracker`, default branch `main`. The remote is HTTPS; pushes use `gh` credentials. PR #1 is merged (`29eb2c7`). Work continues on `feat/00-foundation-2b`, cut from `main` (the merged `feat/00-foundation` branch can be deleted).
-- **Feature 00 parts 1 and 2a are done and merged:** pnpm workspaces, TypeScript 7, oxlint + oxfmt + Stylelint, Vitest (207 tests), Tailwind design layer (`packages/ui`, with the WCAG contrast test), Husky/lint-staged/commitlint hooks, digest-pinned Dockerfiles, Caddy gateway, hardened compose, `scripts/compose-smoke.sh` (17 checks), CI, Dependabot, Makefile, and the advisory AI-review tooling (30 offline tests).
-- **CI is verified on GitHub:** PR #1 and the merge to `main` ran green end to end, including `publish`: web, api and gateway images built for `linux/amd64` and `linux/arm64` with SBOM and provenance attestations and pushed to GHCR tagged `latest` and `sha-29eb2c7` (confirmed from the job logs; package visibility and pulling were not independently checked because the local `gh` token lacks `read:packages`).
-- **Not built yet:** the Supabase stack, migrations, and every product feature. Design exists for onboarding, the closing-soon countdown and alerts, and the UI direction.
+- **Repo:** private GitHub repository `blaquetribe/deal-pipeline-tracker`, default branch `main`, clean, no open PRs. Remote is HTTPS; pushes use `gh` credentials.
+- **Feature 00 (foundation) is done and merged:** parts 1 and 2a (tooling, design layer, Dockerfiles, Caddy gateway, CI, AI-review tooling) and part 2b (PR 4: Supabase stack in compose, `migrate` job, `test-db`, spikes, `.claude/`), plus PR 9 (pnpm installed directly instead of Corepack so Node 26 images build). Dependabot PRs 2, 3, 5, 6, 7, 8 are merged after green CI: Node 26, Envoy v1.40.1, Realtime v2.147.1, supabase/postgres 17.11.0.007, PostgREST v16.5.
+- **CI is green on GitHub** for all of the above, including `test-db` and the extended smoke test. `publish` has pushed multi-arch images with SBOM and provenance to GHCR.
+- **Stack:** db, auth, rest, realtime and Envoy on an internal compose network, plus Mailpit and a one-shot `migrate` job. Only the Caddy gateway publishes a port. Keys derive from `JWT_SECRET` (ADR 0014, `docs/features/00-foundation/supabase-stack.md`, GOTCHAS rows 91-97). Commands: `make test-db`, `make smoke`, `make env`, `make ci-local`.
+- **Not built yet:** migrations beyond the baseline extensions, and every product feature.
 
 ## Next action
-`00-foundation` part 2b is finished locally on `feat/00-foundation-2b` (not pushed; ADR 0014): push it, watch the first CI run of `test-db` and the extended smoke test (unverified: `up --wait` with the exited `migrate` one-shot on real Docker, amd64, Trivy on the Supabase images), then `01-schema-security`; check in with the owner after the RLS tests pass.
+PR 10 (`feat/01-schema-security`) is open; slice 4 is committed locally only if the owner has asked (check `git status`). Feature 01 is feature-complete for the schema: tenancy, ledger, RBAC with SoD, deals, stage machine, tenant and role administration, `update_deal`, SQL/TS parity (`make test-db`: 193 assertions). Before merging: watch CI (`test-db`, smoke with the new `/fixtures` mount; `make smoke` not run locally since the mount was added). Then feature 02 (auth and onboarding), which also verifies `app.uid()` through real PostgREST (GOTCHAS 98) and decides the per-user tenant cap. `make up` runs the stack locally (http://localhost:8080); it is currently stopped.
 
 ## Where decisions live
-- `docs/decisions/README.md`: index of ADRs 0001-0011, one line each with the reason. ADRs are append-only; later ones supersede earlier ones (for example ADR 0003's CSS Modules choice was superseded by ADR 0006).
-- `docs/brief/GOTCHAS.md`: the brief's traps and the ones found while building (rows 1-81).
+- `docs/decisions/README.md`: index of ADRs 0001-0014, one line each with the reason. ADRs are append-only; later ones supersede earlier ones (for example ADR 0003's CSS Modules choice was superseded by ADR 0006).
+- `docs/brief/GOTCHAS.md`: the brief's traps and the ones found while building (rows 1-100).
 - `docs/standards/`: engineering (org base), coding (project overlay with exceptions E1-E12), security, markup, testing, container.
 - `docs/design/mockup-review.md`, `docs/features/03-deals-core/closing-soon.md`, `docs/features/02-auth-onboarding/onboarding-flow.md`, `docs/PRESENTATION_NOTES.md`, `docs/AI_USAGE.md`.
 
@@ -26,6 +27,9 @@ Keep this current. Anyone (human or agent) should be able to continue from here 
 - **Brief receipt date and submission deadline: not recorded yet.** Add here.
 
 ## Known issues and limits
+- **Vendored Supabase files are stale relative to the images.** `supabase/gateway` and `supabase/db` come from supabase/supabase commit `f4d6d90`; the images have since moved (postgres 17.11.0.007, PostgREST v16.5, Realtime v2.147.1, Envoy v1.40.1). Green CI is evidence they work, not proof of full compatibility. Release notes for the Postgres and PostgREST bumps were not read at the time (see `docs/features/00-foundation/supabase-stack.md`, "Image bumps"). Re-vendor with `make vendor-supabase UPSTREAM=<checkout>` and review the diff.
+- **Unverified:** Docker Desktop, Trivy on the third-party Supabase images, memory under load, Claude Code loading the `.claude/` hook and commands (the hook was only simulated).
+- **Wired but unused:** RustFS (`rustfs/rustfs:1.0.1`) as the S3-compatible container for CI `ObjectStore` tests (feature 08).
 - `.trivyignore.yaml` holds four documented exceptions for Go-stdlib CVEs in the upstream Caddy binary; they **expire 2026-11-30**, after which the Trivy scan fails until the image is rebuilt upstream or the entries are renewed.
 - No branch protection: GitHub does not offer it for private repositories without Pro, so CI cannot be made mandatory. Mention in the README.
 - oxfmt is beta (its CSS formatter lowercased font names); the revisit triggers are in ADR 0005.

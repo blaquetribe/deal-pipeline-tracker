@@ -22,3 +22,6 @@ Status: accepted (design, based on measurements); integration is the next step o
 
 ## Verified versus open
 Verified: items above (see the evidence doc). Open: RLS-filtered Realtime for a real user's JWT (feature 05), behaviour under Docker Desktop and amd64, memory under load, `!reset` needs Compose 2.24 or newer.
+
+## Update 2026-10-26: image versions moved
+The versions named above were current when this ADR was written. Dependabot has since merged: supabase/postgres 17.11.0.007, PostgREST v16.5, Realtime v2.147.1, Envoy v1.40.1 (GoTrue stays v2.197.0). `docker-compose.yml` is the source of truth for pins. The vendored config is still from `f4d6d90`; see ADR 0014 update.

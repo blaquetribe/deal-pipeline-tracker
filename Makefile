@@ -108,8 +108,8 @@ images: ## Build the three images
 smoke: ## Build, start and test the whole stack, then tear it down
 	scripts/compose-smoke.sh
 
-test-db: ## Start the database, apply migrations, run the pgTAP tests (leaves the db running; make down)
-	$(COMPOSE) up -d --wait db
+test-db: ## Start the database and auth, apply migrations, run the pgTAP tests (leaves them running; make down)
+	$(COMPOSE) up -d --wait db auth
 	$(COMPOSE) run --rm migrate
 	$(COMPOSE) exec -T db sh /tests/run.sh
 
