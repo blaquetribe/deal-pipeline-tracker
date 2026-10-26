@@ -42,7 +42,7 @@ Always text on a chip; an urgent style (tokens, plus icon) at 5 days or fewer an
 - **5-day and 1-day:** notify when the tenant-local date is on or after `expected_close_date - threshold` and no alert exists for that deal, close date and threshold. `on or after` (not "equals") means deals created or rescheduled inside the window, and missed runs, still alert exactly once.
 - **Overdue:** notify once when `now >= close_at`, where `close_at` is the close time on the close date, or the start of the next day when no time is set.
 
-**Scheduler:** a SQL function `scan_closing_soon(now)` (`SECURITY DEFINER`, revoked from PUBLIC) runs **hourly**, judging each tenant on its own local time, so an overdue alert can arrive up to an hour late (accepted). Run it with `pg_cron` if the Supabase Postgres image provides it (**verify**), otherwise a timer in the BFF guarded by `pg_try_advisory_lock` so several API instances never double-run it.
+**Scheduler:** a SQL function `scan_closing_soon(now)` (`SECURITY DEFINER`, revoked from PUBLIC) runs **hourly**, judging each tenant on its own local time, so an overdue alert can arrive up to an hour late (accepted). Run it with `pg_cron` (**verified available**: `pg_cron` 1.6.4 is in the Supabase Postgres 17.6 image and preloaded; enable it in a migration), otherwise a timer in the BFF guarded by `pg_try_advisory_lock` so several API instances never double-run it.
 
 **Idempotent by construction:** `notifications.dedupe_key` is unique.
 - 5-day and 1-day: `closing:{deal}:{close_date}:{d5|d1}`. Editing only the close time does not duplicate them. Moving to a different date re-arms them.

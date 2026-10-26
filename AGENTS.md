@@ -15,7 +15,7 @@ Deal Pipeline Tracker: multi-tenant, realtime, auth-gated deal pipeline for a fi
 - Notes, approval decisions and other audit records are append-only and must be unmodifiable by any role, including owner and service role.
 - Schema changes only via new migration files in `supabase/migrations`. Never edit applied migrations, never use Studio or ad-hoc SQL.
 - Everything is tenant-scoped. Never trust client-supplied tenant, author, role, or timestamps.
-- No secrets in the repo. No floats for money.
+- No secrets in the repo: `.env.example` holds placeholders only (the commit hook, CI and `make env-check` enforce it); real values live in the untracked `.env`. No floats for money.
 - Fail closed: no auto-approvals, no default-allow.
 - Consequential rules (stage machine, quorum, SoD, immutability) are enforced in Postgres functions and privileges; TS copies are mirrors with parity tests.
 - Only the gateway publishes a host port. Supabase is never reachable from the host.

@@ -184,6 +184,12 @@ Supabase (Postgres, Auth, Realtime, Mailpit) is on an internal network and never
 - **Decisions confirmed:** the team is the deal's assignees and team members (fallback Owner/Admins); the final day counts hours and minutes when a close time is set; alert emails have a generic subject, the body carries the deal details and a link to the deal (no token, normal sign-in); alerts fire at 5 days, 1 day and when overdue.
 - **Hard parts we planned for:** time zones and DST, a wrong laptop clock (offset from the API `Date` header), no duplicate alerts when only the time is edited, and an overdue alert that can be up to an hour late because the scan is hourly.
 
+## J. Coverage, secrets hygiene and the Supabase stack (ADRs 0012, 0013, 0004 update)
+- **Coverage that cannot lie:** the first report said 100% but only counted 19 statements and included the test setup file. We now count every source file, enforce thresholds (higher for domain and API code), and proved the gate fails when an untested file appears. V8 and Istanbul gave identical numbers on our code, so we kept V8. We say plainly that coverage is a backstop; mutation testing is the next step.
+- **A near miss, handled:** real-looking cloud credentials appeared in a tracked template file. We verified they were never staged, committed or pushed, moved them to a gitignored file without losing them, made the template placeholders-only, and added a guard (commit hook, CI, make) that reports names and line numbers but never values, tested with fake secrets built at runtime.
+- **Supabase, measured not guessed:** the official stack is eleven services (about 1.2 GB of container memory, 7.3 GB of images). We need five (about 450 MiB, 2.5 GB). With our own three containers the whole system is about 650 MiB. We verified auth, REST, the "unconfirmed user cannot log in" rule our onboarding relies on, and a live realtime change event through the gateway.
+- **R2 reality:** tokens scope to buckets, not folders, so one bucket with `Dev/` and `Prod/` cannot isolate environments at the credential level; we added an app-level guard and recommend a separate production bucket.
+
 ## Honest limits (present these proudly, not apologetically)
 - Tamper-evident, not DBA-proof, audit ledger.
 - Tenant-level visibility only (no per-deal barriers).

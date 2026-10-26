@@ -84,8 +84,8 @@ Financial deal data, multi-tenant. Fail closed. Every rule below needs a test or
 ## Files and object storage
 - **BFF rule:** the browser never talks to storage. All file bytes pass through the Hono BFF (uploads and downloads streamed). No presigned URLs, no public bucket, no storage origin in the CSP.
 - **One `ObjectStore` port** in `apps/api` with two drivers: `fs` (default, compose named volume) and `s3` (Cloudflare R2 via the S3 API, config only). One contract test suite runs against both. CI holds no storage credentials; real R2 is a documented manual check.
-- **Buckets:** separate dev and prod buckets with separate bucket-scoped API tokens (object read/write only, no admin). Config declares the environment and the app refuses to start on a mismatch (for example the prod bucket in a non-production environment).
-- **Keys** are server-derived, never client-supplied: `tenants/{tenant_id}/{kind}/{uuid}` for account files; `users/{user_id}/avatar/{uuid}` for avatars (a user belongs to many tenants, so avatars are user-level).
+- **Bucket layout:** one bucket (`deal-pipeline-tracker`) with `Dev/` and `Prod/` key prefixes. R2 API tokens are scoped to buckets, not prefixes, so a dev credential can reach `Prod/`: the `ObjectStore` always prepends the configured prefix and never accepts one from a caller, the app refuses to start when prefix and environment disagree (`Dev/` only outside production, `Prod/` only in production), each environment has its own token, and a separate production bucket is the recommended hardening. Tokens are dedicated to this project (Object Read & Write, this bucket only). CI holds no storage credentials.
+- **Keys** are server-derived, never client-supplied: `{Env}/tenants/{tenant_id}/{kind}/{uuid}` for account files and `{Env}/users/{user_id}/avatar/{uuid}` for avatars (a user belongs to many tenants, so avatars are user-level). `{Env}` is `Dev` or `Prod`, capitalised as created. **No public bucket and no public `r2.dev` URL, ever.**
 - **Authorization is the `files` row** (RLS, `tenant_id`), not the key. Objects are readable only when a `ready` row exists and the caller may see it. An avatar is visible only to viewers who share at least one tenant with its owner.
 - **Uploads:** allowlist by detected content (magic bytes), size cap, filename never used as a path. Images are decoded and re-encoded (avatars: PNG/JPEG/WebP in, 256x256 WebP out, EXIF stripped; no SVG, no animated GIF). Documents are served with `Content-Disposition: attachment` and `nosniff`, never inline from the app origin.
 - **Consistency:** write the object, insert the row as `pending`, mark it `ready`; a cleanup job removes orphans. Objects are content-addressed (sha256) and never overwritten; ledger events reference file id and sha256.
@@ -93,7 +93,7 @@ Financial deal data, multi-tenant. Fail closed. Every rule below needs a test or
 - **Tests:** cross-tenant file request returns 404; avatar visibility rule; an SVG or HTML file named `.png` is rejected; oversize rejected; stored avatar is always 256x256 WebP; bucket/environment mismatch refuses to start.
 
 ## Secrets and supply chain
-- No real secrets in the repo or history. `.env.example` holds clearly fake dev-only values; real deployments inject their own.
+- No real secrets in the repo or history. `.env.example` holds **placeholders only** (`scripts/check-env-example.mjs` enforces it in the commit hook, CI and `make env-check`; real values live in the untracked `.env`); real deployments inject their own.
 - Service-role key and JWT secret never reach `apps/web` or any browser bundle (CI greps the build output).
 - Lockfile committed; pinned versions; Dependabot or equivalent; secret scan and `pnpm audit` in CI.
 - Containers: see `CONTAINER_STANDARDS.md` (non-root, pinned bases, hadolint, Trivy scan in CI, no secrets in images or build args). GitHub Actions are pinned to commit SHAs with least-privilege `permissions`.

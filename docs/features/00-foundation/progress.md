@@ -37,6 +37,10 @@ Part 2 (not started):
 - [x] Advisory AI review workflow, scripts and 30 offline tests (ADR 0010); shellcheck gate; live run pending the owner's Cloudflare secrets
 - [x] CI first-run verification on GitHub: green
 - [x] `publish` job proven on the merge to main: 3 images, amd64 and arm64, SBOM and provenance, tags `latest` and `sha-29eb2c7`
+- [x] Code coverage (ADR 0012): V8 over all source files, thresholds (global 90/85/90/90; shared and api 95/90/95/95), CI summary and artifact; compared with Istanbul (identical); proven to fail on an untested file
+- [x] Env-template secret guard (`scripts/check-env-example.mjs`) in lint-staged, CI and `make env-check`, with 11 tests
+- [x] Supabase stack measured (ADR 0013, `supabase-stack.md`): full 1,244 MiB vs trimmed 446 MiB; trimmed stack verified (auth, REST, unconfirmed-login rule, realtime event); `pgcrypto`, `pgTAP`, `pg_cron` confirmed
+- [ ] (part 2b) Integrate the trimmed stack into compose: internal network, Mailpit, `migrate` job, vendored init SQL and trimmed gateway config, generated keys, `test-db` CI job
 - [ ] Spikes: WebSocket through gateway, Realtime with server-held JWT, sharp on Alpine/arm64, S3-compatible container for CI
 - [ ] `.claude/` project hooks/commands
 
