@@ -28,7 +28,7 @@ need = $(if $($(1)),,$(error $(1) is empty: could not read it from .github/workf
 .PHONY: help install hooks dev check typecheck lint lint-fix stylelint format format-check \
         test test-watch coverage build clean distclean \
         up down restart logs ps images smoke \
-        hadolint trivy secrets actionlint shellcheck ai-review-test ai-review-dry ci-local
+        hadolint trivy secrets env-check actionlint shellcheck ai-review-test ai-review-dry ci-local
 
 help: ## List the available targets
 	@awk 'BEGIN {FS = ":.*## "} /^[a-zA-Z0-9_-]+:.*## / {printf "  \033[36m%-14s\033[0m %s\n", $$1, $$2}' $(MAKEFILE_LIST)
@@ -71,7 +71,7 @@ test: ## Vitest, all projects
 test-watch: ## Vitest in watch mode
 	pnpm test:watch
 
-coverage: ## Vitest with coverage
+coverage: ## Vitest with coverage and thresholds (HTML report: coverage/index.html)
 	pnpm test:coverage
 
 build: ## Build web (Next) and api (tsup)
@@ -129,6 +129,9 @@ secrets: ## Scan git history for secrets
 	$(call need,GITLEAKS_IMAGE)
 	docker run --rm -v $(CURDIR):/repo $(GITLEAKS_IMAGE) git /repo --redact
 
+env-check: ## Fail if .env.example contains anything but placeholders
+	node scripts/check-env-example.mjs
+
 actionlint: ## Lint the GitHub Actions workflows
 	docker run --rm -v $(CURDIR):/repo -w /repo $(ACTIONLINT_IMAGE) -color=false
 
@@ -142,4 +145,4 @@ ai-review-test: ## Test the AI review scripts offline against a mock API
 ai-review-dry: ## Show what the AI review would send and cost for this branch (no network)
 	BASE_SHA=$$(git merge-base origin/main HEAD) HEAD_SHA=$$(git rev-parse HEAD) DRY_RUN=1 .github/ai-review/review.sh
 
-ci-local: check shellcheck ai-review-test hadolint
+ci-local: check env-check shellcheck ai-review-test hadolint

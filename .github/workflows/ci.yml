@@ -42,9 +42,22 @@ jobs:
         run: pnpm exec commitlint --from "${{ github.event.pull_request.base.sha }}" --to "${{ github.event.pull_request.head.sha }}"
       - run: pnpm typecheck
       - run: pnpm lint
+      - name: Env template holds placeholders only
+        run: node scripts/check-env-example.mjs
       - run: pnpm stylelint
       - run: pnpm format:check
       - run: pnpm test:coverage
+      - name: Coverage summary
+        if: always()
+        run: node scripts/coverage-summary.mjs >> "$GITHUB_STEP_SUMMARY"
+      - name: Upload coverage report
+        if: always()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: coverage
+          path: coverage
+          retention-days: 14
+          if-no-files-found: warn
       - name: shellcheck (warnings and errors)
         run: docker run --rm -v "$PWD":/mnt -w /mnt "$SHELLCHECK_IMAGE" -S warning .github/ai-review/review.sh .github/ai-review/post-comment.sh .github/ai-review/test.sh scripts/compose-smoke.sh
       - name: AI review tooling tests (offline, mock API)
