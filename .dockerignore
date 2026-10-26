@@ -12,7 +12,6 @@
 .idea
 .env
 .env.*
-!.env.example
 docs
 **/*.md
 **/*.test.ts

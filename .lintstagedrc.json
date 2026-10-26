@@ -1,5 +1,6 @@
 {
   "*.{ts,tsx,mjs,js,json,css}": "oxfmt --no-error-on-unmatched-pattern",
   "*.{ts,tsx}": "oxlint --type-aware --fix",
-  "*.css": "stylelint --fix"
+  "*.css": "stylelint --fix",
+  ".env.example": "node scripts/check-env-example.mjs"
 }
