@@ -5,8 +5,8 @@ Tier: **core** (must ship), **extended** (ship if time allows, else README note)
 
 | # | Feature | Folder | Tier | Depends on | Status |
 |---|---|---|---|---|---|
-| 00 | Foundation: monorepo, tooling, compose, CI | `docs/features/00-foundation` | core | none | in progress (2a and 2b done locally: tooling, compose with the Supabase stack, `test-db`, spikes, `.claude/`; first CI run of the new jobs pending, branch not pushed) |
-| 01 | Schema and security: tenants, memberships, permissions, roles, deals, notes, RLS, immutability, SQL tests | `docs/features/01-schema-security` | core | 00 | not started |
+| 00 | Foundation: monorepo, tooling, compose, CI | `docs/features/00-foundation` | core | none | done (merged; CI green including `test-db` and the extended smoke test) |
+| 01 | Schema and security: tenants, memberships, permissions, roles, deals, notes, RLS, immutability, SQL tests | `docs/features/01-schema-security` | core | 00 | in progress (slice 1 green: tenancy, RLS, ledger; slice 2 roles and permissions next) |
 | 02 | Auth and onboarding: sign-up, verification, login, sessions, tenant switcher, invitations, Mailer | `docs/features/02-auth-onboarding` | core | 01 | not started |
 | 03 | Deals core: CRUD, stage machine, notes, pipeline overview, closing soon | `docs/features/03-deals-core` | core | 01, 02 | not started |
 | 04 | Approvals: gates, quorum, decisions, absence, delegation, custom roles + SoD | `docs/features/04-approvals` | extended | 03 | not started |
@@ -41,3 +41,4 @@ Anything cut must be written in the README "what I'd do next" section.
 - AI PR review: GitHub Models found retired (ADR 0010 corrected); advisory review built on Cloudflare Workers AI with 30 offline tests, shellcheck and actionlint clean; live run pending the owner's secrets.
 - Closing soon designed and confirmed by the owner (ADR 0011): live countdown with hours on the final day, 60-day window, alerts at 5 days, 1 day and overdue to the assigned team, in-app plus email digest with deal details and link; design in `docs/features/03-deals-core/closing-soon.md`.
 - Mockup reviewed (ADR 0009); AI PR-review options researched (ADR 0010, proposed); Makefile added; PR #1 opened to trigger the first CI run.
+- Feature 00 part 2b merged (PR 4, ADR 0014: Supabase stack in compose, `test-db`, spikes). PR 9: pnpm installed directly so Node 26 images build. Dependabot bumps merged after green CI: Node 26, Envoy v1.40.1, Realtime v2.147.1, supabase/postgres 17.11.0.007, PostgREST v16.5. Open: vendored Supabase files still at `f4d6d90`.
