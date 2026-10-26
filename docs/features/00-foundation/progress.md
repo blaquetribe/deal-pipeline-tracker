@@ -34,6 +34,7 @@ Part 2 (not started):
 - [ ] Supabase stack in compose; `migrate` one-shot; `supabase test db` wiring (CLI not installed locally)
 - [x] CI workflow written and actionlint-clean (`quality`, `secrets`, `docker`, `smoke`, `publish`); Dependabot. **First run on PR #1 was green (all jobs; publish skipped by design).** `test-db` job waits for the Supabase stack
 - [x] Makefile (`make help`): dev, check, up/down/smoke, hadolint, trivy, secrets, actionlint, ci-local; all targets run locally
+- [x] Advisory AI review workflow, scripts and 30 offline tests (ADR 0010); shellcheck gate; live run pending the owner's Cloudflare secrets
 - [x] CI first-run verification on GitHub: green
 - [ ] (part 2b) `publish` job proven on the first merge to main or tag
 - [ ] Spikes: WebSocket through gateway, Realtime with server-held JWT, sharp on Alpine/arm64, S3-compatible container for CI

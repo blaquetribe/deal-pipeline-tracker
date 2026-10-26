@@ -8,7 +8,7 @@ Depends on: 03
 WebSocket relay of RLS-filtered events, live cache updates, presence. Covers GOTCHAS rows 13, 14.
 
 ## Scope
-- In:
+- In: WebSocket relay of RLS-filtered events with live cache updates; **notifications** (closing-soon alerts at 5 days, 1 day and overdue: hourly idempotent `scan_closing_soon`, `notifications` rows pushed over the tenant-scoped socket, bell/toast/live region, email digest with deal details and a deal link through the Mailer with `email_outbox`; ADR 0011); presence (cut-list item).
 - Out (and where it goes):
 
 ## Design notes

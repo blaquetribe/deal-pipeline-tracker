@@ -22,7 +22,7 @@ Every item below is classified **Adopt**, **Adapt**, **Reject** or **Missing** (
 | **Typography:** Fraunces headings, Inter body | Both are OFL-licensed variable fonts on npm (`@fontsource-variable/*` 5.3.0). Self-host through the packages, not Google Fonts: offline Docker builds, CSP `font-src 'self'`, no third-party request. Fraunces for page titles only. |
 | **Dark navy sidebar** | Add `chrome` semantic tokens (sidebar background/foreground/active) to `packages/ui`; navy primitives added to `tokens.css`; brand blue already ~#2563EB in our tokens. |
 | **Currency totals** ("£6.3B total pipeline", donut, "£1.28 total value") | The mockup sums mixed deals into one figure. We show **per-currency** totals (a currency selector or one figure per currency); no cross-currency sum without FX. The donut gets a text table alternative. |
-| **"Closing soon: next 60 days"** | Default window becomes **60 days** (was 30); configurable per tenant. |
+| **"Closing soon: next 60 days"** | Default window stays **60 days** (was 30), per-tenant. The mockup shows it as text only; we add a **live day-resolution countdown** on every surface and a **server-side alert at 5 days** to the assigned team (ADR 0011, `closing-soon.md`). |
 | **KPI deltas** ("+3 from last month", "25% of pipeline") | Derived from the ledger (created and stage-change events), not stored counters. |
 | **"Status" filter** | Ambiguous next to Stage. Replace with filters that mean something to us: Needs my approval, Overdue close date, Owner. |
 | **Kanban cards** with drag-and-drop | Drag is an enhancement. Every card has a "Move to..." menu (keyboard and screen reader). Moves that need approval open an approval request instead of moving. |

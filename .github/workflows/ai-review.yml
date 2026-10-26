@@ -1,0 +1,55 @@
+name: AI review (advisory)
+
+# Advisory only. Never a required check, never blocks a merge. Reads the PR diff, asks a model
+# on Cloudflare Workers AI (free allowance, no training on customer content) and keeps one
+# comment up to date. See docs/decisions/0010-ai-assisted-pr-review.md.
+#
+# Cost control: the free allowance is 10,000 neurons/day, so it runs when a PR is opened,
+# reopened or marked ready, and again whenever the `ai-review` label is (re)applied, not on
+# every push.
+
+on:
+  pull_request:
+    types: [opened, reopened, ready_for_review, labeled]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ai-review-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+jobs:
+  review:
+    name: Advisory AI review
+    # Same-repo, non-draft, non-bot PRs only (forks and Dependabot get no secrets anyway).
+    if: >-
+      github.event.pull_request.head.repo.full_name == github.repository &&
+      !github.event.pull_request.draft &&
+      github.actor != 'dependabot[bot]' &&
+      (github.event.action != 'labeled' || github.event.label.name == 'ai-review')
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    continue-on-error: true
+    permissions:
+      contents: read
+      pull-requests: write # to create or update the one review comment
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Review the diff
+        env:
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+          CF_ACCOUNT_ID: ${{ secrets.AI_REVIEW_CF_ACCOUNT_ID }}
+          CF_API_TOKEN: ${{ secrets.AI_REVIEW_CF_API_TOKEN }}
+        run: .github/ai-review/review.sh
+      - name: Post or update the comment
+        if: hashFiles('ai-review-out.md') != ''
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPO: ${{ github.repository }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+        run: .github/ai-review/post-comment.sh ai-review-out.md

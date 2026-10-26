@@ -55,7 +55,7 @@ pnpm test               # Vitest, all projects (web, api, shared, ui)
 pnpm build              # next build + tsup
 ```
 
-`make help` lists every developer target (`make check`, `make dev`, `make up`, `make smoke`, `make hadolint`, `make trivy`, `make secrets`, `make ci-local`). UI work: read `docs/design/mockup-review.md` and ADR 0009 first. Next 16 calls middleware `proxy.ts`; the installed Next docs are in `apps/web/node_modules/next/dist/docs`.
+`make help` lists every developer target (also `make shellcheck`, `make ai-review-test`, `make ai-review-dry`; the AI review is documented in `.github/ai-review/README.md`). Highlights:
 
 Git hooks (Husky):
 

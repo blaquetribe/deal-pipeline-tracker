@@ -84,3 +84,16 @@ Each row: what the brief says, the trap, how we handle it, which feature owns it
 | 66 | "Forgot password?" is shown but no reset flow was designed. | Add password reset to feature 02. | 02 |
 | 67 | `next dev` writes an agent-instruction file from a dependency. | Gitignore `apps/web/AGENTS.md`; our own AGENTS.md files are authoritative. | 00 |
 | 68 | An AI PR reviewer reads untrusted diffs (prompt injection) and sends code to a model. | Comment-only token, no secrets, advisory and non-blocking, `pull_request` not `pull_request_target` (ADR 0010). | CI |
+| 69 | Search-summary research went stale: GitHub Models (and the free `GITHUB_TOKEN` inference path) was retired 2026-07-30; `actions/ai-inference` v3 is Copilot-only. | Verify availability and pricing on primary pages at decision time; ADR 0010 rewritten with the correction. | CI |
+| 70 | Free AI allowance is a hard cap (10,000 neurons/day) and models get retired. | Run on open/ready/label only, ~1,000 neurons per review, model configurable (`AI_MODEL`), every failure degrades to no comment. | CI |
+| 71 | A model's output is untrusted: it can ping people with @mentions or forge our comment marker. | Strip HTML comments, defuse `@`, cap length, update only the bot's own marked comment. | CI |
+| 72 | A `.PHONY` edit that replaced only the first line of a multi-line declaration broke the Makefile. | Caught by a check that every documented target is phony; repaired. | 00 |
+| 73 | A per-second countdown on a date-only field is false precision. | Day-resolution countdown that rolls over at tenant-local midnight; hours only if a close time field is added. | 03 |
+| 74 | A front-end timer cannot alert offline users, and notifications that duplicate or vanish are worse than none. | Server-side hourly scan, `<=` threshold, unique dedupe key, audited in the ledger (ADR 0011). | 05 |
+| 75 | Day boundaries differ per tenant time zone (and DST outside SAST). | Judge each tenant on its local date; calendar-day maths; tests across midnight and DST. | 03, 05 |
+| 76 | An unassigned deal or a deactivated assignee would silently lose the alert. | Fall back to Owner/Admins; absent assignee still notified, delegate too. | 05 |
+| 77 | Alert emails can leak confidential deal names and ten deals could mean ten emails. | Generic subject, names only in the body, one digest per recipient per scan. | 05 |
+| 78 | Relative or countdown times cause server/client hydration mismatches. | Server renders `closes_in_days` from the API; client recomputes after mount. | 03 |
+| 79 | Minute-level countdown on the final day needs a close time, time-zone/DST-safe maths and an accurate clock; a wrong laptop clock shows wrong hours. | Optional `expected_close_time` in the tenant zone; client offset from the API `Date` header; parity tests with the SQL function; DST test days. | 03 |
+| 80 | An hourly scan makes the overdue alert up to an hour late. | Accepted and documented; the countdown itself is exact. | 05 |
+| 81 | Alert emails need a deal link, but a link built from request headers allows host-header injection and a link carrying a token would be a credential. | `{PUBLIC_BASE_URL}` from configuration, no token, no action; sign-in required; subject never names a deal. | 05 |

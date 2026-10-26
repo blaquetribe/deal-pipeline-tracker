@@ -173,7 +173,16 @@ Supabase (Postgres, Auth, Realtime, Mailpit) is on an internal network and never
 - **What we rejected and why:** CVC logo/photo/tagline (not ours), SSO button (no IdP), magic-link tab (brief says pick one), Calendar/Reports (outside the brief), a single mixed-currency total (misleading).
 - **What the mockup lacked:** tenant switcher, sign-up and onboarding, password reset, approvals and absence handling, People/roles, empty/error states.
 - **Found in the installed docs:** Next 16 renamed middleware to `proxy.ts`; the nonce CSP mechanism is documented for our version and needs dynamic rendering.
-- **AI PR review, free:** GitHub Models via `actions/ai-inference` (first-party, no extra account, rate-limited) as a non-blocking advisory comment. Copilot code review is not clearly free; other apps are unconfirmed or add another vendor reading private code. Risks named: prompt injection, data sharing, noise.
+- **AI PR review, free (and a correction worth presenting):** our first recommendation, GitHub Models via `actions/ai-inference`, turned out to be dead: GitHub retired Models on 2026-07-30 and the action's v3 is Copilot-only. We caught it by checking primary sources before building. The replacement is Cloudflare Workers AI (free 10,000 neurons/day, no training on customer content), advisory and non-blocking, triggered on open/ready and by an `ai-review` label to respect the cap. Built with 30 offline tests against a mock API (mutation-tested). Honest status: the first live run needs the owner's two secrets, and review quality from a free 32B model is unproven. Risks named: prompt injection (delimited diff, comment-only token), untrusted output (mentions defused, marker protected), data sharing (Cloudflare as processor).
+
+## I. Closing soon: countdown and the 5-day alert (ADR 0011)
+- **Requirement:** a real countdown, and at 5 days the team and the assignee are notified.
+- **Why the alert is server-side:** it must fire when nobody is logged in. An hourly, idempotent database scan judges each tenant on its own local date; a unique key per (deal, close date, threshold) means retries never duplicate, and `<=` means late-created or missed-run deals still alert exactly once.
+- **Never silent:** unassigned deals or deactivated assignees fall back to Owner/Admins; absent assignees still get it and their delegate too.
+- **Auditable:** each alert is a ledger event with actor *system*, so the timeline shows who was told and when.
+- **Honest about the countdown:** it counts down in days and rolls over at the tenant's local midnight; a per-second ticker on a date field would be false precision.
+- **Decisions confirmed:** the team is the deal's assignees and team members (fallback Owner/Admins); the final day counts hours and minutes when a close time is set; alert emails have a generic subject, the body carries the deal details and a link to the deal (no token, normal sign-in); alerts fire at 5 days, 1 day and when overdue.
+- **Hard parts we planned for:** time zones and DST, a wrong laptop clock (offset from the API `Date` header), no duplicate alerts when only the time is edited, and an overdue alert that can be up to an hour late because the scan is hourly.
 
 ## Honest limits (present these proudly, not apologetically)
 - Tamper-evident, not DBA-proof, audit ledger.

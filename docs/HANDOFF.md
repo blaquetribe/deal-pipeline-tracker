@@ -19,6 +19,8 @@ CSP and hardening headers (core); Hono is the BFF; object storage behind an `Obj
 oxlint + oxfmt replace ESLint/Prettier (TypeScript unpinned to 7); Husky + lint-staged + commitlint (CI remains the real gate); Tailwind v4 with a `packages/ui` design layer and cookie-driven theme; feature layering by public `index.ts` + lint boundaries (no Nuxt-style layers in Next); TanStack Query kept, alova not adopted (unverified for App Router). Index: `docs/decisions/README.md`. Onboarding design: `docs/features/02-auth-onboarding/onboarding-flow.md`.
 
 ## Open questions
+- **Closing soon decisions (ADR 0011) are settled:** team = assignees and team members with Owner/Admin fallback; hours on the final day (optional close time); email body has deal details and a link, subject is generic; alerts at 5 days, 1 day and overdue. Still to verify when building: `pg_cron` availability, the time-zone library choice.
+- **Owner action (enables the advisory AI PR review):** create a Cloudflare API token from the Workers AI template, then set repo secrets `AI_REVIEW_CF_ACCOUNT_ID` and `AI_REVIEW_CF_API_TOKEN` and create the label `ai-review` (commands in `.github/ai-review/README.md`). Until then the workflow runs and skips. Never paste the token into chat.
 - **Owner action (not needed until feature 08's s3 driver):** create the R2 dev bucket and prod bucket, each with its own bucket-scoped API token (object read/write only). Do not commit them; never use the prod bucket from dev.
 - Hosting/deploy target beyond docker compose: none required by the brief.
 - Stretch extraction: undecided (model/provider, data exposure).

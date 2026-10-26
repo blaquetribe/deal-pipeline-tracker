@@ -36,4 +36,6 @@ Anything cut must be written in the README "what I'd do next" section.
 - ADR 0005-0007: oxlint/oxfmt + hooks, Tailwind + `packages/ui` design layer, TanStack Query kept over alova; onboarding flow designed (feature 02).
 - ADR 0008: Dockerfiles, Caddy gateway, hardened compose, smoke test and CI written and verified locally on Podman; the workflow has not run on GitHub.
 - First CI run on PR #1 green (every job; publish skipped by design).
+- AI PR review: GitHub Models found retired (ADR 0010 corrected); advisory review built on Cloudflare Workers AI with 30 offline tests, shellcheck and actionlint clean; live run pending the owner's secrets.
+- Closing soon designed and confirmed by the owner (ADR 0011): live countdown with hours on the final day, 60-day window, alerts at 5 days, 1 day and overdue to the assigned team, in-app plus email digest with deal details and link; design in `docs/features/03-deals-core/closing-soon.md`.
 - Mockup reviewed (ADR 0009); AI PR-review options researched (ADR 0010, proposed); Makefile added; PR #1 opened to trigger the first CI run.

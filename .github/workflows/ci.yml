@@ -22,6 +22,7 @@ env:
   HADOLINT_IMAGE: hadolint/hadolint@sha256:32dac94127fd60b7b7e3fbfc65e1383b9b5e25c9bfd7b8536de7a539fe68a12d
   TRIVY_IMAGE: aquasec/trivy@sha256:790fd66d1697395d8693d1acaa1ea702406a20f109b6fc7bac8db623eca6c06c
   GITLEAKS_IMAGE: zricethezav/gitleaks@sha256:c00b6bd0aeb3071cbcb79009cb16a60dd9e0a7c60e2be9ab65d25e6bc8abbb7f
+  SHELLCHECK_IMAGE: koalaman/shellcheck@sha256:bb596a0d169b85ddd81d8b6d3a2ff6d5baf5fca10b97f575ebc647c3dff62b3d
 
 jobs:
   quality:
@@ -44,6 +45,10 @@ jobs:
       - run: pnpm stylelint
       - run: pnpm format:check
       - run: pnpm test:coverage
+      - name: shellcheck (warnings and errors)
+        run: docker run --rm -v "$PWD":/mnt -w /mnt "$SHELLCHECK_IMAGE" -S warning .github/ai-review/review.sh .github/ai-review/post-comment.sh .github/ai-review/test.sh scripts/compose-smoke.sh
+      - name: AI review tooling tests (offline, mock API)
+        run: .github/ai-review/test.sh
       - run: pnpm build
 
   secrets:
