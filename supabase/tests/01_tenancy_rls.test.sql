@@ -62,6 +62,11 @@ insert into public.tenants (id, name) values
 insert into public.memberships (tenant_id, user_id) values
   ('bbbbbbbb-0000-4000-8000-00000000000a', 'aaaaaaaa-0000-4000-8000-000000000001'),
   ('bbbbbbbb-0000-4000-8000-00000000000b', 'aaaaaaaa-0000-4000-8000-000000000002');
+-- Reading deals needs a permission, not just membership (slice 2): both users are observers.
+select app.seed_system_roles(id) from public.tenants;
+insert into public.membership_roles (tenant_id, membership_id, role_id)
+select m.tenant_id, m.id, r.id from public.memberships m
+join public.roles r on r.tenant_id = m.tenant_id and r.key = 'observer_compliance';
 insert into public.deals (id, tenant_id, name) values
   ('cccccccc-0000-4000-8000-0000000000da', 'bbbbbbbb-0000-4000-8000-00000000000a', 'Deal A'),
   ('cccccccc-0000-4000-8000-0000000000db', 'bbbbbbbb-0000-4000-8000-00000000000b', 'Deal B');
