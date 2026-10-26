@@ -40,9 +40,10 @@ Part 2 (not started):
 - [x] Code coverage (ADR 0012): V8 over all source files, thresholds (global 90/85/90/90; shared and api 95/90/95/95), CI summary and artifact; compared with Istanbul (identical); proven to fail on an untested file
 - [x] Env-template secret guard (`scripts/check-env-example.mjs`) in lint-staged, CI and `make env-check`, with 11 tests
 - [x] Supabase stack measured (ADR 0013, `supabase-stack.md`): full 1,244 MiB vs trimmed 446 MiB; trimmed stack verified (auth, REST, unconfirmed-login rule, realtime event); `pgcrypto`, `pgTAP`, `pg_cron` confirmed
-- [ ] (part 2b) Integrate the trimmed stack into compose: internal network, Mailpit, `migrate` job, vendored init SQL and trimmed gateway config, generated keys, `test-db` CI job
-- [ ] Spikes: WebSocket through gateway, Realtime with server-held JWT, sharp on Alpine/arm64, S3-compatible container for CI
-- [ ] `.claude/` project hooks/commands
+- [x] (part 2b) Supabase stack in compose (ADR 0014): internal network, Mailpit, `migrate` job, vendored init SQL and trimmed gateway, derived keys, `make env`, `test-db` CI job, extended and sabotage-proven smoke test
+- [x] Spikes: WebSocket through Caddy, RLS-filtered Realtime for a user JWT, sharp on Alpine arm64/amd64, S3-compatible container (RustFS), R2 region `auto`
+- [x] `.claude/` Stop hook and commands (hook simulated; loading by Claude Code not verified here)
+- [ ] First CI run of the new `test-db` and smoke jobs
 
 ## Tests
 `pnpm test` runs all Vitest projects (207 tests: stage schema, config parsing, API headers/health, StageBadge, theme parsing, and the full WCAG AA contrast matrix for both themes). Gates: `pnpm typecheck`, `lint`, `stylelint`, `format:check`, `test`, `build`.
@@ -63,8 +64,10 @@ Part 2 (not started):
 - The home page is statically prerendered; the nonce-based CSP (feature 02) needs dynamic rendering, so 02 must opt the layout into it.
 - Set `NEXT_TELEMETRY_DISABLED=1` in Dockerfile and CI (Next prints a telemetry notice during build).
 
+- 2026-10-26: Part 2b done locally (not pushed). Findings: the db image's init runner aborts later init scripts after one error while still reporting healthy; GoTrue must send no SMTP credentials to Mailpit; Envoy needs HTTP/1.1 and real-route health checks; several smoke checks passed for the wrong reason until sabotaged; the `ci-local` Makefile target had been truncated. See ADR 0014 and GOTCHAS 91-97.
+
 ## Deviations / debt
 - Resolved: the TypeScript 6.x pin was removed by moving to oxlint (ADR 0005).
 - oxfmt is beta (and its CSS formatter is not byte-identical to Prettier). Revisit triggers in ADR 0005.
 - `allowBuilds: esbuild: true` is a conscious supply-chain decision.
-- No Supabase CLI installed locally yet; needed for `supabase test db` and migrations (part 2 / feature 01). Run via `npx`/container or install.
+- No Supabase CLI: migrations and pgTAP run through our own small scripts (ADR 0014). Revisit if the CLI becomes necessary.

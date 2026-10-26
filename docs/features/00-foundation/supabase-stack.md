@@ -31,11 +31,19 @@ Per container, full stack (MiB): studio 237, realtime 212, pooler 205, meta 125,
 - **Database image:** PostgreSQL 17.6; `pgcrypto` is installed and `digest(..., 'sha256')` returned the correct value (so the hash-chained ledger is feasible); **`pgTAP` 1.3.3 is available** (database tests); **`pg_cron` 1.6.4 is available and in `shared_preload_libraries`** (the closing-soon scheduler can be a database job; enable it in a migration); `pg_trgm` is available (search). `pgaudit`, `pg_net` and `supabase_vault` are preloaded.
 - The `!reset` compose override (removing the gateway's dependency on Studio) works with Compose 5.5.1; it needs Docker Compose 2.24 or newer.
 
-## Not verified (to do in part 2b and later)
-- Which of the upstream database init scripts (`roles.sql`, `jwt.sql`, `realtime.sql`, `_supabase.sql`, `webhooks.sql`, ...) the trimmed stack truly needs, and the minimal trimmed Envoy configuration (it currently routes to services we omit).
-- RLS-filtered Realtime delivery for a real user JWT held by the API (feature 05).
+## Integration and spikes (part 2b, all run on this machine, arm64)
+- **Integrated:** see ADR 0014. Full smoke from a clean state passes (about 65 s).
+- **WebSocket through Caddy `/ws`:** a throwaway `ws` server aliased as `api` behind the real `gateway/Caddyfile`: valid cookie and Origin gives 101 and an echo; wrong Origin gives 403; no cookie gives 401. Caddy proxies the upgrade with no extra configuration. The check is the server's job (Origin and cookie), not Caddy's.
+- **Realtime with a user JWT held by the API:** two users created through the admin API, a table with RLS (`owner = auth.uid()`), `replica identity full`, in the `supabase_realtime` publication, `select` granted to `authenticated`. A channel joined with user A's access token received only A's inserted row; the rows for B were not delivered. This closes the caveat above.
+- **`sharp` on Alpine:** `sharp` 0.35.5 on `node:24-alpine` resized to 256x256 WebP and produced a valid RIFF/WEBP file on arm64 and on amd64 (emulated).
+- **S3-compatible CI container:** `rustfs/rustfs:1.0.1` with `@aws-sdk/client-s3`, region `auto`, path-style: create bucket, put, get and content type all worked. Candidate for the CI `ObjectStore` test; not yet wired into CI.
+- **R2 region:** Cloudflare's AWS SDK v3 example sets region `"auto"`. Not tested against a real R2 bucket (no credentials were used).
+
+## Not verified (to do in later features)
+- Resolved in ADR 0014: the minimal init set (`roles.sql` trimmed, `jwt.sql`, `realtime.sql`) and the trimmed Envoy routes.
 - Behaviour under Docker Desktop and on the CI runner; memory under load; behaviour on amd64 (measured on arm64).
-- Mail: no service in the compose; we add Mailpit.
+- `up --wait` with the exited one-shot `migrate` on real Docker, and the whole stack on Docker Desktop and amd64: first CI run will show it.
+- Trivy scan of the third-party Supabase images.
 
 ## Cleanup done
 Both stacks stopped, 0 containers running, host ports free. The six images only the full stack needed were removed (about 4.7 GB); the five needed images were kept. The scratch copy lives outside the repo.

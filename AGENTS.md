@@ -61,4 +61,4 @@ Git hooks (Husky):
 
 Containers: `pnpm docker:build` builds the images; `pnpm compose:smoke` builds, starts the stack and tests it through the gateway (needs Docker or Podman with compose, plus `jq`). `docker compose up --build` starts the stack; only the gateway publishes a port (default 8080).
 
-Still to come in feature 00: Supabase stack in compose, `test:db`.
+Database: `make test-db` starts the database, applies `supabase/migrations`, and runs the pgTAP tests in `supabase/tests`. `make env` writes random per-machine secrets into the untracked `.env` (optional; compose has dev-only defaults). Mailpit's inbox is at http://localhost:8080/mail/ in the dev stack. `supabase/gateway` and `supabase/db` are vendored (see `supabase/UPSTREAM.md`); change them through `scripts/vendor-supabase.py`, not by hand.

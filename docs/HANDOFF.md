@@ -9,7 +9,7 @@ Keep this current. Anyone (human or agent) should be able to continue from here 
 - **Not built yet:** the Supabase stack, migrations, and every product feature. Design exists for onboarding, the closing-soon countdown and alerts, and the UI direction.
 
 ## Next action
-`00-foundation` part 2b (see its `progress.md`): Supabase stack in compose (internal network, `migrate` service), a `test-db` CI job, the remaining spikes (WebSocket through the gateway, Realtime with server-held JWTs, `sharp` on Alpine and arm64, an S3-compatible container for CI), and the `.claude/` project hooks. Measure the stack's memory first (the local Podman VM has 4 GiB). Then `01-schema-security`; check in with the owner after the RLS tests pass.
+`00-foundation` part 2b is finished locally on `feat/00-foundation-2b` (not pushed; ADR 0014): push it, watch the first CI run of `test-db` and the extended smoke test (unverified: `up --wait` with the exited `migrate` one-shot on real Docker, amd64, Trivy on the Supabase images), then `01-schema-security`; check in with the owner after the RLS tests pass.
 
 ## Where decisions live
 - `docs/decisions/README.md`: index of ADRs 0001-0011, one line each with the reason. ADRs are append-only; later ones supersede earlier ones (for example ADR 0003's CSS Modules choice was superseded by ADR 0006).

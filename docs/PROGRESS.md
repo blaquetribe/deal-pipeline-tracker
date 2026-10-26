@@ -5,7 +5,7 @@ Tier: **core** (must ship), **extended** (ship if time allows, else README note)
 
 | # | Feature | Folder | Tier | Depends on | Status |
 |---|---|---|---|---|---|
-| 00 | Foundation: monorepo, tooling, compose, CI | `docs/features/00-foundation` | core | none | in progress (2a done: tooling, design layer, hooks, Dockerfiles, gateway, compose, CI written; 2b next: Supabase stack, `test-db`, spikes, first CI run) |
+| 00 | Foundation: monorepo, tooling, compose, CI | `docs/features/00-foundation` | core | none | in progress (2a and 2b done locally: tooling, compose with the Supabase stack, `test-db`, spikes, `.claude/`; first CI run of the new jobs pending, branch not pushed) |
 | 01 | Schema and security: tenants, memberships, permissions, roles, deals, notes, RLS, immutability, SQL tests | `docs/features/01-schema-security` | core | 00 | not started |
 | 02 | Auth and onboarding: sign-up, verification, login, sessions, tenant switcher, invitations, Mailer | `docs/features/02-auth-onboarding` | core | 01 | not started |
 | 03 | Deals core: CRUD, stage machine, notes, pipeline overview, closing soon | `docs/features/03-deals-core` | core | 01, 02 | not started |
