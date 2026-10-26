@@ -7,5 +7,6 @@ useDefault = true
 # non-secret test password.
 [[allowlists]]
 description = "smoke test throwaway password"
+condition = "AND" # both the path and the value must match
 paths = ['''scripts/compose-smoke\.sh''']
 regexes = ['''Smoke-Pass-123456''']
