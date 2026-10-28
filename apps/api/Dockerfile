@@ -27,8 +27,11 @@ COPY tsconfig.base.json ./
 COPY packages/shared packages/shared
 COPY apps/api apps/api
 RUN pnpm --filter @dpt/api build
+RUN mkdir -p /repo/runtime-deps/node_modules \
+    && cp -R "$(readlink -f /repo/apps/api/node_modules/ws)" /repo/runtime-deps/node_modules/ws
 
-# The bundle is self-contained, so the runtime image has no node_modules and no pnpm.
+# The bundle is self-contained apart from ws, which Node loads as CommonJS.
+# Copy only that runtime package; the image still carries no pnpm or workspace tree.
 FROM node:26-alpine@sha256:40cd011b55415bc894e45b02fdd5a5dfde056921b7d23a64c74f80497af48797 AS runtime
 ARG IMAGE_SOURCE=https://github.com/blaquetribe/deal-pipeline-tracker
 LABEL org.opencontainers.image.source=${IMAGE_SOURCE} \
@@ -41,6 +44,7 @@ WORKDIR /app
 RUN rm -rf /usr/local/lib/node_modules /usr/local/bin/npm /usr/local/bin/npx \
            /usr/local/bin/corepack /opt/yarn*
 COPY --from=build --chown=1000:1000 /repo/apps/api/dist ./dist
+COPY --from=build --chown=1000:1000 /repo/runtime-deps/node_modules/ws ./node_modules/ws
 # Numeric UID/GID of the image's built-in `node` user, so orchestrators can verify non-root.
 USER 1000:1000
 EXPOSE 3001

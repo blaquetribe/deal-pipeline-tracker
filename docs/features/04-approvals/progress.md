@@ -37,7 +37,7 @@ ADR 0018. Configuration uses existing Owner-only `role.manage`; no mutation of i
 
 ## Log
 Dated notes: what changed, what was learned, problems.
-- 2026-10-28: implemented the core IC approval gate in migrations 15–17, API, and deal detail UI. Existing system roles could not accept a new permission, so configuration correctly uses their existing `role.manage` permission (ADR 0018). The quorum has a 1–50 database bound in addition to API validation. Full Vitest (460 tests) and pgTAP (450 assertions) pass. Lint, typecheck, stylelint, format and build pass; PR #14 is stacked on PR #13 to inherit its coverage tests and is awaiting a fresh CI run.
+- 2026-10-28: implemented the core IC approval gate in migrations 15–17, API, and deal detail UI. Existing system roles could not accept a new permission, so configuration correctly uses their existing `role.manage` permission (ADR 0018). The quorum has a 1–50 database bound in addition to API validation. PR #14 merged to main as `e1fd24c` after all required CI checks passed; the combined run passed 520 Vitest tests, pgTAP, typecheck, lint, stylelint, format, build, image scans, and compose smoke. Absence/reassignment and delegation remain extended follow-up.
 - 2026-10-28: captured the running dashboard/detail UI in the browser after rebuilding the local web/API containers. The approval controls are covered in component tests; no persistent deal was moved just to create an IC-review screenshot because stage changes are audited and append-only.
 
 ## Deviations / debt

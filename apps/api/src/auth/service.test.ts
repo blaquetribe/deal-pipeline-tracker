@@ -335,7 +335,11 @@ describe('auth routes', () => {
     );
     expect(first.status).toBe(202);
     const firstReply = await first.json();
-    const token = new URL(mails[0]?.link ?? '').searchParams.get('token');
+    const verificationEmail = mails[0];
+    const token =
+      verificationEmail?.kind === 'verify_email'
+        ? new URL(verificationEmail.link).searchParams.get('token')
+        : null;
     expect(token).toMatch(/^[A-Za-z0-9_-]{43}$/);
     expect(calls.find((call) => call.name === 'token_issue')?.args).toMatchObject({
       p_purpose: 'verify_email',

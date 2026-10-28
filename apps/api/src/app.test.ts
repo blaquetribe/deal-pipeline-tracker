@@ -3,11 +3,15 @@ import { describe, expect, it, vi } from 'vitest';
 const mocks = vi.hoisted(() => ({
   mountAuthRoutes: vi.fn<(...args: unknown[]) => void>(),
   mountDealRoutes: vi.fn<(...args: unknown[]) => void>(),
+  mountNotificationRoutes: vi.fn<(...args: unknown[]) => void>(),
   createRateLimiter: vi.fn<() => unknown>(() => ({ hit: vi.fn<() => unknown>() })),
 }));
 
 vi.mock('./auth/service', () => ({ mountAuthRoutes: mocks.mountAuthRoutes }));
 vi.mock('./features/deals/routes', () => ({ mountDealRoutes: mocks.mountDealRoutes }));
+vi.mock('./features/notifications/routes', () => ({
+  mountNotificationRoutes: mocks.mountNotificationRoutes,
+}));
 vi.mock('./http/rate-limit', () => ({ createRateLimiter: mocks.createRateLimiter }));
 
 import { createApp } from './app';
@@ -90,6 +94,9 @@ describe('api app', () => {
       auth,
     );
     expect(mocks.mountDealRoutes).toHaveBeenCalledWith(configuredApp, expect.any(Object), {
+      userRpc: auth.userRpc,
+    });
+    expect(mocks.mountNotificationRoutes).toHaveBeenCalledWith(configuredApp, expect.any(Object), {
       userRpc: auth.userRpc,
     });
   });

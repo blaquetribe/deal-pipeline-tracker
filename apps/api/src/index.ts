@@ -1,4 +1,5 @@
 import { serve } from '@hono/node-server';
+import { WebSocketServer } from 'ws';
 
 import { createApp } from './app';
 import { createGoTrue } from './auth/gotrue';
@@ -7,6 +8,7 @@ import { createSessionResolver } from './auth/service';
 import { createSessionStore } from './auth/session-store';
 import { loadConfig } from './config';
 import { createRpc } from './db/rpc';
+import { createClosingSoonEmailWorker } from './email/closing-soon-worker';
 import { createSmtpMailer } from './email/smtp';
 import { createRateLimiter } from './http/rate-limit';
 
@@ -55,19 +57,39 @@ const logger = {
   error: (message: string, fields?: Record<string, unknown>) => console.error(message, fields),
 };
 
+type WebSocketAdapter = NonNullable<Parameters<typeof serve>[0]['websocket']>['server'];
+
+const http = {
+  appOrigin: config.APP_ORIGIN,
+  cookieSecure: config.cookieSecure,
+  resolver,
+  limiter,
+  logger,
+};
+const app = createApp({
+  auth,
+  http,
+  realtime: { supabaseUrl: config.SUPABASE_URL, anonKey: publicKey, http },
+});
+const closingSoonEmailWorker = createClosingSoonEmailWorker({
+  rpc: authRpc,
+  mailer,
+  appOrigin: config.APP_ORIGIN,
+  logger,
+});
+void closingSoonEmailWorker.run();
+const closingSoonEmailTimer = setInterval(() => void closingSoonEmailWorker.run(), 60_000);
+closingSoonEmailTimer.unref();
+const websocketServer = new WebSocketServer({ noServer: true });
+// ws and Hono expose compatible runtime adapters but their send callback overloads differ.
+// oxlint-disable-next-line typescript/no-unsafe-type-assertion
+const honoWebsocketServer = websocketServer as unknown as WebSocketAdapter;
+
 serve(
   {
-    fetch: createApp({
-      auth,
-      http: {
-        appOrigin: config.APP_ORIGIN,
-        cookieSecure: config.cookieSecure,
-        resolver,
-        limiter,
-        logger,
-      },
-    }).fetch,
+    fetch: app.fetch,
     port: config.PORT,
+    websocket: { server: honoWebsocketServer },
   },
   (info) => {
     console.log(`api listening on :${info.port.toString()}`);

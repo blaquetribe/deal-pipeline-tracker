@@ -1,5 +1,6 @@
 import { SignOutButton, TenantSwitcher } from '../features/auth';
 import { DealsDashboard } from '../features/deals';
+import { NotificationBell } from '../features/notifications';
 
 export default function HomePage() {
   return (
@@ -11,6 +12,7 @@ export default function HomePage() {
         </div>
         <div className="flex flex-wrap items-center gap-4">
           <TenantSwitcher />
+          <NotificationBell />
           <SignOutButton />
         </div>
       </header>
