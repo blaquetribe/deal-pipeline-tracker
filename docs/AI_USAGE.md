@@ -87,3 +87,9 @@ Running log feeding the README reflection required by the brief. Add an entry pe
 - **What the human decided or corrected:** explicitly asked to merge PR #12 and continue from clean main, while preserving prior work and maintaining careful drag behavior if Kanban is ever introduced.
 - **How it was verified:** 502 Vitest tests pass; typecheck, lint, stylelint, format and build checks pass. API/shared and all global coverage thresholds pass locally; global branch coverage is 85.04%. Follow-up PR #13 is open and GitHub CI is running.
 - **What went wrong or was surprising:** PR #12 was merged at the user's direction while GitHub coverage CI was failing. Focused UI-state tests and small unreachable-fallback cleanup raised coverage from the prior 68.15% global statements and 56.96% branches to above the unchanged ADR 0012 floors.
+
+### 2026-10-28 / gateway CI remediation
+- **What Codex did:** investigated PR #13's Trivy failures, confirmed upstream Caddy v2.11.7 still contains go-jose v4.1.5 and x/net v0.59.0, then rebuilt the same Caddy release from the official digest-pinned builder with go-jose v4.1.6 and x/net v0.60.0. Added ADR 0017 and updated the container standard and handoff.
+- **What the human decided or corrected:** authorized the narrowly scoped custom Caddy build after the stock-image exception was explained.
+- **How it was verified:** the pinned builder completed the local Caddy build; embedded Go module metadata reports go-jose v4.1.6 and x/net v0.60.0 replacements. Pinned Trivy reports zero HIGH/CRITICAL findings with no suppressions; pinned hadolint and Caddyfile validation pass; isolated compose smoke passes. GitHub CI remains to be checked on amd64.
+- **What went wrong or was surprising:** the upstream Caddy release and image had not yet picked up the patched dependency; the advisory also lists go-jose v3 with no patched release.
