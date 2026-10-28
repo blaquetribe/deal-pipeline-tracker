@@ -35,7 +35,7 @@ Key decisions, schema/API shape, links to ADRs.
 ## Tests
 What is covered, where it lives, how to run it.
 - `pnpm test`: 34 files and 450 tests pass. Focused route, dashboard, detail, countdown and shared-schema tests pass.
-- `pnpm typecheck`, `pnpm lint`, `pnpm stylelint`, `pnpm format:check`, and `pnpm build` pass. `make COMPOSE='podman compose' test-db` passes with 408 assertions across 21 files. The full Podman compose smoke passes after the dashboard summary change.
+- `pnpm typecheck`, `pnpm lint`, `pnpm stylelint`, `pnpm format:check`, `pnpm build`, `make COMPOSE='podman compose' test-db` (408 assertions across 21 files), and full Podman compose smoke pass. `pnpm test:coverage` runs all 450 tests but fails repository thresholds (68.15% global statements; 86.95% statements for `apps/api/src`; required floors are 90% and 95%). GitHub CI skips build after the coverage failure. Most uncovered paths are in auth/onboarding code already included in this branch; see `docs/HANDOFF.md` before treating CI as green.
 - Browser evidence: authenticated deal detail with a saved note captured on 2026-10-28; dashboard evidence with a deal due in 12 days captured on 2026-10-28.
 
 ## Security checklist (from SECURITY_STANDARDS.md)
