@@ -21,7 +21,7 @@ WebSocket relay of RLS-filtered events, live cache updates, presence. Covers GOT
 - [x] Migration(s)
 - [x] API
 - [x] Web
-- [x] Docs updated (local verification; refresh after CI/PR)
+- [x] Docs updated (local verification and PR #15 CI)
 
 ## Tests
 What is covered, where it lives, how to run it.
@@ -43,7 +43,7 @@ What is covered, where it lives, how to run it.
 Dated notes: what changed, what was learned, problems.
 - 2026-10-28: started from clean `main` at `e1fd24c` after PRs #13 and #14 merged with all required checks green. Existing compose spike evidence covers JWT-filtered Realtime and Caddy `/ws`; implementation must preserve the API-only Supabase boundary, session/tenant isolation, and reconnect cache refresh behavior.
 - 2026-10-28: implemented RLS-backed per-user WebSocket delivery, notification list/read APIs and bell UI, hourly closing-soon scan, append-only system audit event, leased email outbox and generic digest template. Local Vitest, coverage, pgTAP, typecheck, lint, stylelint, format, production build and full isolated compose smoke pass. Captured authenticated notification UI at mobile and desktop widths; GitHub CI remains before merge.
-- 2026-10-29: live UI validation exposed an initialization race: Realtime's first channel join could precede caller-JWT setup, and the user-id filter was not accepted by the active Realtime schema. The API now awaits `setAuth` before subscribing and uses the active-tenant filter while RLS continues to authorize rows. Browser verification received a new closing-soon alert and displayed the connected state. Added regression coverage for token rotation and disconnect during async initialization. Latest verification: 551 tests, coverage gates pass (85.06% global branches; 92.30% API branches), formatting, lint, stylelint, typecheck, build, and the full isolated compose smoke pass. GitHub CI remains before merge.
+- 2026-10-29: live UI validation exposed an initialization race: Realtime's first channel join could precede caller-JWT setup, and the user-id filter was not accepted by the active Realtime schema. The API now awaits `setAuth` before subscribing and uses the active-tenant filter while RLS continues to authorize rows. Browser verification received a new closing-soon alert and displayed the connected state. Added regression coverage for token rotation and disconnect during async initialization. Local verification passes: 551 tests, coverage gates (85.06% global branches; 92.30% API branches), formatting, lint, stylelint, typecheck, build, and the full isolated compose smoke. PR #15's required GitHub checks all passed: secret scan, typecheck/lint/test/build, pgTAP, API/web/gateway image jobs and compose smoke; advisory AI review passed. The PR is ready to merge.
 
 ## Deviations / debt
 Anything that differs from the plan or is deferred (also mirror in README "next steps").
