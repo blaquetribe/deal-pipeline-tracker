@@ -34,6 +34,19 @@ const activity = {
   hasMore: false,
   integrityOk: true,
 };
+const approvalStatus = {
+  requestId: null,
+  status: null,
+  requiredApprovals: null,
+  configuredApprovals: null,
+  approvedCount: 0,
+  pendingCount: 0,
+  rejectedCount: 0,
+  currentUserDecision: null,
+  canRequest: false,
+  canDecide: false,
+  canConfigure: false,
+};
 
 afterEach(() => vi.unstubAllGlobals());
 
@@ -41,10 +54,15 @@ describe('DealDetail', () => {
   it('shows overview and verified append-only activity', async () => {
     const fetch = vi.fn<(input: RequestInfo | URL) => Promise<Response>>(async (input) => {
       const url = input instanceof Request ? input.url : String(input);
-      return new Response(JSON.stringify(url.endsWith('/activity') ? activity : deal), {
-        status: 200,
-        headers: { 'Content-Type': 'application/json' },
-      });
+      return new Response(
+        JSON.stringify(
+          url.endsWith('/activity') ? activity : url.endsWith('/approval') ? approvalStatus : deal,
+        ),
+        {
+          status: 200,
+          headers: { 'Content-Type': 'application/json' },
+        },
+      );
     });
     vi.stubGlobal('fetch', fetch);
 
@@ -83,10 +101,19 @@ describe('DealDetail', () => {
             headers: { 'Content-Type': 'application/json' },
           });
         }
-        return new Response(JSON.stringify(url.endsWith('/activity') ? activity : deal), {
-          status: 200,
-          headers: { 'Content-Type': 'application/json' },
-        });
+        return new Response(
+          JSON.stringify(
+            url.endsWith('/activity')
+              ? activity
+              : url.endsWith('/approval')
+                ? approvalStatus
+                : deal,
+          ),
+          {
+            status: 200,
+            headers: { 'Content-Type': 'application/json' },
+          },
+        );
       },
     );
     vi.stubGlobal('fetch', fetch);
@@ -103,7 +130,7 @@ describe('DealDetail', () => {
     const post = fetch.mock.calls.find(([, init]) => init?.method === 'POST');
     expect(post?.[0]).toBe(`/api/deals/${dealId}/notes`);
     expect(post?.[1]?.body).toBe(JSON.stringify({ body: 'Follow-up booked.' }));
-    await waitFor(() => expect(fetch).toHaveBeenCalledTimes(6));
+    await waitFor(() => expect(fetch).toHaveBeenCalledTimes(8));
   });
 
   it('loads older activity with the exact sequence cursor', async () => {
@@ -119,7 +146,9 @@ describe('DealDetail', () => {
         ? { events: [olderEvent], hasMore: false, integrityOk: true }
         : url.endsWith('/activity')
           ? { ...activity, hasMore: true }
-          : deal;
+          : url.endsWith('/approval')
+            ? approvalStatus
+            : deal;
       return new Response(JSON.stringify(response), {
         status: 200,
         headers: { 'Content-Type': 'application/json' },
@@ -138,5 +167,67 @@ describe('DealDetail', () => {
       expect.objectContaining({ cache: 'no-store' }),
     );
     expect(screen.queryByRole('button', { name: 'Load older activity' })).not.toBeInTheDocument();
+  });
+
+  it('submits an approval request from IC review and refreshes the authoritative status', async () => {
+    const icDeal = { ...deal, stage: 'ic_review' as const };
+    let requested = false;
+    const fetch = vi.fn<(input: RequestInfo | URL, init?: RequestInit) => Promise<Response>>(
+      async (input) => {
+        const url = input instanceof Request ? input.url : String(input);
+        if (url === '/api/auth/session') {
+          return new Response(
+            JSON.stringify({
+              csrfToken: 'csrf-test',
+              user: {
+                id: 'cccccccc-0000-4000-8000-000000000001',
+                email: 'person@example.test',
+                fullName: 'Test User',
+              },
+              tenantId: 'cccccccc-0000-4000-8000-000000000002',
+            }),
+            { status: 200, headers: { 'Content-Type': 'application/json' } },
+          );
+        }
+        if (url.endsWith('/approval-requests')) {
+          requested = true;
+          return new Response(
+            JSON.stringify({ requestId: 'bbbbbbbb-0000-4000-8000-000000000003' }),
+            {
+              status: 201,
+              headers: { 'Content-Type': 'application/json' },
+            },
+          );
+        }
+        const currentStatus = requested
+          ? {
+              ...approvalStatus,
+              requestId: 'bbbbbbbb-0000-4000-8000-000000000003',
+              status: 'pending',
+              requiredApprovals: 2,
+            }
+          : { ...approvalStatus, configuredApprovals: 2, canRequest: true };
+        const body = url.endsWith('/activity')
+          ? activity
+          : url.endsWith('/approval')
+            ? currentStatus
+            : icDeal;
+        return new Response(JSON.stringify(body), {
+          status: 200,
+          headers: { 'Content-Type': 'application/json' },
+        });
+      },
+    );
+    vi.stubGlobal('fetch', fetch);
+    const user = userEvent.setup();
+
+    render(<DealDetail dealId={dealId} />);
+    await user.click(await screen.findByRole('button', { name: 'Submit for approval' }));
+
+    expect(await screen.findByText(/Required approvals: 2/)).toBeVisible();
+    expect(fetch).toHaveBeenCalledWith(
+      `/api/deals/${dealId}/approval-requests`,
+      expect.objectContaining({ method: 'POST', body: JSON.stringify({ expectedVersion: 2 }) }),
+    );
   });
 });

@@ -3,6 +3,10 @@ import { describe, expect, it } from 'vitest';
 import {
   createDealBodySchema,
   createNoteBodySchema,
+  approvalDecisionBodySchema,
+  approvalPolicyBodySchema,
+  approvalRequestBodySchema,
+  dealApprovalStatusSchema,
   dashboardSummarySchema,
   dealActivityQuerySchema,
   dealActivityResponseSchema,
@@ -218,5 +222,50 @@ describe('deal list schemas', () => {
         items: [{ ...response.items[0], expected_close_time: '25:00' }],
       }),
     ).toThrow(/expected_close_time/);
+  });
+});
+
+describe('approval schemas', () => {
+  it('validates strict request, decision and bounded policy inputs', () => {
+    expect(approvalRequestBodySchema.parse({ expectedVersion: 2 })).toEqual({ expectedVersion: 2 });
+    expect(
+      approvalDecisionBodySchema.parse({ decision: 'reject', reason: 'Needs review' }),
+    ).toEqual({
+      decision: 'reject',
+      reason: 'Needs review',
+    });
+    expect(approvalPolicyBodySchema.parse({ requiredApprovals: 2 })).toEqual({
+      requiredApprovals: 2,
+    });
+    expect(() => approvalDecisionBodySchema.parse({ decision: 'abstain' })).toThrow(/decision/);
+    expect(() => approvalRequestBodySchema.parse({ expectedVersion: 0 })).toThrow(
+      /expectedVersion/,
+    );
+    expect(() => approvalPolicyBodySchema.parse({ requiredApprovals: 51 })).toThrow(
+      /requiredApprovals/,
+    );
+    expect(() => approvalPolicyBodySchema.parse({ requiredApprovals: 2, tenantId: userA })).toThrow(
+      /tenantId/,
+    );
+  });
+
+  it('validates actionable status, nullable policy and quorum fields', () => {
+    const status = {
+      requestId: null,
+      status: null,
+      requiredApprovals: null,
+      configuredApprovals: null,
+      approvedCount: 0,
+      pendingCount: 0,
+      rejectedCount: 0,
+      currentUserDecision: null,
+      canRequest: false,
+      canDecide: false,
+      canConfigure: true,
+    };
+    expect(dealApprovalStatusSchema.parse(status)).toEqual(status);
+    expect(() => dealApprovalStatusSchema.parse({ ...status, tenantId: userA })).toThrow(
+      /tenantId/,
+    );
   });
 });

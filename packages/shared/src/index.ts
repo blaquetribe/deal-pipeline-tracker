@@ -7,6 +7,10 @@ export type { OnboardingFlow } from './onboarding';
 export { daysUntil, formatCloseCountdown } from './countdown';
 export {
   dashboardSummarySchema,
+  approvalDecisionBodySchema,
+  approvalPolicyBodySchema,
+  approvalRequestBodySchema,
+  dealApprovalStatusSchema,
   createDealBodySchema,
   createNoteBodySchema,
   moveDealStageBodySchema,
@@ -24,6 +28,7 @@ export {
 } from './deals';
 export type {
   DashboardSummary,
+  DealApprovalStatus,
   CreateDealBody,
   Deal,
   DealActivityQuery,

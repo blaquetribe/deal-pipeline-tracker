@@ -194,6 +194,33 @@ export const createNoteBodySchema = z.strictObject({
   body: z.string().trim().min(1).max(10000),
 });
 
+export const approvalRequestBodySchema = z.strictObject({
+  expectedVersion: z.number().int().min(1),
+});
+
+export const approvalDecisionBodySchema = z.strictObject({
+  decision: z.enum(['approve', 'reject']),
+  reason: z.string().trim().min(1).max(2000).optional(),
+});
+
+export const approvalPolicyBodySchema = z.strictObject({
+  requiredApprovals: z.number().int().min(1).max(50),
+});
+
+export const dealApprovalStatusSchema = z.strictObject({
+  requestId: z.uuid().nullable(),
+  status: z.enum(['pending', 'approved', 'rejected']).nullable(),
+  requiredApprovals: z.number().int().min(1).nullable(),
+  configuredApprovals: z.number().int().min(1).nullable(),
+  approvedCount: z.number().int().nonnegative(),
+  pendingCount: z.number().int().nonnegative(),
+  rejectedCount: z.number().int().nonnegative(),
+  currentUserDecision: z.enum(['approve', 'reject']).nullable(),
+  canRequest: z.boolean(),
+  canDecide: z.boolean(),
+  canConfigure: z.boolean(),
+});
+
 export type DealAssignee = z.infer<typeof dealAssigneeSchema>;
 export type DashboardSummary = z.infer<typeof dashboardSummarySchema>;
 export type CreateDealBody = z.infer<typeof createDealBodySchema>;
@@ -206,3 +233,4 @@ export type SetDealAssigneesBody = z.infer<typeof setDealAssigneesBodySchema>;
 export type DealAssigneesResponse = z.infer<typeof dealAssigneesResponseSchema>;
 export type DealListQuery = z.infer<typeof dealListQuerySchema>;
 export type DealListResponse = z.infer<typeof dealListResponseSchema>;
+export type DealApprovalStatus = z.infer<typeof dealApprovalStatusSchema>;

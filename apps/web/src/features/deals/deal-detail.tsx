@@ -1,16 +1,24 @@
 'use client';
 
-import type { Deal, DealActivityResponse } from '@dpt/shared';
+import type { Deal, DealActivityResponse, DealApprovalStatus } from '@dpt/shared';
 import Link from 'next/link';
 import { useEffect, useId, useState } from 'react';
 import type { FormEvent } from 'react';
 
 import { StageBadge } from '../pipeline';
-import { postDealNote, readDeal, readDealActivity } from './api';
+import {
+  configureDealApprovalPolicy,
+  decideDealApproval,
+  postDealNote,
+  readDeal,
+  readDealActivity,
+  readDealApprovalStatus,
+  requestDealApproval,
+} from './api';
 import { formatMinorAmount } from './money';
 
 async function loadDealData(dealId: string) {
-  return Promise.all([readDeal(dealId), readDealActivity(dealId)]);
+  return Promise.all([readDeal(dealId), readDealActivity(dealId), readDealApprovalStatus(dealId)]);
 }
 
 interface DealDetailProps {
@@ -25,21 +33,30 @@ function formatDate(value: string): string {
 
 export function DealDetail({ dealId }: DealDetailProps) {
   const noteId = useId();
+  const quorumId = useId();
+  const rejectionReasonId = useId();
   const [deal, setDeal] = useState<Deal | null>(null);
   const [activity, setActivity] = useState<DealActivityResponse | null>(null);
+  const [approval, setApproval] = useState<DealApprovalStatus | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [noteError, setNoteError] = useState<string | null>(null);
   const [activityError, setActivityError] = useState<string | null>(null);
+  const [approvalError, setApprovalError] = useState<string | null>(null);
+  const [approvalBusy, setApprovalBusy] = useState(false);
+  const [quorum, setQuorum] = useState('1');
+  const [rejectionReason, setRejectionReason] = useState('');
   const [posting, setPosting] = useState(false);
   const [loadingOlder, setLoadingOlder] = useState(false);
 
   useEffect(() => {
     let active = true;
     void loadDealData(dealId)
-      .then(([detail, events]) => {
+      .then(([detail, events, approvalStatus]) => {
         if (!active) return;
         setDeal(detail);
         setActivity(events);
+        setApproval(approvalStatus);
+        setQuorum(String(approvalStatus.configuredApprovals ?? 1));
       })
       .catch((cause: unknown) => {
         if (active)
@@ -54,12 +71,76 @@ export function DealDetail({ dealId }: DealDetailProps) {
     setError(null);
     setDeal(null);
     setActivity(null);
+    setApproval(null);
     try {
-      const [detail, events] = await loadDealData(dealId);
+      const [detail, events, approvalStatus] = await loadDealData(dealId);
       setDeal(detail);
       setActivity(events);
+      setApproval(approvalStatus);
+      setQuorum(String(approvalStatus.configuredApprovals ?? 1));
     } catch (cause) {
       setError(cause instanceof Error ? cause.message : 'Deal details could not be loaded.');
+    }
+  }
+
+  async function refreshApprovalData() {
+    const [detail, events, approvalStatus] = await loadDealData(dealId);
+    setDeal(detail);
+    setActivity(events);
+    setApproval(approvalStatus);
+    setQuorum(String(approvalStatus.configuredApprovals ?? 1));
+  }
+
+  async function submitApprovalRequest() {
+    if (!deal) return;
+    setApprovalError(null);
+    setApprovalBusy(true);
+    try {
+      await requestDealApproval(deal.id, deal.version);
+      await refreshApprovalData();
+    } catch (cause) {
+      setApprovalError(
+        cause instanceof Error ? cause.message : 'The approval request could not be submitted.',
+      );
+    } finally {
+      setApprovalBusy(false);
+    }
+  }
+
+  async function decideApproval(decision: 'approve' | 'reject') {
+    if (!approval?.requestId) return;
+    setApprovalError(null);
+    setApprovalBusy(true);
+    try {
+      await decideDealApproval(
+        approval.requestId,
+        decision,
+        decision === 'reject' && rejectionReason.trim() ? rejectionReason.trim() : undefined,
+      );
+      setRejectionReason('');
+      await refreshApprovalData();
+    } catch (cause) {
+      setApprovalError(
+        cause instanceof Error ? cause.message : 'The approval decision could not be saved.',
+      );
+    } finally {
+      setApprovalBusy(false);
+    }
+  }
+
+  async function saveApprovalPolicy(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    setApprovalError(null);
+    setApprovalBusy(true);
+    try {
+      await configureDealApprovalPolicy(Number(quorum));
+      await refreshApprovalData();
+    } catch (cause) {
+      setApprovalError(
+        cause instanceof Error ? cause.message : 'The approval policy could not be saved.',
+      );
+    } finally {
+      setApprovalBusy(false);
     }
   }
 
@@ -183,6 +264,109 @@ export function DealDetail({ dealId }: DealDetailProps) {
           </div>
         </dl>
       </section>
+
+      {approval && (deal.stage === 'ic_review' || approval.requestId !== null) ? (
+        <section
+          aria-labelledby="approval-title"
+          className="rounded-panel border border-line bg-surface-raised p-5"
+        >
+          <h2 className="text-xl font-semibold" id="approval-title">
+            IC approval
+          </h2>
+          {approval.requiredApprovals === null && approval.configuredApprovals === null ? (
+            <p className="mt-2 text-fg-muted">
+              No approval quorum is configured for this organisation.
+            </p>
+          ) : (
+            <p className="mt-2 text-fg-muted">
+              Required approvals: {approval.requiredApprovals ?? approval.configuredApprovals}
+              {approval.status === 'pending'
+                ? ` · ${approval.approvedCount} approved · ${approval.pendingCount} pending · ${approval.rejectedCount} rejected`
+                : ''}
+            </p>
+          )}
+          {approval.status === 'approved' ? <p className="mt-2">Approval quorum reached.</p> : null}
+          {approval.status === 'rejected' ? (
+            <p className="mt-2">Approval request failed because quorum was no longer reachable.</p>
+          ) : null}
+          {approval.canConfigure ? (
+            <form
+              className="mt-4 flex flex-wrap items-end gap-3"
+              onSubmit={(event) => void saveApprovalPolicy(event)}
+            >
+              <div>
+                <label className="mb-1 block text-sm font-medium" htmlFor={quorumId}>
+                  Required approvals
+                </label>
+                <input
+                  className="w-28 rounded-control border border-line bg-surface p-2 outline-focus focus-visible:outline-2"
+                  id={quorumId}
+                  max={50}
+                  min={1}
+                  onChange={(event) => setQuorum(event.currentTarget.value)}
+                  required
+                  type="number"
+                  value={quorum}
+                />
+              </div>
+              <button
+                className="rounded-control border border-line px-4 py-2 focus-visible:outline-2 disabled:opacity-60"
+                disabled={approvalBusy}
+                type="submit"
+              >
+                Save quorum
+              </button>
+            </form>
+          ) : null}
+          {approval.canRequest ? (
+            <button
+              className="mt-4 rounded-control bg-brand px-4 py-2 font-medium text-fg-on-brand hover:bg-brand-hover focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus disabled:opacity-60"
+              disabled={approvalBusy}
+              onClick={() => void submitApprovalRequest()}
+              type="button"
+            >
+              {approvalBusy ? 'Submitting…' : 'Submit for approval'}
+            </button>
+          ) : null}
+          {approval.canDecide ? (
+            <div className="mt-4 space-y-3">
+              <label className="block text-sm font-medium" htmlFor={rejectionReasonId}>
+                Rejection reason (optional)
+              </label>
+              <textarea
+                className="min-h-20 w-full rounded-control border border-line bg-surface p-3 outline-focus focus-visible:outline-2"
+                id={rejectionReasonId}
+                maxLength={2000}
+                onChange={(event) => setRejectionReason(event.currentTarget.value)}
+                value={rejectionReason}
+              />
+              <div className="flex flex-wrap gap-3">
+                <button
+                  className="rounded-control bg-brand px-4 py-2 font-medium text-fg-on-brand hover:bg-brand-hover focus-visible:outline-2 disabled:opacity-60"
+                  disabled={approvalBusy}
+                  onClick={() => void decideApproval('approve')}
+                  type="button"
+                >
+                  Approve
+                </button>
+                <button
+                  className="rounded-control border border-danger px-4 py-2 text-danger focus-visible:outline-2 disabled:opacity-60"
+                  disabled={approvalBusy}
+                  onClick={() => void decideApproval('reject')}
+                  type="button"
+                >
+                  Reject
+                </button>
+              </div>
+            </div>
+          ) : null}
+          {approvalError ? (
+            <p className="mt-3 text-danger" role="alert">
+              {approvalError}
+            </p>
+          ) : null}
+        </section>
+      ) : null}
 
       <section aria-labelledby="activity-title">
         <div className="flex flex-wrap items-center justify-between gap-3">
