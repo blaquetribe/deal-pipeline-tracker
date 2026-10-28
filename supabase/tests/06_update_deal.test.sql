@@ -1,7 +1,7 @@
 -- Feature 01, slice 4: update_deal. Field edits are permissioned, versioned, validated against an
 -- allow-list, cannot strip a field the current stage requires, and are recorded in the ledger.
 begin;
-select plan(15);
+select plan(16);
 
 insert into auth.users (id, instance_id, aud, role, email, email_confirmed_at)
 select ('aaaaaaaa-0000-4000-8000-00000000000' || n)::uuid, '00000000-0000-0000-0000-000000000000', 'authenticated', 'authenticated',
@@ -10,7 +10,7 @@ from generate_series(1, 3) as n;
 insert into public.tenants (id, name) values
   ('bbbbbbbb-0000-4000-8000-00000000000a', 'Tenant A'),
   ('bbbbbbbb-0000-4000-8000-00000000000b', 'Tenant B');
-select app.seed_system_roles(id) from public.tenants;
+select app.seed_system_roles(id) from public.tenants where id in ('bbbbbbbb-0000-4000-8000-00000000000a', 'bbbbbbbb-0000-4000-8000-00000000000b');
 insert into public.memberships (tenant_id, user_id) values
   ('bbbbbbbb-0000-4000-8000-00000000000a', 'aaaaaaaa-0000-4000-8000-000000000001'),
   ('bbbbbbbb-0000-4000-8000-00000000000a', 'aaaaaaaa-0000-4000-8000-000000000002'),
@@ -35,6 +35,8 @@ update public.deals set archived_at = now() where id = (select id from ids where
 
 select is(public.update_deal((select id from ids where k = 'd'), 1, '{"sector":"Mining","amount":"1500000","name":"Target II"}'), 2,
   'a lead can edit fields and gets the new version');
+select throws_ok(format($$select public.update_deal(%L, null, '{"name":"Bypass"}')$$, (select id from ids where k = 'd')),
+  'DP409', 'stale version', 'a null expected version cannot bypass optimistic concurrency');
 select is((select sector || '/' || amount || '/' || name from public.deals where id = (select id from ids where k = 'd')),
   'Mining/1500000/Target II', 'the fields changed, and the amount arrived as a string of minor units');
 select is((select count(*) from public.deal_events where deal_id = (select id from ids where k = 'd') and kind = 'field_change' and body like 'Updated:%sector%'),

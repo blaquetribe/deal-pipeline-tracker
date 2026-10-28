@@ -10,10 +10,15 @@ cd "$(dirname "$0")/.."
 
 if docker compose version >/dev/null 2>&1; then
   COMPOSE=(docker compose)
+  CONTAINER_ENGINE=docker
+elif podman compose version >/dev/null 2>&1; then
+  COMPOSE=(podman compose)
+  CONTAINER_ENGINE=podman
 elif command -v docker-compose >/dev/null 2>&1; then
   COMPOSE=(docker-compose)
+  CONTAINER_ENGINE=docker
 else
-  echo "FAIL: neither 'docker compose' nor 'docker-compose' is available" >&2
+  echo "FAIL: no supported Docker or Podman Compose command is available" >&2
   exit 1
 fi
 
@@ -79,6 +84,7 @@ SERVICE=$(sign_key service_role)
 
 # `exec` must never read this script's stdin, or it swallows the rest of the file.
 dc_exec() { "${COMPOSE[@]}" exec -T "$@" </dev/null; }
+strip_ansi() { perl -pe 's/\e\[[0-9;]*[[:alpha:]]//g'; }
 internal_curl() { dc_exec realtime curl -s -m 10 "$@"; } # a client that lives on the internal network
 http_code() { internal_curl -o /dev/null -w '%{http_code}' "$@"; }
 
@@ -93,11 +99,11 @@ container_of() { "${COMPOSE[@]}" ps -a -q "$1" | head -n 1; }
 
 echo "== services =="
 for svc in db auth rest realtime supabase-gateway mailpit api web gateway; do
-  state=$(docker inspect --format '{{.State.Health.Status}}' "$(container_of "$svc")" 2>/dev/null || echo missing)
+  state=$($CONTAINER_ENGINE inspect --format '{{.State.Health.Status}}' "$(container_of "$svc")" 2>/dev/null || echo missing)
   [ "$state" = healthy ] && pass "${svc} is healthy" || fail "${svc} is healthy (state: ${state})"
 done
 migrate_id=$(container_of migrate)
-[ "$(docker inspect --format '{{.State.Status}} {{.State.ExitCode}}' "$migrate_id" 2>/dev/null)" = "exited 0" ] \
+[ "$($CONTAINER_ENGINE inspect --format '{{.State.Status}} {{.State.ExitCode}}' "$migrate_id" 2>/dev/null)" = "exited 0" ] \
   && pass "migrate ran to completion (exit 0)" || fail "migrate ran to completion (exit 0)"
 grep -q -F "$DEFAULT_JWT_SECRET" docker-compose.yml \
   && pass "this script's dev JWT default matches docker-compose.yml" \
@@ -105,7 +111,7 @@ grep -q -F "$DEFAULT_JWT_SECRET" docker-compose.yml \
 
 echo "== gateway =="
 check "gateway liveness /healthz" curl -fsS "${BASE}/healthz"
-check "web page served through the gateway" bash -c "curl -fsS '${BASE}/' | grep -q 'Deal Pipeline Tracker'"
+check "web page served through the gateway" bash -c "curl -fsSL '${BASE}/' | grep -q 'Deal Pipeline Tracker'"
 check "api health reachable at /api/health" bash -c "curl -fsS '${BASE}/api/health' | grep -q '\"status\":\"ok\"'"
 check "unknown api route returns 404" bash -c "[ \"\$(curl -s -o /dev/null -w '%{http_code}' '${BASE}/api/does-not-exist')\" = 404 ]"
 check "Mailpit inbox is served at /mail/ (development gateway)" bash -c "curl -fsS '${BASE}/mail/' | grep -qi mailpit"
@@ -226,9 +232,10 @@ ws.onopen = () => ws.send(JSON.stringify({ topic: "realtime:smoke", event: "phx_
 ws.onmessage = (e) => { const m = JSON.parse(e.data);
   if (m.event === "phx_reply" && m.ref === "1") { console.log(m.payload.status); process.exit(m.payload.status === "ok" ? 0 : 1); } };
 '
-[ "$(dc_exec -e ANON="$ANON" api node -e "$ws_js" 2>&1 | tail -n 1)" = ok ] \
+ws_out=$(dc_exec -e ANON="$ANON" api node -e "$ws_js" 2>&1 | strip_ansi | tail -n 1)
+[ "$ws_out" = ok ] \
   && pass "api opens a realtime WebSocket through the internal gateway" \
-  || fail "api opens a realtime WebSocket through the internal gateway"
+  || fail "api opens a realtime WebSocket through the internal gateway (${ws_out:-no response})"
 
 # PostgREST must switch to the roles named in a JWT (ADR 0015): api_service reaches only the session
 # functions, a signed-in user reaches their own data through app.uid(), and neither can do the other's job.
@@ -262,7 +269,7 @@ const call = async (method, path, token, body) => {
   process.exit(bad.length === 0 ? 0 : 1);
 })();
 '
-roles_out=$(JWT_SECRET="$JWT_SECRET" dc_exec -e JWT_SECRET api node -e "$roles_js" 2>&1 | tail -n 1)
+roles_out=$(JWT_SECRET="$JWT_SECRET" dc_exec -e JWT_SECRET api node -e "$roles_js" 2>&1 | strip_ansi | tail -n 1)
 [ "$roles_out" = ok ] \
   && pass "PostgREST switches to api_service and to the signed-in user from the JWT role (app.uid works)" \
   || fail "PostgREST role switching: ${roles_out}"

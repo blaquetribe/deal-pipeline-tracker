@@ -1,7 +1,7 @@
 -- Feature 01, slice 3: create_deal and move_stage. The stage machine, the required fields per stage,
 -- optimistic concurrency and permissions are enforced in the database. Written before the migration.
 begin;
-select plan(33);
+select plan(34);
 
 -- Structure -------------------------------------------------------------------------------------------
 select has_table('public', 'stage_transitions', 'allowed transitions are data');
@@ -40,7 +40,7 @@ from generate_series(1, 4) as n;
 insert into public.tenants (id, name) values
   ('bbbbbbbb-0000-4000-8000-00000000000a', 'Tenant A'),
   ('bbbbbbbb-0000-4000-8000-00000000000b', 'Tenant B');
-select app.seed_system_roles(id) from public.tenants;
+select app.seed_system_roles(id) from public.tenants where id in ('bbbbbbbb-0000-4000-8000-00000000000a', 'bbbbbbbb-0000-4000-8000-00000000000b');
 -- u1 deal lead (A), u2 observer (A), u3 IC member (A), u4 deal lead (B)
 insert into public.memberships (tenant_id, user_id) values
   ('bbbbbbbb-0000-4000-8000-00000000000a', 'aaaaaaaa-0000-4000-8000-000000000001'),
@@ -117,6 +117,8 @@ select set_config('request.jwt.claims', '{"sub":"aaaaaaaa-0000-4000-8000-0000000
 
 select is(public.move_stage((select id from ids where k = 'full'), 'screening', 1), 2,
   'a legal move with its required fields returns the new version');
+select throws_ok(format($$select public.move_stage(%L, 'due_diligence', null)$$, (select id from ids where k = 'full')),
+  'DP409', 'stale version', 'a null expected version cannot bypass optimistic concurrency');
 select is((select stage from public.deals where id = (select id from ids where k = 'full')), 'screening', 'and the stage changed');
 select is((select body from public.deal_events where deal_id = (select id from ids where k = 'full') and kind = 'stage_change'),
   'sourcing -> screening', 'the move is recorded in the ledger');

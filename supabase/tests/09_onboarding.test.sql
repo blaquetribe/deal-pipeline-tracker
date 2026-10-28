@@ -62,7 +62,7 @@ select throws_ok($$select public.create_organisation('')$$, '23514', null, 'an o
 insert into ids select 'T', public.create_organisation('Acme Capital', 'Africa/Johannesburg', 'ZAR');
 select ok((select id from ids where k = 'T') is not null, 'a verified user at the organisation step creates their organisation');
 select is((select timezone || '/' || default_currency || '/' || closing_soon_days from public.tenants where id = (select id from ids where k = 'T')),
-  'Africa/Johannesburg/ZAR/30', 'with its settings and the default 30-day closing-soon window');
+  'Africa/Johannesburg/ZAR/60', 'with its settings and the ADR 0011 60-day closing-soon default');
 select ok(app.has_permission((select id from ids where k = 'T'), 'role.manage'), 'and the creator is its Owner');
 select is((select current_step from public.onboarding_state()), 'defaults', 'the flow moves on to the optional steps');
 select throws_ok($$select public.create_organisation('Second Fund')$$, 'DP422', 'not at this step', 'a second organisation is refused');

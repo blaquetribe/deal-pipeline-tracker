@@ -11,6 +11,7 @@ import { pathToFileURL } from 'node:url';
 export const GENERATED = {
   POSTGRES_PASSWORD: () => randomBytes(24).toString('base64url'),
   JWT_SECRET: () => randomBytes(48).toString('base64url'),
+  SESSION_SECRET: () => randomBytes(48).toString('base64url'),
   SECRET_KEY_BASE: () => randomBytes(64).toString('hex'),
   // Realtime encrypts with AES-128: the key must be exactly 16 characters.
   REALTIME_DB_ENC_KEY: () => randomBytes(12).toString('base64url'),

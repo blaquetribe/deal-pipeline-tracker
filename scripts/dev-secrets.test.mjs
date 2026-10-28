@@ -88,6 +88,7 @@ describe('mergeEnv', () => {
   it('generates secrets that satisfy the services constraints', () => {
     const values = Object.fromEntries(Object.entries(GENERATED).map(([k, make]) => [k, make()]));
     expect(values.JWT_SECRET.length).toBeGreaterThanOrEqual(32);
+    expect(values.SESSION_SECRET.length).toBeGreaterThanOrEqual(32);
     expect(values.SECRET_KEY_BASE.length).toBeGreaterThanOrEqual(64);
     expect(values.REALTIME_DB_ENC_KEY).toHaveLength(16);
     expect(values.POSTGRES_PASSWORD).toMatch(/^[A-Za-z0-9_-]+$/);

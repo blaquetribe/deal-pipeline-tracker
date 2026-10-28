@@ -35,7 +35,7 @@ from generate_series(1, 7) as n;
 insert into public.tenants (id, name) values
   ('bbbbbbbb-0000-4000-8000-00000000000a', 'Tenant A'),
   ('bbbbbbbb-0000-4000-8000-00000000000b', 'Tenant B');
-select app.seed_system_roles(id) from public.tenants;
+select app.seed_system_roles(id) from public.tenants where id in ('bbbbbbbb-0000-4000-8000-00000000000a', 'bbbbbbbb-0000-4000-8000-00000000000b');
 
 -- u1 owner, u2 deal lead, u3 IC member, u4 observer, u5 member with no role, u6 deactivated lead (all A); u7 lead of B
 insert into public.memberships (tenant_id, user_id) values
