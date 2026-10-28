@@ -86,6 +86,65 @@ describe('DealsDashboard', () => {
     expect(await screen.findByRole('alert')).toHaveTextContent('You are not allowed to do that.');
   });
 
+  it('lets the user retry a failed pipeline summary', async () => {
+    let summaryCalls = 0;
+    const fetch = vi.fn<(input: RequestInfo | URL, init?: RequestInit) => Promise<Response>>(
+      async (input) => {
+        const url = input instanceof Request ? input.url : String(input);
+        if (url.endsWith('/dashboard-summary') && summaryCalls++ === 0) {
+          return new Response(JSON.stringify({ error: { message: 'Summary unavailable.' } }), {
+            status: 503,
+            headers: { 'Content-Type': 'application/json' },
+          });
+        }
+        return new Response(
+          JSON.stringify(
+            url.endsWith('/dashboard-summary') ? dashboardSummary : { total: 0, items: [] },
+          ),
+          { status: 200, headers: { 'Content-Type': 'application/json' } },
+        );
+      },
+    );
+    vi.stubGlobal('fetch', fetch);
+    const user = userEvent.setup();
+    render(<DealsDashboard />);
+
+    expect(await screen.findByRole('alert')).toHaveTextContent('Summary unavailable.');
+    await user.click(screen.getByRole('button', { name: 'Retry summary' }));
+    expect(await screen.findByText('Deals by stage')).toBeVisible();
+  });
+
+  it('shows the empty pipeline summary and unavailable closing dates', async () => {
+    const emptySummary = {
+      ...dashboardSummary,
+      totalsByCurrency: [],
+      closingSoonCount: 2,
+      closingSoon: [],
+    };
+    stubFetch({ total: 0, items: [] }, 200, emptySummary);
+    render(<DealsDashboard />);
+
+    expect(await screen.findByText('No valued open deals')).toBeVisible();
+    expect(
+      screen.getByText('No active deals have an expected close date in this window.'),
+    ).toBeVisible();
+    expect(screen.getByText('Showing the 10 nearest close dates.')).toBeVisible();
+  });
+
+  it('reports precise amount validation errors when creating a deal', async () => {
+    stubFetch({ total: 0, items: [] });
+    const user = userEvent.setup();
+    render(<DealsDashboard />);
+
+    await screen.findByText('No deals found');
+    await user.click(screen.getByText('New deal'));
+    await user.type(screen.getByRole('textbox', { name: 'Deal name' }), 'Northstar Systems');
+    await user.type(screen.getByRole('textbox', { name: 'Deal size' }), '1.2345');
+    await user.click(screen.getByRole('button', { name: 'Create deal' }));
+
+    expect(await screen.findByRole('alert')).toHaveTextContent(/non-negative amount/i);
+  });
+
   it('renders the tenant currency totals and closing-soon countdown', async () => {
     const summary = {
       ...dashboardSummary,

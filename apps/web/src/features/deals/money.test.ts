@@ -17,10 +17,12 @@ describe('formatMinorAmount', () => {
     expect(parseMajorAmount('100', 'JPY')).toBe('100');
     expect(parseMajorAmount('', 'ZAR')).toBeNull();
     expect(() => parseMajorAmount('1.234', 'ZAR')).toThrow(/decimal point/);
+    expect(() => parseMajorAmount('9999999999999999999', 'JPY')).toThrow(/too large/);
   });
 
   it('converts minor units to canonical decimal input without floating-point arithmetic', () => {
     expect(majorAmountForInput('123456789012345', 'ZAR')).toBe('1234567890123.45');
+    expect(majorAmountForInput('10000', 'ZAR')).toBe('100');
     expect(majorAmountForInput('125000000', 'JPY')).toBe('125000000');
     expect(majorAmountForInput(null, 'ZAR')).toBe('');
   });

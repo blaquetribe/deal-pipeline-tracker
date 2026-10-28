@@ -14,6 +14,16 @@ function transportFactory() {
 }
 
 describe('createSmtpMailer', () => {
+  it('uses the default Nodemailer transport when no factory is supplied', () => {
+    expect(() =>
+      createSmtpMailer({
+        host: 'mailpit',
+        port: 1025,
+        from: 'no-reply@example.test',
+      }),
+    ).not.toThrow();
+  });
+
   it('configures Mailpit and sends rendered text and HTML', async () => {
     const fake = transportFactory();
     const mailer = createSmtpMailer({

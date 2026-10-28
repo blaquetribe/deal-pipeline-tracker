@@ -618,7 +618,11 @@ export function createAuthRoutes(options: AuthServiceOptions): Route[] {
     path: '/onboarding/skip/:step',
     body: noBody,
     handler: async ({ params, session }) => {
-      const step = onboardingStepSchema.parse(params.step);
+      const parsedStep = onboardingStepSchema.safeParse(params.step);
+      if (!parsedStep.success) {
+        throw new HttpError(400, 'invalid_step', 'Unknown onboarding step.');
+      }
+      const step = parsedStep.data;
       const nextStep = await userRpc.call('onboarding_skip', { p_step: step }, session.accessToken);
       return { body: { nextStep } };
     },
