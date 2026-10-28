@@ -2,6 +2,7 @@ import { Hono } from 'hono';
 import { secureHeaders } from 'hono/secure-headers';
 
 import { mountAuthRoutes, type AuthServiceOptions } from './auth/service';
+import { mountApprovalRoutes } from './features/approvals/routes';
 import { mountDealRoutes } from './features/deals/routes';
 import { createRateLimiter } from './http/rate-limit';
 import type { HttpDeps } from './http/route';
@@ -38,6 +39,7 @@ export function createApp(options?: AppOptions): Hono {
     const httpDeps = { ...options.http, limiter: options.http.limiter ?? createRateLimiter() };
     mountAuthRoutes(app, httpDeps, options.auth);
     mountDealRoutes(app, httpDeps, { userRpc: options.auth.userRpc });
+    mountApprovalRoutes(app, httpDeps, { userRpc: options.auth.userRpc });
   }
 
   return app;

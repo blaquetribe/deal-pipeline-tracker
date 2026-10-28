@@ -3,6 +3,10 @@ import {
   dealDetailResponseSchema,
   dealActivityResponseSchema,
   createNoteBodySchema,
+  approvalDecisionBodySchema,
+  approvalPolicyBodySchema,
+  approvalRequestBodySchema,
+  dealApprovalStatusSchema,
   dashboardSummarySchema,
   type CreateDealBody,
   type Stage,
@@ -21,6 +25,38 @@ export async function readDashboardSummary() {
 
 export async function readDeal(dealId: string) {
   return dealDetailResponseSchema.parse(await sessionRead(`/deals/${dealId}`));
+}
+
+export async function readDealApprovalStatus(dealId: string) {
+  return dealApprovalStatusSchema.parse(await sessionRead(`/deals/${dealId}/approval`));
+}
+
+export async function requestDealApproval(dealId: string, expectedVersion: number): Promise<void> {
+  await sessionRequest(
+    `/deals/${dealId}/approval-requests`,
+    'POST',
+    approvalRequestBodySchema.parse({ expectedVersion }),
+  );
+}
+
+export async function decideDealApproval(
+  requestId: string,
+  decision: 'approve' | 'reject',
+  reason?: string,
+): Promise<void> {
+  await sessionRequest(
+    `/approval-requests/${requestId}/decisions`,
+    'POST',
+    approvalDecisionBodySchema.parse({ decision, ...(reason === undefined ? {} : { reason }) }),
+  );
+}
+
+export async function configureDealApprovalPolicy(requiredApprovals: number): Promise<void> {
+  await sessionRequest(
+    '/approval-policy',
+    'PUT',
+    approvalPolicyBodySchema.parse({ requiredApprovals }),
+  );
 }
 
 export async function readDealActivity(
