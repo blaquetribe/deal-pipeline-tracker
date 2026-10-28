@@ -3,6 +3,7 @@ import {
   dealDetailResponseSchema,
   dealActivityResponseSchema,
   createNoteBodySchema,
+  dashboardSummarySchema,
   type CreateDealBody,
   type Stage,
   type UpdateDealBody,
@@ -12,6 +13,10 @@ import { sessionRead, sessionRequest } from '../auth/api';
 
 export async function readDeals(query: URLSearchParams) {
   return dealListResponseSchema.parse(await sessionRead(`/deals?${query.toString()}`));
+}
+
+export async function readDashboardSummary() {
+  return dashboardSummarySchema.parse(await sessionRead('/deals/dashboard-summary'));
 }
 
 export async function readDeal(dealId: string) {

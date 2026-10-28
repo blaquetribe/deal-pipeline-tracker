@@ -8,6 +8,9 @@ import {
   STAGE_TRANSITIONS,
   stageSchema,
   updateDealBodySchema,
+  daysUntil,
+  formatCloseCountdown,
+  type DashboardSummary,
   type DealListResponse,
   type Stage,
 } from '@dpt/shared';
@@ -16,7 +19,7 @@ import { useEffect, useId, useRef, useState } from 'react';
 import type { FormEvent } from 'react';
 
 import { StageBadge } from '../pipeline';
-import { createDeal, moveDealStage, readDeals, updateDeal } from './api';
+import { createDeal, moveDealStage, readDashboardSummary, readDeals, updateDeal } from './api';
 import { formatMinorAmount, majorAmountForInput, parseMajorAmount } from './money';
 
 const PAGE_SIZE = 25;
@@ -43,6 +46,9 @@ export function DealsDashboard() {
   const [appliedSearch, setAppliedSearch] = useState('');
   const [offset, setOffset] = useState(0);
   const [result, setResult] = useState<DealListResponse | null>(null);
+  const [summary, setSummary] = useState<DashboardSummary | null>(null);
+  const [summaryError, setSummaryError] = useState<string | null>(null);
+  const [clockNow, setClockNow] = useState<Date | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [createError, setCreateError] = useState<string | null>(null);
@@ -77,6 +83,83 @@ export function DealsDashboard() {
     };
   }, [appliedSearch, offset, stage]);
 
+  useEffect(() => {
+    let active = true;
+    void readDashboardSummary()
+      .then((response) => {
+        if (active) {
+          setSummary(response);
+          setSummaryError(null);
+        }
+      })
+      .catch((cause: unknown) => {
+        if (active) {
+          setSummaryError(
+            cause instanceof Error ? cause.message : 'Pipeline summary could not be loaded.',
+          );
+        }
+      });
+    return () => {
+      active = false;
+    };
+  }, []);
+
+  useEffect(() => {
+    if (!summary) return undefined;
+    const serverOffsetMs = Date.parse(summary.serverNow) - Date.now();
+    let timer: number | undefined;
+    const schedule = () => {
+      if (document.hidden) return;
+      const now = Date.now() + serverOffsetMs;
+      const withinMinuteWindow = summary.closingSoon.some((deal) => {
+        if (!deal.closesAt) return false;
+        const timeLeft = Date.parse(deal.closesAt) - now;
+        return timeLeft > 0 && timeLeft <= 86_400_000;
+      });
+      const boundaryDelay = withinMinuteWindow
+        ? 60_000 - (now % 60_000)
+        : Date.parse(summary.nextMidnightAt) - now;
+      timer = window.setTimeout(
+        () => {
+          const updatedNow = Date.now() + serverOffsetMs;
+          setClockNow(new Date(updatedNow));
+          if (!withinMinuteWindow && updatedNow >= Date.parse(summary.nextMidnightAt)) {
+            void refreshSummary();
+            return;
+          }
+          schedule();
+        },
+        Math.max(500, boundaryDelay),
+      );
+    };
+    const onVisibility = () => {
+      if (timer !== undefined) window.clearTimeout(timer);
+      if (!document.hidden) {
+        const updatedNow = Date.now() + serverOffsetMs;
+        setClockNow(new Date(updatedNow));
+        if (updatedNow >= Date.parse(summary.nextMidnightAt)) void refreshSummary();
+        else schedule();
+      }
+    };
+    document.addEventListener('visibilitychange', onVisibility);
+    schedule();
+    return () => {
+      if (timer !== undefined) window.clearTimeout(timer);
+      document.removeEventListener('visibilitychange', onVisibility);
+    };
+  }, [summary]);
+
+  async function refreshSummary() {
+    try {
+      setSummary(await readDashboardSummary());
+      setSummaryError(null);
+    } catch (cause) {
+      setSummaryError(
+        cause instanceof Error ? cause.message : 'Pipeline summary could not be loaded.',
+      );
+    }
+  }
+
   async function submitDeal(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     const formElement = event.currentTarget;
@@ -106,6 +189,7 @@ export function DealsDashboard() {
       if (appliedSearch) query.set('search', appliedSearch);
       const refreshed = await readDeals(query);
       setResult(refreshed);
+      void refreshSummary();
       setLoading(false);
       if (createForm.current) createForm.current.open = false;
     } catch (cause) {
@@ -128,6 +212,7 @@ export function DealsDashboard() {
       if (appliedSearch) query.set('search', appliedSearch);
       const refreshed = await readDeals(query);
       setResult(refreshed);
+      void refreshSummary();
       setMoveTargets((current) => ({ ...current, [dealId]: '' }));
       setMoveNotice(`${deal.name} moved to ${STAGE_LABELS[toStage]}.`);
     } catch (cause) {
@@ -176,6 +261,7 @@ export function DealsDashboard() {
       if (stage) query.set('stage', stage);
       if (appliedSearch) query.set('search', appliedSearch);
       setResult(await readDeals(query));
+      void refreshSummary();
       setUpdateNotice(`${deal.name} updated.`);
       const details = formElement.closest('details');
       if (details) details.open = false;
@@ -225,6 +311,133 @@ export function DealsDashboard() {
             : `${result?.total ?? 0} ${result?.total === 1 ? 'deal' : 'deals'}`}
         </p>
       </div>
+
+      <section aria-labelledby="pipeline-overview-title" className="mt-6 space-y-4">
+        <h3 className="text-xl font-semibold" id="pipeline-overview-title">
+          Pipeline overview
+        </h3>
+        {summaryError ? (
+          <div
+            className="rounded-panel border border-danger/40 bg-danger-soft p-4 text-danger-fg"
+            role="alert"
+          >
+            <p>{summaryError}</p>
+            <button
+              className="mt-2 underline focus-visible:outline-2"
+              onClick={() => void refreshSummary()}
+              type="button"
+            >
+              Retry summary
+            </button>
+          </div>
+        ) : summary ? (
+          <div aria-busy={false} className="space-y-4">
+            <div className="grid gap-3 sm:grid-cols-2">
+              <article className="rounded-panel border border-line bg-surface-raised p-4">
+                <h4 className="text-sm text-fg-muted">Open pipeline value</h4>
+                <ul className="mt-2 space-y-1 font-semibold tabular-nums">
+                  {summary.totalsByCurrency.length ? (
+                    summary.totalsByCurrency.map((total) => (
+                      <li key={total.currency}>
+                        {formatMinorAmount(total.amount, total.currency)}
+                      </li>
+                    ))
+                  ) : (
+                    <li>No valued open deals</li>
+                  )}
+                </ul>
+              </article>
+              <article className="rounded-panel border border-line bg-surface-raised p-4">
+                <h4 className="text-sm text-fg-muted">Closing soon</h4>
+                <p className="mt-2 text-2xl font-semibold">{summary.closingSoonCount}</p>
+                <p className="text-sm text-fg-muted">
+                  Within {summary.windowDays} days, including overdue deals
+                </p>
+              </article>
+            </div>
+            <div className="grid gap-4 lg:grid-cols-2">
+              <section
+                aria-labelledby="stage-overview-title"
+                className="rounded-panel border border-line bg-surface-raised p-4"
+              >
+                <h4 className="font-semibold" id="stage-overview-title">
+                  Deals by stage
+                </h4>
+                <ul className="mt-3 divide-y divide-line">
+                  {summary.pipelineByStage.map((item) => (
+                    <li className="flex justify-between gap-3 py-2" key={item.stage}>
+                      <span>{STAGE_LABELS[item.stage]}</span>
+                      <span className="tabular-nums">{item.count}</span>
+                    </li>
+                  ))}
+                </ul>
+              </section>
+              <section
+                aria-labelledby="closing-soon-title"
+                className="rounded-panel border border-line bg-surface-raised p-4"
+              >
+                <h4 className="font-semibold" id="closing-soon-title">
+                  Closing soon
+                </h4>
+                {summary.closingSoon.length === 0 ? (
+                  <p className="mt-3 text-sm text-fg-muted">
+                    No active deals have an expected close date in this window.
+                  </p>
+                ) : (
+                  <ol className="mt-3 space-y-3">
+                    {summary.closingSoon.map((deal) => {
+                      const now = clockNow ?? new Date(summary.serverNow);
+                      const currentDays = clockNow
+                        ? daysUntil(deal.expectedCloseDate, clockNow, summary.timeZone)
+                        : deal.closesInDays;
+                      const urgent = currentDays <= 5;
+                      return (
+                        <li
+                          className="flex flex-wrap items-center justify-between gap-3 border-t border-line pt-3"
+                          key={deal.id}
+                        >
+                          <div>
+                            <Link
+                              className="font-medium underline focus-visible:outline-2"
+                              href={`/deals/${deal.id}`}
+                            >
+                              {deal.name}
+                            </Link>
+                            <p className="text-sm text-fg-muted">
+                              {STAGE_LABELS[deal.stage]} · {formatCloseDate(deal.expectedCloseDate)}
+                            </p>
+                          </div>
+                          <p
+                            className={
+                              urgent
+                                ? 'rounded-control border border-danger/40 bg-danger-soft px-3 py-1 text-sm font-medium text-danger-fg'
+                                : 'rounded-control border border-line px-3 py-1 text-sm'
+                            }
+                          >
+                            {formatCloseCountdown(
+                              currentDays,
+                              deal.closesAt,
+                              now,
+                              summary.timeZone,
+                            )}
+                          </p>
+                        </li>
+                      );
+                    })}
+                  </ol>
+                )}
+                {summary.closingSoonCount > summary.closingSoon.length ? (
+                  <p className="mt-3 text-sm text-fg-muted">Showing the 10 nearest close dates.</p>
+                ) : null}
+              </section>
+            </div>
+          </div>
+        ) : (
+          <p aria-busy="true" className="text-sm text-fg-muted">
+            Loading pipeline summary…
+          </p>
+        )}
+      </section>
 
       <div className="mt-6 flex flex-wrap items-end justify-between gap-4 rounded-panel border border-line bg-surface-raised p-4">
         <form className="flex min-w-64 flex-1 flex-wrap items-end gap-3" onSubmit={applySearch}>

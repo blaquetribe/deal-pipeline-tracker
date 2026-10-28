@@ -1,6 +1,6 @@
 # 03 Deals core: progress
 
-Status: in progress (deal create/list/stage/assignment/update/detail/activity and notes implemented; closing-soon dashboard remains)
+Status: in progress (deal create/list/stage/assignment/update/detail/activity/notes and closing-soon dashboard are implemented; server alerts depend on features 02 and 05)
 Owner/branch: feat/02-api-auth (continuing the existing working tree; do not branch-reset or replace)
 Depends on: 01, 02
 
@@ -20,7 +20,7 @@ Key decisions, schema/API shape, links to ADRs.
 
 ## Tasks
 - [x] Database security tests for assignments and deal list, including cross-tenant, permission, anonymous, stale-version and null-parameter cases.
-- [x] Additive migrations for assignees, assignment reads, deal list, fail-closed null guards, and tenant-authorized detail/activity reads (`20261107000000` through `20261112000000`).
+- [x] Additive migrations for assignees, assignment reads, deal list, fail-closed null guards, tenant-authorized detail/activity reads, exact bigint cursors, and dashboard summary (`20261107000000` through `20261114000000`).
 - [x] Session-gated API for deal list and assignment reads/replacement.
 - [x] Session-gated deal creation through the existing database function.
 - [x] Session-gated stage movement through the existing database state machine with optimistic versioning.
@@ -28,15 +28,15 @@ Key decisions, schema/API shape, links to ADRs.
 - [x] Optimistic deal updates through a strict API allow-list and accessible edit form.
 - [x] Tenant-authorized detail and activity APIs; exact bigint sequence cursors; append-only note API and UI; visible integrity result and accessible ordered timeline.
 - [x] Bounded activity pagination with exact bigint cursors.
-- [ ] Closing-soon countdown/dashboard summaries.
-- [ ] Closing-soon calculations, dashboard summary and alerts in the planned feature order.
+- [x] Tenant-local 60-day closing-soon summary, per-currency open pipeline totals, stage counts, and live countdown with day/minute-aligned refreshes and clock-skew correction.
+- [ ] Server-side closing alerts and delivery (owned across feature 02 mail and feature 05 realtime; see `closing-soon.md`).
 - [x] Progress and handoff docs updated for this slice.
 
 ## Tests
 What is covered, where it lives, how to run it.
-- `pnpm test`: 33 files and 445 tests pass. Focused route, dashboard, detail, and shared-schema tests pass.
-- `pnpm typecheck`, `pnpm lint`, `pnpm stylelint`, `pnpm format:check`, and `pnpm build` pass. `make COMPOSE='podman compose' test-db` passes with 396 assertions across 20 files; migration 12 was restored to its applied checksum and exact bigint cursor serialization moved into additive migration 13. The full `KEEP_UP=1 scripts/compose-smoke.sh` passes.
-- Browser evidence: authenticated deal detail with exact ZAR display, verified integrity cue, immutable note warning and a saved timeline note captured on 2026-10-28.
+- `pnpm test`: 34 files and 450 tests pass. Focused route, dashboard, detail, countdown and shared-schema tests pass.
+- `pnpm typecheck`, `pnpm lint`, `pnpm stylelint`, `pnpm format:check`, and `pnpm build` pass. `make COMPOSE='podman compose' test-db` passes with 408 assertions across 21 files. The full Podman compose smoke passes after the dashboard summary change.
+- Browser evidence: authenticated deal detail with a saved note captured on 2026-10-28; dashboard evidence with a deal due in 12 days captured on 2026-10-28.
 
 ## Security checklist (from SECURITY_STANDARDS.md)
 - [x] The new assignment table has `tenant_id`, forced RLS, role tests and cross-tenant tests.
@@ -55,3 +55,4 @@ Dated notes: what changed, what was learned, problems.
 Anything that differs from the plan or is deferred (also mirror in README "next steps").
 
 - 2026-10-28 (later): Added strict optimistic deal updates, SQL NULL guards for stage/update version checks, tenant-scoped deal detail and activity reads, session-gated APIs, and a detail page with exact money display, integrity cue, ordered event timeline, append-only note composer and bounded older-event pagination. Preserved the applied migration checksum by moving exact bigint cursor serialization to migration 13. Vitest passes 445 tests; typecheck, lint, stylelint, format check, build, pgTAP (396 assertions/20 files) and compose smoke pass. Captured the authenticated detail page with a saved test note. Kanban drag-and-drop remains deferred; keep the keyboard move control and target smooth 60 fps if implemented.
+- 2026-10-28 (later): Added a database-authorized dashboard summary for per-stage counts, per-currency open pipeline totals and tenant-local closing dates. The browser shows a 60-day closing-soon list, timezone-aware countdown chips, and minute/midnight-aligned updates using the API's server clock. Vitest passes 450 tests; typecheck, lint, stylelint, format check and build pass; pgTAP passes 408 assertions across 21 files. Server alert delivery remains with feature 02/05 dependencies.

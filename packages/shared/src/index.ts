@@ -4,7 +4,9 @@ export { evaluateMove, STAGE_REQUIREMENTS, STAGE_TRANSITIONS } from './stage-mac
 export type { DealField, MoveCheck } from './stage-machine';
 export { ONBOARDING_STEPS } from './onboarding';
 export type { OnboardingFlow } from './onboarding';
+export { daysUntil, formatCloseCountdown } from './countdown';
 export {
+  dashboardSummarySchema,
   createDealBodySchema,
   createNoteBodySchema,
   moveDealStageBodySchema,
@@ -21,6 +23,7 @@ export {
   setDealAssigneesBodySchema,
 } from './deals';
 export type {
+  DashboardSummary,
   CreateDealBody,
   Deal,
   DealActivityQuery,

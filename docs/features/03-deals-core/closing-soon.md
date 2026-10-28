@@ -1,6 +1,6 @@
 # Closing soon: the countdown and the alerts
 
-Status: design, **owner decisions confirmed 2026-10-26** (no code yet). Decision record: [ADR 0011](../../decisions/0011-closing-soon-countdown-and-alert.md).
+Status: countdown and dashboard summary implemented; server-side alert delivery remains planned across features 02 and 05. Owner decisions confirmed 2026-10-26. Decision record: [ADR 0011](../../decisions/0011-closing-soon-countdown-and-alert.md).
 Owners: feature 03 (date maths, countdown UI), feature 05 (realtime delivery), feature 02 (Mailer).
 
 **Requirement:** "closing soon" shows a real countdown, including **hours on the final day**. When a deal reaches **5 days** (and **1 day**, and when it becomes **overdue**) from its expected closing date, the **team and the person assigned** are notified, by an in-app notification and by email that uses the **deal details and a link to the deal**.
@@ -36,6 +36,12 @@ Always text on a chip; an urgent style (tokens, plus icon) at 5 days or fewer an
 - **Hydration:** the server renders from `closes_in_days`/`closes_at` supplied by the API; the client recomputes after mount.
 - **Accessibility:** no per-tick announcements; one polite live message when a deal the user has open crosses into 1 day, today or overdue. Reduced motion: no animation.
 - **Shared maths:** `daysUntil` and `timeLeft` are pure functions in `packages/shared` taking an injected clock and a time zone; **parity tests** run the same fixtures against the SQL function (overlay E1). A vetted time-zone library (or the Temporal API once confirmed available) handles DST; **verify the choice** during implementation.
+
+### Implemented dashboard behavior
+- `deal_dashboard_summary` enforces `deal.view` in Postgres and returns the tenant time zone, configured window, server clock, next tenant-local midnight, per-stage counts, exact per-currency active pipeline totals, and up to ten nearest closing/overdue deals.
+- Postgres computes each deal's tenant-local calendar-day distance and close instant; the browser recomputes calendar days with `Intl.DateTimeFormat` and uses the returned server clock to account for local clock skew. DST calendar-day behavior is covered by the shared countdown tests and pgTAP checks a non-default tenant zone.
+- The countdown pauses while the tab is hidden, refreshes at the next tenant-local midnight, and refreshes each minute only while a timed close is within 24 hours. The UI shows no seconds and does not announce each tick.
+- The dashboard currently lists up to ten closest dates and reports the full matching count. It groups open pipeline totals by currency and includes active overdue deals in the closing-soon count/list.
 
 ## The alerts (server-side, because they must fire when nobody is logged in)
 **Rules** for every active deal (not Closed or Passed):

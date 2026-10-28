@@ -75,3 +75,9 @@ Running log feeding the README reflection required by the brief. Add an entry pe
 - **What the human decided or corrected:** directed continued work, asked for UI screenshots as evidence, and authorized continuing through commit and PR preparation.
 - **How it was verified:** Vitest passes 445 tests; typecheck, lint, stylelint, format check, production build, pgTAP (396 assertions across 20 files), and full compose smoke pass. Captured the detail page with a saved note in the activity timeline.
 - **What went wrong or was surprising:** the first pgTAP retry detected that the bigint sequence cast had been added directly to an already-applied migration. I restored its recorded checksum and moved the cast into a new forward migration before rerunning the suite successfully.
+
+### 2026-10-28 (later) / feature 03 closing-soon dashboard summary
+- **What Codex did:** added a tenant-authorized database summary for stage counts, per-currency open pipeline totals and closing dates, then wired the dashboard to show timezone-aware 60-day countdowns with server-clock correction and aligned refreshes. Added shared countdown/schema coverage and forward migration 14; updated feature and handoff progress.
+- **What the human decided or corrected:** asked to continue through commit and PR, preserve previous work, and capture UI screenshots; previously specified smooth 60 fps if drag-and-drop is introduced. Kanban remains deferred by ADR 0009.
+- **How it was verified:** Vitest passes 450 tests; typecheck, lint, stylelint, format check and production build pass; pgTAP passes 408 assertions across 21 files. Full Podman compose smoke passes; captured dashboard evidence with a deal due in 12 days.
+- **What went wrong or was surprising:** none in this slice. Server-side alert delivery still depends on feature 02/05 notification, realtime and email work.

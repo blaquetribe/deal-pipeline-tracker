@@ -2,6 +2,36 @@ import { z } from 'zod';
 
 import { stageSchema } from './stages';
 
+export const dashboardSummarySchema = z.strictObject({
+  serverNow: z.iso.datetime({ offset: true }),
+  nextMidnightAt: z.iso.datetime({ offset: true }),
+  timeZone: z.string().min(1).max(100),
+  windowDays: z.number().int().min(1).max(365),
+  pipelineByStage: z.array(
+    z.strictObject({ stage: stageSchema, count: z.number().int().nonnegative() }),
+  ),
+  totalsByCurrency: z.array(
+    z.strictObject({ currency: z.string().regex(/^[A-Z]{3}$/), amount: z.string().regex(/^\d+$/) }),
+  ),
+  closingSoonCount: z.number().int().nonnegative(),
+  closingSoon: z.array(
+    z.strictObject({
+      id: z.uuid(),
+      name: z.string().min(1).max(200),
+      stage: stageSchema,
+      amount: z.string().regex(/^\d+$/).nullable(),
+      currency: z.string().regex(/^[A-Z]{3}$/),
+      expectedCloseDate: z.iso.date(),
+      expectedCloseTime: z
+        .string()
+        .regex(/^(?:[01]\d|2[0-3]):[0-5]\d(?::[0-5]\d(?:\.\d+)?)?$/)
+        .nullable(),
+      closesInDays: z.number().int(),
+      closesAt: z.iso.datetime({ offset: true }).nullable(),
+    }),
+  ),
+});
+
 export const dealAssigneeRoleSchema = z.enum(['owner', 'lead', 'member']);
 export const dealAssigneeSchema = z.strictObject({
   userId: z.uuid(),
@@ -165,6 +195,7 @@ export const createNoteBodySchema = z.strictObject({
 });
 
 export type DealAssignee = z.infer<typeof dealAssigneeSchema>;
+export type DashboardSummary = z.infer<typeof dashboardSummarySchema>;
 export type CreateDealBody = z.infer<typeof createDealBodySchema>;
 export type MoveDealStageBody = z.infer<typeof moveDealStageBodySchema>;
 export type UpdateDealBody = z.infer<typeof updateDealBodySchema>;

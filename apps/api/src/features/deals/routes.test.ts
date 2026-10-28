@@ -52,6 +52,30 @@ function harness(tenantId: string | null = 'cccccccc-0000-4000-8000-000000000001
           created_at: '2026-10-28T10:00:00+00:00',
         };
       }
+      if (name === 'deal_dashboard_summary') {
+        return {
+          serverNow: '2026-10-28T10:00:00+00:00',
+          nextMidnightAt: '2026-10-28T21:00:00+00:00',
+          timeZone: 'Africa/Johannesburg',
+          windowDays: 60,
+          pipelineByStage: [{ stage: 'sourcing', count: 1 }],
+          totalsByCurrency: [{ currency: 'ZAR', amount: '123456789012345' }],
+          closingSoonCount: 1,
+          closingSoon: [
+            {
+              id: DEAL,
+              name: 'Northstar Systems',
+              stage: 'sourcing',
+              amount: '123456789012345',
+              currency: 'ZAR',
+              expectedCloseDate: '2026-10-29',
+              expectedCloseTime: '14:30:00',
+              closesInDays: 1,
+              closesAt: '2026-10-29T14:30:00+02:00',
+            },
+          ],
+        };
+      }
       if (name === 'deal_activity') {
         return {
           events: [
@@ -108,6 +132,7 @@ describe('deal assignment routes', () => {
     expect(describeRoutes(routes)).toEqual([
       { method: 'POST', path: '/deals', access: 'session' },
       { method: 'GET', path: '/deals', access: 'session' },
+      { method: 'GET', path: '/deals/dashboard-summary', access: 'session' },
       { method: 'GET', path: '/deals/:dealId', access: 'session' },
       { method: 'PUT', path: '/deals/:dealId', access: 'session' },
       { method: 'POST', path: '/deals/:dealId/stage', access: 'session' },
@@ -120,6 +145,7 @@ describe('deal assignment routes', () => {
       'deal.create',
       'deal.view',
       'deal.view',
+      'deal.view',
       'deal.edit',
       'deal.edit',
       'deal.view',
@@ -127,6 +153,24 @@ describe('deal assignment routes', () => {
       'deal.view',
       'deal.edit',
     ]);
+  });
+
+  it('reads the active tenant dashboard summary through the user JWT', async () => {
+    const { app, userRpc } = harness();
+    const response = await app.request('/deals/dashboard-summary', {
+      headers: { Cookie: SESSION_COOKIE },
+    });
+    expect(response.status).toBe(200);
+    expect(await response.json()).toMatchObject({
+      timeZone: 'Africa/Johannesburg',
+      windowDays: 60,
+      closingSoon: [{ id: DEAL, closesInDays: 1 }],
+    });
+    expect(userRpc.call).toHaveBeenCalledWith(
+      'deal_dashboard_summary',
+      { p_tenant: 'cccccccc-0000-4000-8000-000000000001' },
+      'user-jwt',
+    );
   });
 
   it('requires a session before querying assignments', async () => {

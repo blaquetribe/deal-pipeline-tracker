@@ -1,6 +1,7 @@
 import {
   createDealBodySchema,
   createNoteBodySchema,
+  dashboardSummarySchema,
   dealActivityQuerySchema,
   dealActivityResponseSchema,
   dealAssigneesResponseSchema,
@@ -135,6 +136,27 @@ export function createDealRoutes({ userRpc }: DealRoutesOptions): Route[] {
       return {
         body: dealDetailResponseSchema.parse(
           await userRpc.call('deal_detail', { p_deal: dealId.data }, session.accessToken),
+        ),
+      };
+    },
+  });
+
+  const dashboardSummary = sessionRoute({
+    method: 'GET',
+    path: '/deals/dashboard-summary',
+    body: noBody,
+    permission: 'deal.view',
+    handler: async ({ session }) => {
+      if (!session.tenantId) {
+        throw new HttpError(409, 'tenant_required', 'Choose an organisation to view its deals.');
+      }
+      return {
+        body: dashboardSummarySchema.parse(
+          await userRpc.call(
+            'deal_dashboard_summary',
+            { p_tenant: session.tenantId },
+            session.accessToken,
+          ),
         ),
       };
     },
@@ -340,6 +362,7 @@ export function createDealRoutes({ userRpc }: DealRoutesOptions): Route[] {
   return [
     create,
     list,
+    dashboardSummary,
     detail,
     update,
     moveStage,

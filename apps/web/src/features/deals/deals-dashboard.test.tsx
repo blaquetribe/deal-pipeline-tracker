@@ -1,3 +1,4 @@
+import type { DashboardSummary } from '@dpt/shared';
 import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { afterEach, describe, expect, it, vi } from 'vitest';
@@ -17,13 +18,27 @@ const deal = {
   created_at: '2026-10-28T10:00:00+00:00',
 };
 
-function stubFetch(body: unknown, status = 200) {
+const dashboardSummary: DashboardSummary = {
+  serverNow: '2026-10-28T10:00:00+00:00',
+  nextMidnightAt: '2026-10-28T21:00:00+00:00',
+  timeZone: 'Africa/Johannesburg',
+  windowDays: 60,
+  pipelineByStage: [{ stage: 'sourcing', count: 1 }],
+  totalsByCurrency: [{ currency: 'ZAR', amount: '123456789012345' }],
+  closingSoonCount: 0,
+  closingSoon: [],
+};
+
+function stubFetch(body: unknown, status = 200, summary = dashboardSummary) {
   const fetch = vi.fn<(input: RequestInfo | URL, init?: RequestInit) => Promise<Response>>(
-    async (_input, _init) =>
-      new Response(JSON.stringify(body), {
-        status,
+    async (input) => {
+      const url = input instanceof Request ? input.url : String(input);
+      const isSummary = url.endsWith('/dashboard-summary');
+      return new Response(JSON.stringify(isSummary ? summary : body), {
+        status: isSummary ? 200 : status,
         headers: { 'Content-Type': 'application/json' },
-      }),
+      });
+    },
   );
   vi.stubGlobal('fetch', fetch);
   return fetch;
@@ -38,7 +53,7 @@ describe('DealsDashboard', () => {
 
     expect(screen.getByText('Loading deals…')).toBeVisible();
     expect(await screen.findByRole('row', { name: /Northstar Systems/ })).toBeVisible();
-    expect(screen.getByText(/R 1 234 567 890 123,45/)).toBeVisible();
+    expect(screen.getAllByText(/R 1 234 567 890 123,45/)).toHaveLength(2);
     expect(screen.getByText('31 Mar 2027')).toBeVisible();
     expect(fetch).toHaveBeenCalledWith(
       '/api/deals?limit=25&offset=0',
@@ -56,10 +71,10 @@ describe('DealsDashboard', () => {
     await screen.findByText('No deals found');
     await user.type(screen.getByRole('searchbox', { name: 'Search deals' }), 'Northstar');
     await user.click(screen.getByRole('button', { name: 'Search' }));
-    await waitFor(() => expect(fetch).toHaveBeenCalledTimes(2));
-    await user.selectOptions(screen.getByRole('combobox', { name: 'Pipeline stage' }), 'screening');
     await waitFor(() => expect(fetch).toHaveBeenCalledTimes(3));
-    expect(fetch.mock.calls[2]?.[0]).toBe(
+    await user.selectOptions(screen.getByRole('combobox', { name: 'Pipeline stage' }), 'screening');
+    await waitFor(() => expect(fetch).toHaveBeenCalledTimes(4));
+    expect(fetch.mock.calls[3]?.[0]).toBe(
       '/api/deals?limit=25&offset=0&stage=screening&search=Northstar',
     );
     expect(screen.getByText('Try changing the search or stage filter.')).toBeVisible();
@@ -69,6 +84,36 @@ describe('DealsDashboard', () => {
     stubFetch({ error: { code: 'forbidden', message: 'You are not allowed to do that.' } }, 403);
     render(<DealsDashboard />);
     expect(await screen.findByRole('alert')).toHaveTextContent('You are not allowed to do that.');
+  });
+
+  it('renders the tenant currency totals and closing-soon countdown', async () => {
+    const summary = {
+      ...dashboardSummary,
+      closingSoonCount: 1,
+      closingSoon: [
+        {
+          id: deal.id,
+          name: 'Northstar Systems',
+          stage: 'sourcing' as const,
+          amount: '123456789012345',
+          currency: 'ZAR',
+          expectedCloseDate: '2026-11-09',
+          expectedCloseTime: null,
+          closesInDays: 12,
+          closesAt: null,
+        },
+      ],
+    };
+    stubFetch({ total: 0, items: [] }, 200, summary);
+    render(<DealsDashboard />);
+
+    expect(await screen.findByText('12 days left')).toBeVisible();
+    expect(screen.getByRole('link', { name: 'Northstar Systems' })).toHaveAttribute(
+      'href',
+      `/deals/${deal.id}`,
+    );
+    expect(screen.getAllByText(/R 1 234 567 890 123,45/)).toHaveLength(1);
+    expect(screen.getAllByText('Closing soon')).toHaveLength(2);
   });
 
   it('creates a deal using exact minor units and refreshes the list', async () => {
@@ -132,7 +177,7 @@ describe('DealsDashboard', () => {
         }),
       }),
     );
-    await waitFor(() => expect(fetch).toHaveBeenCalledTimes(4));
+    await waitFor(() => expect(fetch).toHaveBeenCalledTimes(6));
   });
 
   it('offers an accessible move-to control and uses the current optimistic version', async () => {
@@ -185,7 +230,7 @@ describe('DealsDashboard', () => {
         body: JSON.stringify({ toStage: 'screening', expectedVersion: 1 }),
       }),
     );
-    await waitFor(() => expect(fetch).toHaveBeenCalledTimes(4));
+    await waitFor(() => expect(fetch).toHaveBeenCalledTimes(6));
   });
 
   it('edits only changed fields and includes the deal version', async () => {
@@ -236,6 +281,6 @@ describe('DealsDashboard', () => {
         body: JSON.stringify({ expectedVersion: 1, name: 'Northstar Updated' }),
       }),
     );
-    await waitFor(() => expect(fetch).toHaveBeenCalledTimes(4));
+    await waitFor(() => expect(fetch).toHaveBeenCalledTimes(6));
   });
 });

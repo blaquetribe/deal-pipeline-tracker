@@ -3,6 +3,7 @@ import { describe, expect, it } from 'vitest';
 import {
   createDealBodySchema,
   createNoteBodySchema,
+  dashboardSummarySchema,
   dealActivityQuerySchema,
   dealActivityResponseSchema,
   dealListQuerySchema,
@@ -10,6 +11,40 @@ import {
   setDealAssigneesBodySchema,
   updateDealBodySchema,
 } from './deals';
+
+describe('dashboard summary schema', () => {
+  it('preserves server clock, tenant calendar and exact currency totals', () => {
+    const summary = {
+      serverNow: '2026-10-28T10:00:00+00:00',
+      nextMidnightAt: '2026-10-28T21:00:00+00:00',
+      timeZone: 'Africa/Johannesburg',
+      windowDays: 60,
+      pipelineByStage: [{ stage: 'sourcing', count: 1 }],
+      totalsByCurrency: [{ currency: 'ZAR', amount: '123456789012345' }],
+      closingSoonCount: 1,
+      closingSoon: [
+        {
+          id: userA,
+          name: 'Northstar',
+          stage: 'sourcing',
+          amount: '123456789012345',
+          currency: 'ZAR',
+          expectedCloseDate: '2026-10-29',
+          expectedCloseTime: '14:30:00',
+          closesInDays: 1,
+          closesAt: '2026-10-29T14:30:00+02:00',
+        },
+      ],
+    };
+    expect(dashboardSummarySchema.parse(summary).closingSoonCount).toBe(1);
+    expect(() =>
+      dashboardSummarySchema.parse({
+        ...summary,
+        totalsByCurrency: [{ currency: 'ZAR', amount: 12.5 }],
+      }),
+    ).toThrow(/amount/);
+  });
+});
 
 const userA = 'aaaaaaaa-0000-4000-8000-000000000001';
 const userB = 'aaaaaaaa-0000-4000-8000-000000000002';
