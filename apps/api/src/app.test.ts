@@ -1,6 +1,17 @@
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
+
+const mocks = vi.hoisted(() => ({
+  mountAuthRoutes: vi.fn<(...args: unknown[]) => void>(),
+  mountDealRoutes: vi.fn<(...args: unknown[]) => void>(),
+  createRateLimiter: vi.fn<() => unknown>(() => ({ hit: vi.fn<() => unknown>() })),
+}));
+
+vi.mock('./auth/service', () => ({ mountAuthRoutes: mocks.mountAuthRoutes }));
+vi.mock('./features/deals/routes', () => ({ mountDealRoutes: mocks.mountDealRoutes }));
+vi.mock('./http/rate-limit', () => ({ createRateLimiter: mocks.createRateLimiter }));
 
 import { createApp } from './app';
+import type { AppOptions } from './app';
 
 describe('api app', () => {
   const app = createApp();
@@ -24,5 +35,62 @@ describe('api app', () => {
   it('returns 404 for unknown routes', async () => {
     const res = await app.request('/does-not-exist');
     expect(res.status).toBe(404);
+  });
+
+  it('mounts protected routes and supplies a default limiter when configured', () => {
+    const auth: AppOptions['auth'] = {
+      rpc: {
+        call: vi.fn<(...args: [string, Record<string, unknown>]) => Promise<unknown>>(
+          async () => null,
+        ),
+      },
+      userRpc: {
+        call: vi.fn<(...args: [string, Record<string, unknown>, string]) => Promise<unknown>>(
+          async () => null,
+        ),
+      },
+      gotrue: {
+        passwordLogin: vi.fn<(...args: [string, string]) => Promise<null>>(async () => null),
+        refresh: vi.fn<(...args: [string]) => Promise<null>>(async () => null),
+        logout: vi.fn<(...args: [string]) => Promise<void>>(async () => undefined),
+        createUser: vi.fn<
+          (...args: [{ email: string; password: string; fullName: string }]) => Promise<'exists'>
+        >(async () => 'exists'),
+        setPassword: vi.fn<(...args: [string, string]) => Promise<void>>(async () => undefined),
+      },
+      sessions: {
+        create: vi.fn<() => Promise<{ sessionId: string }>>(async () => ({
+          sessionId: 'A'.repeat(43),
+        })),
+        lookup: vi.fn<(...args: [string]) => Promise<null>>(async () => null),
+        updateTokens: vi.fn<(...args: [string, unknown]) => Promise<boolean>>(async () => false),
+        setTenant: vi.fn<(...args: [string, string]) => Promise<boolean>>(async () => false),
+        revoke: vi.fn<(...args: [string]) => Promise<void>>(async () => undefined),
+        revokeUser: vi.fn<(...args: [string]) => Promise<number>>(async () => 0),
+      },
+      mailer: { send: vi.fn<(...args: [never]) => Promise<void>>(async () => undefined) },
+      sessionSecret: 'test-session-secret-that-is-long-enough-123',
+      appOrigin: 'http://localhost:8080',
+    };
+    const http: AppOptions['http'] = {
+      appOrigin: 'http://localhost:8080',
+      cookieSecure: false,
+      resolver: { resolve: vi.fn<(...args: [string]) => Promise<null>>(async () => null) },
+      logger: {
+        info: vi.fn<(...args: [string, Record<string, unknown>?]) => void>(),
+        error: vi.fn<(...args: [string, Record<string, unknown>?]) => void>(),
+      },
+    };
+    const configuredApp = createApp({ auth, http });
+
+    expect(mocks.createRateLimiter).toHaveBeenCalledOnce();
+    expect(mocks.mountAuthRoutes).toHaveBeenCalledWith(
+      configuredApp,
+      { ...http, limiter: expect.any(Object) },
+      auth,
+    );
+    expect(mocks.mountDealRoutes).toHaveBeenCalledWith(configuredApp, expect.any(Object), {
+      userRpc: auth.userRpc,
+    });
   });
 });

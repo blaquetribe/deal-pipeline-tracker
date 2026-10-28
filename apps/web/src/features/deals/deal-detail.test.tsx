@@ -1,3 +1,4 @@
+import type { DealApprovalStatus } from '@dpt/shared';
 import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { afterEach, describe, expect, it, vi } from 'vitest';
@@ -229,5 +230,306 @@ describe('DealDetail', () => {
       `/api/deals/${dealId}/approval-requests`,
       expect.objectContaining({ method: 'POST', body: JSON.stringify({ expectedVersion: 2 }) }),
     );
+  });
+
+  it('configures quorum and lets an assigned IC member reject with a reason', async () => {
+    const icDeal = { ...deal, stage: 'ic_review' as const };
+    let status: DealApprovalStatus = {
+      ...approvalStatus,
+      requestId: 'bbbbbbbb-0000-4000-8000-000000000003',
+      status: 'pending',
+      requiredApprovals: 2,
+      configuredApprovals: 2,
+      approvedCount: 1,
+      pendingCount: 1,
+      canDecide: true,
+      canConfigure: true,
+    };
+    const fetch = vi.fn<(input: RequestInfo | URL, init?: RequestInit) => Promise<Response>>(
+      async (input, init) => {
+        const url = input instanceof Request ? input.url : String(input);
+        if (url === '/api/auth/session') {
+          return new Response(
+            JSON.stringify({
+              csrfToken: 'csrf-test',
+              user: {
+                id: 'cccccccc-0000-4000-8000-000000000001',
+                email: 'person@example.test',
+                fullName: 'Test User',
+              },
+              tenantId: 'cccccccc-0000-4000-8000-000000000002',
+            }),
+            { status: 200, headers: { 'Content-Type': 'application/json' } },
+          );
+        }
+        if (init?.method === 'PUT') {
+          return new Response(null, { status: 204 });
+        }
+        if (init?.method === 'POST') {
+          status = { ...status, status: 'rejected', canDecide: false };
+          return new Response(JSON.stringify({ status: 'rejected' }), {
+            status: 200,
+            headers: { 'Content-Type': 'application/json' },
+          });
+        }
+        const body = url.endsWith('/activity')
+          ? activity
+          : url.endsWith('/approval')
+            ? status
+            : icDeal;
+        return new Response(JSON.stringify(body), {
+          status: 200,
+          headers: { 'Content-Type': 'application/json' },
+        });
+      },
+    );
+    vi.stubGlobal('fetch', fetch);
+    const user = userEvent.setup();
+
+    render(<DealDetail dealId={dealId} />);
+    expect(await screen.findByText(/1 approved · 1 pending · 0 rejected/)).toBeVisible();
+    await user.clear(screen.getByRole('spinbutton', { name: 'Required approvals' }));
+    await user.type(screen.getByRole('spinbutton', { name: 'Required approvals' }), '3');
+    await user.click(screen.getByRole('button', { name: 'Save quorum' }));
+    await waitFor(() =>
+      expect(fetch).toHaveBeenCalledWith(
+        '/api/approval-policy',
+        expect.objectContaining({ method: 'PUT', body: JSON.stringify({ requiredApprovals: 3 }) }),
+      ),
+    );
+
+    await user.type(screen.getByRole('textbox', { name: 'Rejection reason (optional)' }), 'Risk');
+    await user.click(screen.getByRole('button', { name: 'Reject' }));
+
+    expect(
+      await screen.findByText('Approval request failed because quorum was no longer reachable.'),
+    ).toBeVisible();
+    expect(fetch).toHaveBeenCalledWith(
+      '/api/approval-requests/bbbbbbbb-0000-4000-8000-000000000003/decisions',
+      expect.objectContaining({
+        method: 'POST',
+        body: JSON.stringify({ decision: 'reject', reason: 'Risk' }),
+      }),
+    );
+  });
+
+  it('shows an unconfigured quorum only to a user who can configure it', async () => {
+    const icDeal = { ...deal, stage: 'ic_review' as const };
+    const configurableStatus: DealApprovalStatus = {
+      ...approvalStatus,
+      canConfigure: true,
+    };
+    vi.stubGlobal(
+      'fetch',
+      vi.fn<(...args: [RequestInfo | URL]) => Promise<Response>>(async (input) => {
+        const url = input instanceof Request ? input.url : String(input);
+        const body = url.endsWith('/activity')
+          ? activity
+          : url.endsWith('/approval')
+            ? configurableStatus
+            : icDeal;
+        return new Response(JSON.stringify(body), {
+          status: 200,
+          headers: { 'Content-Type': 'application/json' },
+        });
+      }),
+    );
+
+    render(<DealDetail dealId={dealId} />);
+
+    expect(
+      await screen.findByText('No approval quorum is configured for this organisation.'),
+    ).toBeVisible();
+    expect(screen.getByRole('spinbutton', { name: 'Required approvals' })).toHaveValue(1);
+    expect(screen.queryByRole('button', { name: 'Submit for approval' })).not.toBeInTheDocument();
+  });
+
+  it('lets an assigned IC member approve without a rejection reason', async () => {
+    const icDeal = { ...deal, stage: 'ic_review' as const };
+    const pendingStatus: DealApprovalStatus = {
+      ...approvalStatus,
+      requestId: 'bbbbbbbb-0000-4000-8000-000000000003',
+      status: 'pending',
+      requiredApprovals: 2,
+      configuredApprovals: 2,
+      canDecide: true,
+    };
+    let approved = false;
+    const fetch = vi.fn<(input: RequestInfo | URL, init?: RequestInit) => Promise<Response>>(
+      async (input, init) => {
+        const url = input instanceof Request ? input.url : String(input);
+        if (url === '/api/auth/session') {
+          return new Response(
+            JSON.stringify({
+              csrfToken: 'csrf-test',
+              user: {
+                id: 'cccccccc-0000-4000-8000-000000000001',
+                email: 'person@example.test',
+                fullName: 'Test User',
+              },
+              tenantId: 'cccccccc-0000-4000-8000-000000000002',
+            }),
+            { status: 200, headers: { 'Content-Type': 'application/json' } },
+          );
+        }
+        if (init?.method === 'POST') {
+          approved = true;
+          return new Response(JSON.stringify({ status: 'approved' }), {
+            status: 200,
+            headers: { 'Content-Type': 'application/json' },
+          });
+        }
+        const body = url.endsWith('/activity')
+          ? activity
+          : url.endsWith('/approval')
+            ? approved
+              ? { ...pendingStatus, status: 'approved', canDecide: false }
+              : pendingStatus
+            : icDeal;
+        return new Response(JSON.stringify(body), {
+          status: 200,
+          headers: { 'Content-Type': 'application/json' },
+        });
+      },
+    );
+    vi.stubGlobal('fetch', fetch);
+    const user = userEvent.setup();
+
+    render(<DealDetail dealId={dealId} />);
+    await user.click(await screen.findByRole('button', { name: 'Approve' }));
+
+    expect(await screen.findByText('Approval quorum reached.')).toBeVisible();
+    expect(fetch).toHaveBeenCalledWith(
+      '/api/approval-requests/bbbbbbbb-0000-4000-8000-000000000003/decisions',
+      expect.objectContaining({ method: 'POST', body: JSON.stringify({ decision: 'approve' }) }),
+    );
+  });
+
+  it('shows empty activity, unverified integrity, and optional deal fields', async () => {
+    const sparseDeal = {
+      ...deal,
+      sector: null,
+      amount: null,
+      expected_close_date: null,
+      expected_close_time: null,
+    };
+    const emptyActivity = { events: [], hasMore: false, integrityOk: false };
+    vi.stubGlobal(
+      'fetch',
+      vi.fn<(...args: [RequestInfo | URL]) => Promise<Response>>(async (input) => {
+        const url = input instanceof Request ? input.url : String(input);
+        const response = url.endsWith('/activity')
+          ? emptyActivity
+          : url.endsWith('/approval')
+            ? approvalStatus
+            : sparseDeal;
+        return new Response(JSON.stringify(response), {
+          status: 200,
+          headers: { 'Content-Type': 'application/json' },
+        });
+      }),
+    );
+
+    render(<DealDetail dealId={dealId} />);
+
+    expect(await screen.findByText('Activity integrity check failed')).toBeVisible();
+    expect(screen.getByText('No activity yet.')).toBeVisible();
+    expect(screen.getAllByText('Not set')).toHaveLength(3);
+  });
+
+  it('renders non-note event kinds and falls back to the actor email', async () => {
+    const nonNoteActivity = {
+      ...activity,
+      events: [
+        {
+          ...activity.events[0],
+          kind: 'stage_change',
+          body: 'Moved from sourcing to screening.',
+          actorName: null,
+          amendsEventId: 'bbbbbbbb-0000-4000-8000-000000000099',
+        },
+      ],
+    };
+    vi.stubGlobal(
+      'fetch',
+      vi.fn<(...args: [RequestInfo | URL]) => Promise<Response>>(async (input) => {
+        const url = input instanceof Request ? input.url : String(input);
+        const response = url.endsWith('/activity')
+          ? nonNoteActivity
+          : url.endsWith('/approval')
+            ? approvalStatus
+            : deal;
+        return new Response(JSON.stringify(response), {
+          status: 200,
+          headers: { 'Content-Type': 'application/json' },
+        });
+      }),
+    );
+
+    render(<DealDetail dealId={dealId} />);
+
+    expect(await screen.findByText('stage change')).toBeVisible();
+    expect(screen.getByText('person@example.test', { exact: false })).toBeVisible();
+  });
+
+  it('retries a failed detail load', async () => {
+    let detailCalls = 0;
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async (input: RequestInfo | URL) => {
+        const url = input instanceof Request ? input.url : String(input);
+        if (!url.endsWith('/activity') && !url.endsWith('/approval') && detailCalls++ === 0) {
+          return new Response(JSON.stringify({ error: { message: 'Details unavailable.' } }), {
+            status: 503,
+            headers: { 'Content-Type': 'application/json' },
+          });
+        }
+        const response = url.endsWith('/activity')
+          ? activity
+          : url.endsWith('/approval')
+            ? approvalStatus
+            : deal;
+        return new Response(JSON.stringify(response), {
+          status: 200,
+          headers: { 'Content-Type': 'application/json' },
+        });
+      }),
+    );
+    const user = userEvent.setup();
+    render(<DealDetail dealId={dealId} />);
+
+    expect(await screen.findByRole('alert')).toHaveTextContent('Details unavailable.');
+    await user.click(screen.getByRole('button', { name: 'Try again' }));
+    expect(await screen.findByRole('heading', { name: 'Northstar Systems' })).toBeVisible();
+  });
+
+  it('reports an older activity load failure without losing the timeline', async () => {
+    const fetch = vi.fn<(...args: [RequestInfo | URL]) => Promise<Response>>(async (input) => {
+      const url = input instanceof Request ? input.url : String(input);
+      if (url.includes('beforeSeq=')) {
+        return new Response(JSON.stringify({ error: { message: 'Older activity unavailable.' } }), {
+          status: 503,
+          headers: { 'Content-Type': 'application/json' },
+        });
+      }
+      const response = url.endsWith('/activity')
+        ? { ...activity, hasMore: true }
+        : url.endsWith('/approval')
+          ? approvalStatus
+          : deal;
+      return new Response(JSON.stringify(response), {
+        status: 200,
+        headers: { 'Content-Type': 'application/json' },
+      });
+    });
+    vi.stubGlobal('fetch', fetch);
+    const user = userEvent.setup();
+    render(<DealDetail dealId={dealId} />);
+    await screen.findByText('Initial diligence started.');
+
+    await user.click(screen.getByRole('button', { name: 'Load older activity' }));
+
+    expect(await screen.findByRole('alert')).toHaveTextContent('Older activity unavailable.');
+    expect(screen.getByText('Initial diligence started.')).toBeVisible();
   });
 });

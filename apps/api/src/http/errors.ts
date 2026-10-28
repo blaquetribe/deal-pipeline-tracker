@@ -15,7 +15,7 @@ export class HttpError extends Error {
   }
 }
 
-const GENERIC: Record<string, HttpError> = {
+const GENERIC = {
   invalid_request: new HttpError(
     422,
     'invalid_request',
@@ -27,7 +27,7 @@ const GENERIC: Record<string, HttpError> = {
   invalid_token: new HttpError(400, 'invalid_token', 'This link is invalid or has expired.'),
   unavailable: new HttpError(503, 'unavailable', 'The service is temporarily unavailable.'),
   internal: new HttpError(500, 'internal', 'Something went wrong.'),
-};
+} satisfies Record<string, HttpError>;
 
 /**
  * One place that turns any failure into a response. Messages for our own DP4xx rules are written by
@@ -45,17 +45,15 @@ export function toHttpError(error: unknown): HttpError {
         'That password is not accepted. Choose a longer, less common one.',
       );
     }
-    return error.kind === 'unavailable'
-      ? (GENERIC['unavailable'] ?? new HttpError(503, 'unavailable', 'Unavailable.'))
-      : (GENERIC['internal'] ?? new HttpError(500, 'internal', 'Something went wrong.'));
+    return error.kind === 'unavailable' ? GENERIC['unavailable'] : GENERIC['internal'];
   }
   if (!(error instanceof RpcError)) {
-    return GENERIC['internal'] ?? new HttpError(500, 'internal', 'Something went wrong.');
+    return GENERIC['internal'];
   }
 
   switch (error.code) {
     case 'DP401':
-      return GENERIC['invalid_token'] ?? new HttpError(400, 'invalid_token', 'Invalid.');
+      return GENERIC['invalid_token'];
     case 'DP409':
       return new HttpError(
         409,
@@ -65,18 +63,18 @@ export function toHttpError(error: unknown): HttpError {
     case 'DP422':
       return new HttpError(422, 'rule_violation', error.message);
     case '42501':
-      return GENERIC['forbidden'] ?? new HttpError(403, 'forbidden', 'Forbidden.');
+      return GENERIC['forbidden'];
     case 'P0002':
-      return GENERIC['not_found'] ?? new HttpError(404, 'not_found', 'Not found.');
+      return GENERIC['not_found'];
     case '22023':
     case '23514':
-      return GENERIC['invalid_request'] ?? new HttpError(422, 'invalid_request', 'Invalid.');
+      return GENERIC['invalid_request'];
     case '23505':
     case '55000':
-      return GENERIC['conflict'] ?? new HttpError(409, 'conflict', 'Conflict.');
+      return GENERIC['conflict'];
     case 'unavailable':
-      return GENERIC['unavailable'] ?? new HttpError(503, 'unavailable', 'Unavailable.');
+      return GENERIC['unavailable'];
     default:
-      return GENERIC['internal'] ?? new HttpError(500, 'internal', 'Something went wrong.');
+      return GENERIC['internal'];
   }
 }

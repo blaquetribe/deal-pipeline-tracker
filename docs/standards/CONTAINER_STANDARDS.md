@@ -3,7 +3,7 @@
 Goal: `docker compose up` on a clean machine yields a working, seeded system; images are small, reproducible, non-root, scanned, and built in CI. Security rules in SECURITY_STANDARDS take precedence.
 
 ## 1. Dockerfiles
-One Dockerfile per deployable app: `apps/web/Dockerfile`, `apps/api/Dockerfile`. The gateway uses a pinned stock image (Caddy or nginx) with a committed config. Migrate/seed run from a pinned tooling image or an `api` image target (decided in feature 00).
+One Dockerfile per deployable app: `apps/web/Dockerfile`, `apps/api/Dockerfile`. The gateway uses a pinned stock image (Caddy or nginx) with a committed config. A security rebuild of an upstream gateway binary is allowed only when no fixed upstream image is available, must keep the runtime base pinned, and must record its dependency replacement and verification in an ADR. Migrate/seed run from a pinned tooling image or an `api` image target (decided in feature 00).
 
 - **Build context is the repo root** (monorepo, shared package), with a strict `.dockerignore` (node_modules, .git, .env*, docs, tests, build output).
 - **Multi-stage**: `deps` -> `build` -> `runtime`. Runtime contains only production dependencies and build output.

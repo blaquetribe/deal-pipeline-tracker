@@ -140,4 +140,76 @@ describe('Onboarding focus and route behavior', () => {
       screen.getByRole('link', { name: 'Display name: Enter a display name.' }),
     ).toHaveAttribute('href', `#${displayName.id}`);
   });
+
+  it('creates an organisation, saves defaults, and finishes the owner flow', async () => {
+    const user = userEvent.setup();
+    const states = [
+      {
+        onboarding: { flow: 'owner', current_step: 'organisation', completed: false, skipped: [] },
+      },
+      { onboarding: { flow: 'owner', current_step: 'defaults', completed: false, skipped: [] } },
+      { onboarding: { flow: 'owner', current_step: 'invite', completed: false, skipped: [] } },
+      { onboarding: { flow: 'owner', current_step: 'done', completed: true, skipped: [] } },
+    ];
+    mocks.pathname = '/onboarding/organisation';
+    mocks.sessionRead.mockImplementation(async (path) =>
+      path === '/onboarding/state' ? states.shift() : { invitations: [] },
+    );
+    render(<Onboarding />);
+    await user.type(await screen.findByLabelText('Organisation name'), 'Atlas Capital');
+    await user.click(screen.getByRole('button', { name: 'Create organisation' }));
+    expect(await screen.findByText('Organisation created.')).toBeInTheDocument();
+    const days = await screen.findByLabelText('Closing soon window (days)');
+    await user.clear(days);
+    await user.type(days, '45');
+    await user.click(screen.getByRole('button', { name: 'Save defaults' }));
+    expect(await screen.findByRole('heading', { name: 'Invite your team' })).toBeInTheDocument();
+    await user.click(screen.getByRole('button', { name: 'Finish setup' }));
+    expect(await screen.findByText('Your setup is complete.')).toBeInTheDocument();
+    expect(mocks.sessionRequest).toHaveBeenCalledWith('/onboarding/organisation', 'POST', {
+      name: 'Atlas Capital',
+      timezone: 'Africa/Johannesburg',
+      currency: 'ZAR',
+    });
+    expect(mocks.sessionRequest).toHaveBeenCalledWith('/onboarding/defaults', 'PUT', {
+      timezone: 'Africa/Johannesburg',
+      currency: 'ZAR',
+      closingSoonDays: 45,
+    });
+  });
+
+  it('shows safe load/save errors, the no-flow state, and an action error', async () => {
+    mocks.sessionRead.mockRejectedValueOnce('unexpected load failure');
+    const loadingFailure = render(<Onboarding />);
+    expect(await screen.findByRole('alert')).toHaveTextContent('Setup could not be loaded.');
+    expect(screen.getByRole('link', { name: 'Continue to the pipeline' })).toHaveAttribute(
+      'href',
+      '/',
+    );
+    loadingFailure.unmount();
+
+    mocks.sessionRead.mockResolvedValueOnce({ onboarding: null });
+    render(<Onboarding />);
+    expect(await screen.findByText('No onboarding flow is active.')).toBeInTheDocument();
+    screen.getByRole('link', { name: 'Continue to the pipeline' });
+  });
+
+  it('reports save and skip failures and supports skipping defaults', async () => {
+    const user = userEvent.setup();
+    mocks.sessionRead.mockResolvedValue({
+      onboarding: { flow: 'owner', current_step: 'defaults', completed: false, skipped: [] },
+    });
+    mocks.sessionRequest.mockRejectedValueOnce(new Error('Settings could not be saved.'));
+    render(<Onboarding />);
+    await user.click(await screen.findByRole('button', { name: 'Save defaults' }));
+    expect(await screen.findByRole('alert')).toHaveTextContent('Settings could not be saved.');
+    mocks.sessionRequest.mockRejectedValueOnce('skip failed');
+    await user.click(screen.getByRole('button', { name: 'Skip for now' }));
+    expect(await screen.findByRole('alert')).toHaveTextContent(
+      'The request could not be completed.',
+    );
+    mocks.sessionRequest.mockRejectedValueOnce('save failed');
+    await user.click(screen.getByRole('button', { name: 'Save defaults' }));
+    expect(await screen.findByRole('alert')).toHaveTextContent('Your changes could not be saved.');
+  });
 });

@@ -173,6 +173,87 @@ describe('deal assignment routes', () => {
     );
   });
 
+  it('rejects dashboard reads without an active tenant and validates activity query options', async () => {
+    const noTenant = harness(null);
+    const summary = await noTenant.app.request('/deals/dashboard-summary', {
+      headers: { Cookie: SESSION_COOKIE },
+    });
+    expect(summary.status).toBe(409);
+    expect(noTenant.userRpc.call).not.toHaveBeenCalled();
+
+    const { app, userRpc } = harness();
+    const repeated = await app.request(`/deals/${DEAL}/activity?limit=5&limit=10`, {
+      headers: { Cookie: SESSION_COOKIE },
+    });
+    const invalid = await app.request(`/deals/${DEAL}/activity?beforeSeq=-1`, {
+      headers: { Cookie: SESSION_COOKIE },
+    });
+    expect(repeated.status).toBe(400);
+    expect(invalid.status).toBe(400);
+    expect(userRpc.call).not.toHaveBeenCalled();
+  });
+
+  it('serializes every optional deal edit field and rejects malformed deal ids on edit and note routes', async () => {
+    const { app, userRpc } = harness();
+    const response = await app.request(`/deals/${DEAL}`, {
+      method: 'PUT',
+      headers: {
+        Cookie: SESSION_COOKIE,
+        Origin: ORIGIN,
+        'X-CSRF-Token': 'csrf-token',
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        expectedVersion: 3,
+        sector: 'Healthcare',
+        currency: 'USD',
+        expectedCloseDate: '2027-04-01',
+      }),
+    });
+    expect(response.status).toBe(200);
+    expect(userRpc.call).toHaveBeenCalledWith(
+      'update_deal',
+      {
+        p_deal: DEAL,
+        p_expected_version: 3,
+        p_changes: {
+          sector: 'Healthcare',
+          currency: 'USD',
+          expected_close_date: '2027-04-01',
+        },
+      },
+      'user-jwt',
+    );
+    expect(
+      (
+        await app.request('/deals/not-a-uuid', {
+          method: 'PUT',
+          headers: {
+            Cookie: SESSION_COOKIE,
+            Origin: ORIGIN,
+            'X-CSRF-Token': 'csrf-token',
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({ expectedVersion: 3, name: 'Nope' }),
+        })
+      ).status,
+    ).toBe(400);
+    expect(
+      (
+        await app.request('/deals/not-a-uuid/notes', {
+          method: 'POST',
+          headers: {
+            Cookie: SESSION_COOKIE,
+            Origin: ORIGIN,
+            'X-CSRF-Token': 'csrf-token',
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({ body: 'Note' }),
+        })
+      ).status,
+    ).toBe(400);
+  });
+
   it('requires a session before querying assignments', async () => {
     const { app, userRpc, resolver } = harness();
     resolver.resolve = typedMock(async () => null);

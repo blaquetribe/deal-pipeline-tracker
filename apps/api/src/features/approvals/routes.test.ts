@@ -93,6 +93,15 @@ describe('approval routes', () => {
     );
   });
 
+  it('rejects malformed deal ids before querying approval status', async () => {
+    const { app, userRpc } = harness();
+    const response = await app.request('/deals/not-a-uuid/approval', {
+      headers: { Cookie: COOKIE },
+    });
+    expect(response.status).toBe(400);
+    expect(userRpc.call).not.toHaveBeenCalled();
+  });
+
   it('requires a signed-in session before requesting approval', async () => {
     const { app, userRpc, resolver } = harness();
     resolver.resolve = vi.fn<(sessionId: string) => Promise<Session | null>>(async () => null);
@@ -121,12 +130,65 @@ describe('approval routes', () => {
     );
   });
 
+  it('rejects malformed deal ids before creating an approval request', async () => {
+    const { app, userRpc } = harness();
+    const response = await app.request('/deals/not-a-uuid/approval-requests', {
+      method: 'POST',
+      headers: jsonHeaders,
+      body: JSON.stringify({ expectedVersion: 2 }),
+    });
+    expect(response.status).toBe(400);
+    expect(userRpc.call).not.toHaveBeenCalled();
+  });
+
   it('rejects unknown decision fields before calling the database', async () => {
     const { app, userRpc } = harness();
     const response = await app.request(`/approval-requests/${REQUEST}/decisions`, {
       method: 'POST',
       headers: jsonHeaders,
       body: JSON.stringify({ decision: 'approve', actorId: 'client-controlled' }),
+    });
+    expect(response.status).toBe(400);
+    expect(userRpc.call).not.toHaveBeenCalled();
+  });
+
+  it('records an approval decision and defaults an omitted reason to null', async () => {
+    const { app, userRpc } = harness();
+    const response = await app.request(`/approval-requests/${REQUEST}/decisions`, {
+      method: 'POST',
+      headers: jsonHeaders,
+      body: JSON.stringify({ decision: 'approve' }),
+    });
+    expect(response.status).toBe(200);
+    expect(await response.json()).toEqual({ status: 'pending' });
+    expect(userRpc.call).toHaveBeenCalledWith(
+      'decide_approval',
+      { p_request: REQUEST, p_decision: 'approve', p_reason: null },
+      'caller-jwt',
+    );
+  });
+
+  it('passes a supplied decision reason to the database', async () => {
+    const { app, userRpc } = harness();
+    const response = await app.request(`/approval-requests/${REQUEST}/decisions`, {
+      method: 'POST',
+      headers: jsonHeaders,
+      body: JSON.stringify({ decision: 'reject', reason: 'Insufficient diligence' }),
+    });
+    expect(response.status).toBe(200);
+    expect(userRpc.call).toHaveBeenCalledWith(
+      'decide_approval',
+      { p_request: REQUEST, p_decision: 'reject', p_reason: 'Insufficient diligence' },
+      'caller-jwt',
+    );
+  });
+
+  it('rejects malformed approval request ids before writing a decision', async () => {
+    const { app, userRpc } = harness();
+    const response = await app.request('/approval-requests/not-a-uuid/decisions', {
+      method: 'POST',
+      headers: jsonHeaders,
+      body: JSON.stringify({ decision: 'approve' }),
     });
     expect(response.status).toBe(400);
     expect(userRpc.call).not.toHaveBeenCalled();
