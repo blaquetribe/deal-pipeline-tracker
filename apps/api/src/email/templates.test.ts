@@ -31,4 +31,26 @@ describe('renderAuthEmail', () => {
     expect(email.html).toContain('&amp;name=&quot;');
     expect(email.text).toContain('<script>alert(1)</script>');
   });
+
+  it('renders an escaped invitation and rejects unsafe or credentialed links', () => {
+    const invitation = renderAuthEmail({
+      kind: 'invitation',
+      link: 'https://example.test/invite?token=abc',
+      tenantName: "CVC <Partners> 'Holdings'",
+      inviterEmail: 'owner&admin@example.test',
+      roleName: 'Deal "Reviewer"',
+    });
+
+    expect(invitation.subject).toContain("You're invited");
+    expect(invitation.html).toContain('owner&amp;admin@example.test');
+    expect(invitation.html).toContain('CVC &lt;Partners&gt; &#39;Holdings&#39;');
+    expect(invitation.html).toContain('Deal &quot;Reviewer&quot;');
+    expect(invitation.text).toContain('within 7 days');
+    expect(() => renderAuthEmail({ kind: 'verify_email', link: 'javascript:alert(1)' })).toThrow(
+      'Auth email link must use HTTP or HTTPS without credentials',
+    );
+    expect(() =>
+      renderAuthEmail({ kind: 'reset_password', link: 'https://user:password@example.test/reset' }),
+    ).toThrow('Auth email link must use HTTP or HTTPS without credentials');
+  });
 });

@@ -139,4 +139,115 @@ describe('DealDetail', () => {
     );
     expect(screen.queryByRole('button', { name: 'Load older activity' })).not.toBeInTheDocument();
   });
+
+  it('shows empty activity, unverified integrity, and optional deal fields', async () => {
+    const sparseDeal = {
+      ...deal,
+      sector: null,
+      amount: null,
+      expected_close_date: null,
+      expected_close_time: null,
+    };
+    const emptyActivity = { events: [], hasMore: false, integrityOk: false };
+    vi.stubGlobal(
+      'fetch',
+      vi.fn<(...args: [RequestInfo | URL]) => Promise<Response>>(async (input) => {
+        const url = input instanceof Request ? input.url : String(input);
+        return new Response(
+          JSON.stringify(url.endsWith('/activity') ? emptyActivity : sparseDeal),
+          {
+            status: 200,
+            headers: { 'Content-Type': 'application/json' },
+          },
+        );
+      }),
+    );
+
+    render(<DealDetail dealId={dealId} />);
+
+    expect(await screen.findByText('Activity integrity check failed')).toBeVisible();
+    expect(screen.getByText('No activity yet.')).toBeVisible();
+    expect(screen.getAllByText('Not set')).toHaveLength(3);
+  });
+
+  it('renders non-note event kinds and falls back to the actor email', async () => {
+    const nonNoteActivity = {
+      ...activity,
+      events: [
+        {
+          ...activity.events[0],
+          kind: 'stage_change',
+          body: 'Moved from sourcing to screening.',
+          actorName: null,
+          amendsEventId: 'bbbbbbbb-0000-4000-8000-000000000099',
+        },
+      ],
+    };
+    vi.stubGlobal(
+      'fetch',
+      vi.fn<(...args: [RequestInfo | URL]) => Promise<Response>>(async (input) => {
+        const url = input instanceof Request ? input.url : String(input);
+        return new Response(JSON.stringify(url.endsWith('/activity') ? nonNoteActivity : deal), {
+          status: 200,
+          headers: { 'Content-Type': 'application/json' },
+        });
+      }),
+    );
+
+    render(<DealDetail dealId={dealId} />);
+
+    expect(await screen.findByText('stage change')).toBeVisible();
+    expect(screen.getByText('person@example.test', { exact: false })).toBeVisible();
+  });
+
+  it('retries a failed detail load', async () => {
+    let detailCalls = 0;
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async (input: RequestInfo | URL) => {
+        const url = input instanceof Request ? input.url : String(input);
+        if (!url.endsWith('/activity') && detailCalls++ === 0) {
+          return new Response(JSON.stringify({ error: { message: 'Details unavailable.' } }), {
+            status: 503,
+            headers: { 'Content-Type': 'application/json' },
+          });
+        }
+        return new Response(JSON.stringify(url.endsWith('/activity') ? activity : deal), {
+          status: 200,
+          headers: { 'Content-Type': 'application/json' },
+        });
+      }),
+    );
+    const user = userEvent.setup();
+    render(<DealDetail dealId={dealId} />);
+
+    expect(await screen.findByRole('alert')).toHaveTextContent('Details unavailable.');
+    await user.click(screen.getByRole('button', { name: 'Try again' }));
+    expect(await screen.findByRole('heading', { name: 'Northstar Systems' })).toBeVisible();
+  });
+
+  it('reports an older activity load failure without losing the timeline', async () => {
+    const fetch = vi.fn<(...args: [RequestInfo | URL]) => Promise<Response>>(async (input) => {
+      const url = input instanceof Request ? input.url : String(input);
+      if (url.includes('beforeSeq=')) {
+        return new Response(JSON.stringify({ error: { message: 'Older activity unavailable.' } }), {
+          status: 503,
+          headers: { 'Content-Type': 'application/json' },
+        });
+      }
+      return new Response(
+        JSON.stringify(url.endsWith('/activity') ? { ...activity, hasMore: true } : deal),
+        { status: 200, headers: { 'Content-Type': 'application/json' } },
+      );
+    });
+    vi.stubGlobal('fetch', fetch);
+    const user = userEvent.setup();
+    render(<DealDetail dealId={dealId} />);
+    await screen.findByText('Initial diligence started.');
+
+    await user.click(screen.getByRole('button', { name: 'Load older activity' }));
+
+    expect(await screen.findByRole('alert')).toHaveTextContent('Older activity unavailable.');
+    expect(screen.getByText('Initial diligence started.')).toBeVisible();
+  });
 });

@@ -4,10 +4,10 @@ import { z } from 'zod';
 
 import { createRateLimiter } from '../http/rate-limit';
 import { describeRoutes, type SessionResolver } from '../http/route';
-import type { GoTrue } from './gotrue';
+import type { Authenticated, GoTrue } from './gotrue';
 import type { AuthMailer, AuthServiceOptions } from './service';
 import { createAuthRoutes, createSessionResolver } from './service';
-import type { SessionStore, StoredTokens } from './session-store';
+import type { SessionRecord, SessionStore, StoredTokens } from './session-store';
 
 const ORIGIN = 'http://localhost:8080';
 const secret = 'dev-only-session-secret-minimum-32-characters';
@@ -56,35 +56,39 @@ function harness(
     }),
   };
   const userRpc = {
-    call: typedMock(async (name: string, args: Record<string, unknown>, bearer: string) => {
-      userCalls.push({ name, args, bearer });
-      if (name === 'onboarding_state') {
-        return [{ flow: 'owner', current_step: 'profile', completed: false, skipped: [] }];
-      }
-      if (name === 'onboarding_advance') return 'organisation';
-      if (name === 'tenant_choices')
-        return [{ tenant_id: '33333333-3333-4333-8333-333333333333', tenant_name: 'CVC Capital' }];
-      if (name === 'pending_invitations')
-        return [
-          {
-            invitation_id: '44444444-4444-4444-8444-444444444444',
-            invite_email: 'new@example.test',
-            role_key: 'deal_member',
-            created_at: '2026-10-28T10:00:00+00:00',
-            expires_at: '2026-11-04T10:00:00+00:00',
-          },
-        ];
-      if (name === 'invite_member' && typeof args.p_email === 'string') {
-        invitationEmail = args.p_email;
-      }
-      return '00000000-0000-4000-8000-000000000001';
-    }),
-  };
+    call: typedMock(
+      async (name: string, args: Record<string, unknown>, bearer: string): Promise<unknown> => {
+        userCalls.push({ name, args, bearer });
+        if (name === 'onboarding_state') {
+          return [{ flow: 'owner', current_step: 'profile', completed: false, skipped: [] }];
+        }
+        if (name === 'onboarding_advance') return 'organisation';
+        if (name === 'tenant_choices')
+          return [
+            { tenant_id: '33333333-3333-4333-8333-333333333333', tenant_name: 'CVC Capital' },
+          ];
+        if (name === 'pending_invitations')
+          return [
+            {
+              invitation_id: '44444444-4444-4444-8444-444444444444',
+              invite_email: 'new@example.test',
+              role_key: 'deal_member',
+              created_at: '2026-10-28T10:00:00+00:00',
+              expires_at: '2026-11-04T10:00:00+00:00',
+            },
+          ];
+        if (name === 'invite_member' && typeof args.p_email === 'string') {
+          invitationEmail = args.p_email;
+        }
+        return '00000000-0000-4000-8000-000000000001';
+      },
+    ),
+  } satisfies AuthServiceOptions['userRpc'];
   const gotrue = {
     createUser: typedMock(async (): Promise<{ userId: string } | 'exists'> => ({
       userId: '22222222-2222-4222-8222-222222222222',
     })),
-    passwordLogin: typedMock(async () => ({
+    passwordLogin: typedMock(async (): Promise<Authenticated | null> => ({
       userId: '22222222-2222-4222-8222-222222222222',
       tokens,
     })),
@@ -94,7 +98,7 @@ function harness(
   } satisfies GoTrue;
   const sessions = {
     create: typedMock(async () => ({ sessionId: 'A'.repeat(43) })),
-    lookup: typedMock(async () => ({
+    lookup: typedMock(async (): Promise<SessionRecord | null> => ({
       userId: '22222222-2222-4222-8222-222222222222',
       tokens,
       activeTenantId: null,
@@ -144,6 +148,181 @@ const post = (body: unknown, cookie?: string, csrf?: string): RequestInit => ({
 });
 
 describe('auth routes', () => {
+  it('covers failed credentials, live and missing sessions, forbidden tenant switches, and logout after revocation', async () => {
+    const resolver = {
+      resolve: typedMock(async () => ({
+        sessionId: 'A'.repeat(43),
+        userId: '22222222-2222-4222-8222-222222222222',
+        tenantId: null,
+        accessToken: 'access-token',
+        csrfToken: 'csrf',
+      })),
+    };
+    const { app, gotrue, sessions } = harness({}, resolver);
+    gotrue.passwordLogin.mockResolvedValueOnce(null);
+    const invalidLogin = await app.request(
+      '/auth/login',
+      post({ email: 'ada@example.test', password: 'wrong-password' }),
+    );
+    expect(invalidLogin.status).toBe(401);
+
+    const session = await app.request('/auth/session', {
+      headers: { Cookie: `dpt_session=${'A'.repeat(43)}` },
+    });
+    expect(session.status).toBe(200);
+    sessions.lookup.mockResolvedValueOnce(null);
+    const missingSession = await app.request('/auth/session', {
+      headers: { Cookie: `dpt_session=${'A'.repeat(43)}` },
+    });
+    expect(missingSession.status).toBe(401);
+
+    sessions.setTenant.mockResolvedValueOnce(false);
+    const forbiddenSwitch = await app.request(
+      '/auth/tenant',
+      post(
+        { tenantId: '33333333-3333-4333-8333-333333333333' },
+        `dpt_session=${'A'.repeat(43)}`,
+        'csrf',
+      ),
+    );
+    expect(forbiddenSwitch.status).toBe(403);
+
+    sessions.lookup.mockResolvedValueOnce(null);
+    const logout = await app.request(
+      '/auth/logout',
+      post({}, `dpt_session=${'A'.repeat(43)}`, 'csrf'),
+    );
+    expect(logout.status).toBe(204);
+    expect(gotrue.logout).not.toHaveBeenCalled();
+  });
+
+  it('handles existing invitation accounts, password-login fallback, and session binding failure', async () => {
+    const { app, gotrue, sessions } = harness();
+    const body = { token: 'I'.repeat(43), password: 'a-sufficient-password', fullName: 'Ada' };
+    gotrue.createUser.mockResolvedValueOnce('exists');
+    const existing = await app.request('/auth/invitations/register', post(body));
+    expect(existing.status).toBe(409);
+
+    gotrue.passwordLogin.mockResolvedValueOnce(null);
+    const signInRequired = await app.request('/auth/invitations/register', post(body));
+    expect(signInRequired.status).toBe(200);
+    expect(await signInRequired.json()).toMatchObject({ accepted: true, signInRequired: true });
+
+    gotrue.passwordLogin.mockResolvedValueOnce({
+      userId: '33333333-3333-4333-8333-333333333333',
+      tokens,
+    });
+    const mismatchedSession = await app.request('/auth/invitations/register', post(body));
+    expect(mismatchedSession.status).toBe(500);
+    expect(sessions.revoke).toHaveBeenCalledWith('A'.repeat(43));
+  });
+
+  it('covers empty-tenant invitation operations and onboarding completion states', async () => {
+    const resolver = {
+      resolve: typedMock(async () => ({
+        sessionId: 'A'.repeat(43),
+        userId: '22222222-2222-4222-8222-222222222222',
+        tenantId: null as string | null,
+        accessToken: 'user-access',
+        csrfToken: 'csrf',
+      })),
+    };
+    const { app, userRpc, sessions } = harness({}, resolver);
+    const cookie = `dpt_session=${'A'.repeat(43)}`;
+    const emptyInvitations = await app.request('/onboarding/invitations', {
+      headers: { Cookie: cookie },
+    });
+    expect(await emptyInvitations.json()).toEqual({ invitations: [] });
+    const noTenantInvite = await app.request(
+      '/onboarding/invitations',
+      post({ email: 'new@example.test', roleKey: 'analyst' }, cookie, 'csrf'),
+    );
+    expect(noTenantInvite.status).toBe(409);
+    const revoked = await app.request('/onboarding/invitations', {
+      ...post({ invitationId: '44444444-4444-4444-8444-444444444444' }, cookie, 'csrf'),
+      method: 'DELETE',
+    });
+    expect(revoked.status).toBe(204);
+    const defaultsWithoutTenant = await app.request('/onboarding/defaults', {
+      ...post({ timezone: 'UTC', currency: 'ZAR', closingSoonDays: 60 }, cookie, 'csrf'),
+      method: 'PUT',
+    });
+    expect(defaultsWithoutTenant.status).toBe(409);
+
+    userRpc.call.mockImplementation(async (name) => {
+      if (name === 'onboarding_state') return [];
+      if (name === 'onboarding_skip') return 'organisation';
+      return '00000000-0000-4000-8000-000000000001';
+    });
+    const state = await app.request('/onboarding/state', { headers: { Cookie: cookie } });
+    expect(await state.json()).toEqual({ onboarding: null });
+    const invalidSkip = await app.request('/onboarding/skip/nope', post({}, cookie, 'csrf'));
+    expect(invalidSkip.status).toBe(400);
+    const skipProfile = await app.request('/onboarding/skip/profile', post({}, cookie, 'csrf'));
+    expect(await skipProfile.json()).toEqual({ nextStep: 'organisation' });
+    const notStarted = await app.request('/onboarding/complete', post({}, cookie, 'csrf'));
+    expect(notStarted.status).toBe(409);
+    expect(sessions.setTenant).not.toHaveBeenCalled();
+  });
+
+  it('advances only the active onboarding step and covers completion and invitation acceptance outcomes', async () => {
+    const resolver = {
+      resolve: typedMock(async () => ({
+        sessionId: 'A'.repeat(43),
+        userId: '22222222-2222-4222-8222-222222222222',
+        tenantId: '33333333-3333-4333-8333-333333333333',
+        accessToken: 'user-access',
+        csrfToken: 'csrf',
+      })),
+    };
+    const { app, userRpc, sessions } = harness({}, resolver);
+    let state: unknown = [{ flow: 'owner', current_step: 'invite', completed: false, skipped: [] }];
+    userRpc.call.mockImplementation(async (name, args) => {
+      if (name === 'onboarding_state') return state;
+      if (name === 'onboarding_advance') return args.p_step === 'invite' ? 'done' : 'organisation';
+      if (name === 'onboarding_skip') return 'organisation';
+      return '00000000-0000-4000-8000-000000000001';
+    });
+    const cookie = `dpt_session=${'A'.repeat(43)}`;
+    const profile = await app.request('/onboarding/profile', {
+      ...post({ displayName: 'Ada' }, cookie, 'csrf'),
+      method: 'PUT',
+    });
+    expect(await profile.json()).toEqual({ saved: true, nextStep: 'invite' });
+
+    const defaults = await app.request('/onboarding/defaults', {
+      ...post({ timezone: 'UTC', currency: 'ZAR', closingSoonDays: 60 }, cookie, 'csrf'),
+      method: 'PUT',
+    });
+    expect(await defaults.json()).toEqual({ saved: true, nextStep: 'invite' });
+
+    state = [{ flow: 'owner', current_step: 'done', completed: true, skipped: [] }];
+    expect(
+      await (await app.request('/onboarding/complete', post({}, cookie, 'csrf'))).json(),
+    ).toEqual({ completed: true });
+    state = [{ flow: 'owner', current_step: 'profile', completed: false, skipped: [] }];
+    expect((await app.request('/onboarding/complete', post({}, cookie, 'csrf'))).status).toBe(409);
+    state = [{ flow: 'owner', current_step: 'invite', completed: false, skipped: [] }];
+    expect(
+      await (await app.request('/onboarding/complete', post({}, cookie, 'csrf'))).json(),
+    ).toEqual({ completed: true });
+
+    const accepted = await app.request(
+      '/auth/invitations/accept',
+      post({ token: 'I'.repeat(43) }, cookie, 'csrf'),
+    );
+    expect(await accepted.json()).toEqual({
+      accepted: true,
+      tenantId: '00000000-0000-4000-8000-000000000001',
+    });
+    sessions.setTenant.mockResolvedValueOnce(false);
+    const notBound = await app.request(
+      '/auth/invitations/accept',
+      post({ token: 'J'.repeat(43) }, cookie, 'csrf'),
+    );
+    expect(notBound.status).toBe(500);
+  });
+
   it('keeps sign-up generic and mails only for a newly created account', async () => {
     const { app, mails, calls, gotrue } = harness();
     const first = await app.request(

@@ -59,6 +59,7 @@ What is covered, where it lives, how to run it.
 - 2026-10-26: ADR 0015. Slice A written test-first (red: role missing), migration, green. pgTAP lives in the `extensions` schema, so the test grants `api_service` usage on it inside its own rolled-back transaction; production does not. Real PostgREST check: role switching and `app.uid()` work. Smoke script extended (not sabotage-tested; `shellcheck` not installed locally, CI runs it).
 
 - 2026-10-26: slice B written test-first (red: missing functions and tables), migration, green, 313 assertions. Four sabotage runs (once-per-user check, invitation email binding, token hash readable, invitation cap) each failed the intended test. A test caught that a leftover user identity on the connection would have beaten the invitee as actor; fixed by letting an explicit `app.actor` win.
+- 2026-10-28: Coverage follow-up added auth API/form/onboarding regression tests and fixed malformed `/onboarding/skip/:step` input to return a stable 400 `invalid_step` response instead of leaking a Zod exception as a 500. The full suite passes 502 tests and all local coverage thresholds pass; GitHub CI for the follow-up PR remains pending.
 
 ## Deviations / debt
 Anything that differs from the plan or is deferred (also mirror in README "next steps").
