@@ -1,4 +1,4 @@
-# ADR 0017: first approval gate slice
+# ADR 0018: first approval gate slice
 
 Status: accepted
 Date: 2026-10-28

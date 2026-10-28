@@ -9,10 +9,10 @@ Approval gates, quorum, decisions, absence, delegation, custom roles and SoD. Co
 
 ## Scope
 - In (first slice): Owner-configured IC k-of-N quorum; submit-time approver snapshot; request/decision/status RPCs; maker-checker enforcement; 2xx API routes; deal-detail controls.
-- Out (follow-up): absence/reassignment and delegation actions, custom role editor, notifications/SLA escalation, and gates beyond IC review. Delegation UI remains on the cut list. See ADR 0017.
+- Out (follow-up): absence/reassignment and delegation actions, custom role editor, notifications/SLA escalation, and gates beyond IC review. Delegation UI remains on the cut list. See ADR 0018.
 
 ## Design notes
-ADR 0017. Configuration uses existing Owner-only `role.manage`; no mutation of immutable system roles. Only approve/reject; requests snapshot the quorum and eligible memberships; rejection fails when quorum is no longer reachable. `decide_approval` signs the deal and writes ledger events under the deal lock.
+ADR 0018. Configuration uses existing Owner-only `role.manage`; no mutation of immutable system roles. Only approve/reject; requests snapshot the quorum and eligible memberships; rejection fails when quorum is no longer reachable. `decide_approval` signs the deal and writes ledger events under the deal lock.
 
 ## Tasks
 - [x] Failing tests written (security/negative first)
@@ -37,7 +37,7 @@ ADR 0017. Configuration uses existing Owner-only `role.manage`; no mutation of i
 
 ## Log
 Dated notes: what changed, what was learned, problems.
-- 2026-10-28: implemented the core IC approval gate in migrations 15–17, API, and deal detail UI. Existing system roles could not accept a new permission, so configuration correctly uses their existing `role.manage` permission (ADR 0017). The quorum has a 1–50 database bound in addition to API validation. Full Vitest (460 tests) and pgTAP (450 assertions) pass. Lint, typecheck, stylelint, format and build pass; coverage remains below threshold on the unmerged `main` baseline.
+- 2026-10-28: implemented the core IC approval gate in migrations 15–17, API, and deal detail UI. Existing system roles could not accept a new permission, so configuration correctly uses their existing `role.manage` permission (ADR 0018). The quorum has a 1–50 database bound in addition to API validation. Full Vitest (460 tests) and pgTAP (450 assertions) pass. Lint, typecheck, stylelint, format and build pass; PR #14 is stacked on PR #13 to inherit its coverage tests and is awaiting a fresh CI run.
 - 2026-10-28: captured the running dashboard/detail UI in the browser after rebuilding the local web/API containers. The approval controls are covered in component tests; no persistent deal was moved just to create an IC-review screenshot because stage changes are audited and append-only.
 
 ## Deviations / debt
