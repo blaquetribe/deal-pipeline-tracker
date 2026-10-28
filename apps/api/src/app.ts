@@ -4,12 +4,15 @@ import { secureHeaders } from 'hono/secure-headers';
 import { mountAuthRoutes, type AuthServiceOptions } from './auth/service';
 import { mountApprovalRoutes } from './features/approvals/routes';
 import { mountDealRoutes } from './features/deals/routes';
+import { mountNotificationRoutes } from './features/notifications/routes';
+import { mountRealtimeRoutes, type RealtimeRoutesOptions } from './features/realtime/routes';
 import { createRateLimiter } from './http/rate-limit';
 import type { HttpDeps } from './http/route';
 
 export interface AppOptions {
   readonly auth: AuthServiceOptions;
   readonly http: Omit<HttpDeps, 'limiter'> & { readonly limiter?: HttpDeps['limiter'] };
+  readonly realtime?: RealtimeRoutesOptions;
 }
 
 export function createApp(options?: AppOptions): Hono {
@@ -40,6 +43,8 @@ export function createApp(options?: AppOptions): Hono {
     mountAuthRoutes(app, httpDeps, options.auth);
     mountDealRoutes(app, httpDeps, { userRpc: options.auth.userRpc });
     mountApprovalRoutes(app, httpDeps, { userRpc: options.auth.userRpc });
+    mountNotificationRoutes(app, httpDeps, { userRpc: options.auth.userRpc });
+    if (options.realtime) mountRealtimeRoutes(app, httpDeps, options.realtime);
   }
 
   return app;

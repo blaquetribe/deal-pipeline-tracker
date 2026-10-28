@@ -53,4 +53,62 @@ describe('renderAuthEmail', () => {
       renderAuthEmail({ kind: 'reset_password', link: 'https://user:password@example.test/reset' }),
     ).toThrow('Auth email link must use HTTP or HTTPS without credentials');
   });
+
+  it('renders a generic closing-soon digest with escaped deal details and configured links', () => {
+    const digest = renderAuthEmail({
+      kind: 'closing_soon_digest',
+      deals: [
+        {
+          dealName: 'Alpha <script>alert(1)</script>\r\nBeta',
+          stage: 'due_diligence',
+          amount: '9007199254740993',
+          currency: 'ZAR',
+          closeDate: '2026-11-01',
+          closeTime: '12:00:00',
+          timeZone: 'Africa/Johannesburg',
+          thresholdDays: 5,
+          link: 'https://tracker.example/deals/00000000-0000-4000-8000-000000000001',
+        },
+        {
+          dealName: 'Overdue deal',
+          stage: 'signed',
+          amount: null,
+          currency: 'ZAR',
+          closeDate: '2026-10-01',
+          closeTime: null,
+          timeZone: 'Africa/Johannesburg',
+          overdue: true,
+          link: 'https://tracker.example/deals/00000000-0000-4000-8000-000000000002',
+        },
+      ],
+    });
+    expect(digest.subject).toBe('Deals closing soon');
+    expect(digest.subject).not.toContain('Alpha');
+    expect(digest.html).not.toContain('<script>');
+    expect(digest.html).toContain('&lt;script&gt;');
+    expect(digest.html).toContain('9007199254740993 ZAR');
+    expect(digest.html).toContain('Closing date passed');
+    expect(digest.text).toContain('Expected close: 2026-11-01 12:00:00 (Africa/Johannesburg)');
+    expect(digest.text).not.toContain('\r');
+    expect(() => renderAuthEmail({ kind: 'closing_soon_digest', deals: [] })).toThrow(
+      'Closing-soon digest must include a deal',
+    );
+    expect(() =>
+      renderAuthEmail({
+        kind: 'closing_soon_digest',
+        deals: [
+          {
+            dealName: 'Unsafe',
+            stage: 'sourcing',
+            amount: null,
+            currency: 'ZAR',
+            closeDate: '2026-11-01',
+            closeTime: null,
+            timeZone: 'UTC',
+            link: 'javascript:alert(1)',
+          },
+        ],
+      }),
+    ).toThrow('Closing-soon link must use HTTP or HTTPS without credentials');
+  });
 });
