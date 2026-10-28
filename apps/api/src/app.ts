@@ -1,7 +1,17 @@
 import { Hono } from 'hono';
 import { secureHeaders } from 'hono/secure-headers';
 
-export function createApp(): Hono {
+import { mountAuthRoutes, type AuthServiceOptions } from './auth/service';
+import { mountDealRoutes } from './features/deals/routes';
+import { createRateLimiter } from './http/rate-limit';
+import type { HttpDeps } from './http/route';
+
+export interface AppOptions {
+  readonly auth: AuthServiceOptions;
+  readonly http: Omit<HttpDeps, 'limiter'> & { readonly limiter?: HttpDeps['limiter'] };
+}
+
+export function createApp(options?: AppOptions): Hono {
   const app = new Hono();
 
   // API responses are JSON only: nothing may be framed, scripted or sniffed.
@@ -23,6 +33,12 @@ export function createApp(): Hono {
 
   // Data-free liveness probe. Deliberately public (see docs/brief/GOTCHAS.md row 1).
   app.get('/health', (c) => c.json({ status: 'ok' }));
+
+  if (options) {
+    const httpDeps = { ...options.http, limiter: options.http.limiter ?? createRateLimiter() };
+    mountAuthRoutes(app, httpDeps, options.auth);
+    mountDealRoutes(app, httpDeps, { userRpc: options.auth.userRpc });
+  }
 
   return app;
 }

@@ -1,6 +1,17 @@
-import { STAGES } from '@dpt/shared';
-import { render, screen, within } from '@testing-library/react';
-import { describe, expect, it } from 'vitest';
+import { render, screen } from '@testing-library/react';
+import { describe, expect, it, vi } from 'vitest';
+
+vi.mock('../features/auth', () => ({
+  SignOutButton: () => null,
+  TenantSwitcher: () => null,
+}));
+vi.mock('../features/deals', () => ({
+  DealsDashboard: () => (
+    <section aria-labelledby="deals-title">
+      <h2 id="deals-title">Deals</h2>
+    </section>
+  ),
+}));
 
 import HomePage from './page';
 
@@ -11,18 +22,8 @@ describe('HomePage', () => {
     expect(screen.getByRole('heading', { level: 1, name: 'Deal Pipeline Tracker' })).toBeVisible();
   });
 
-  it('lists every pipeline stage once, in order, as text', () => {
+  it('opens the deals dashboard', () => {
     render(<HomePage />);
-    const items = within(screen.getByRole('list')).getAllByRole('listitem');
-    expect(items).toHaveLength(STAGES.length);
-    expect(items.map((item) => item.textContent)).toEqual([
-      'Sourcing',
-      'Screening',
-      'Due Diligence',
-      'IC Review',
-      'Signed',
-      'Closed',
-      'Passed',
-    ]);
+    expect(screen.getByRole('heading', { level: 2, name: 'Deals' })).toBeVisible();
   });
 });

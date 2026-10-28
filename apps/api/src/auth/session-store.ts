@@ -10,6 +10,9 @@ export interface StoredTokens {
   readonly refreshToken: string;
   /** Epoch milliseconds at which the access token expires. */
   readonly expiresAt: number;
+  /** Kept with the tokens so the API can address and greet the user without another lookup. */
+  readonly email: string;
+  readonly fullName: string | null;
 }
 
 export interface SessionRecord {
@@ -30,6 +33,8 @@ const storedTokensSchema = z.object({
   accessToken: z.string(),
   refreshToken: z.string(),
   expiresAt: z.number(),
+  email: z.string(),
+  fullName: z.string().nullable(),
 });
 const lookupRowsSchema = z.array(
   z.object({

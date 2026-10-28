@@ -1,7 +1,7 @@
 # 02 Auth and onboarding: progress
 
-Status: in progress (database slices A and B green; API and web not started)
-Owner/branch: feat/02-auth-onboarding
+Status: implemented; local quality, database, and compose smoke checks pass. Remaining known limitations are listed below.
+Owner/branch: feat/02-api-auth (continues the feature 02 database work)
 Depends on: 01
 
 ## Goal
@@ -15,34 +15,45 @@ Sign-up with verification, sessions, tenant switcher, invitations, Mailer. Cover
 - ADR 0015: sessions in a Postgres table; JWT-less work through a narrow `api_service` role reached via PostgREST. Decided by the owner on 2026-10-26.
 - Slice A (database, done): `api_service` role (no table privileges, EXECUTE on eight functions), `api_sessions` and `email_tokens` (RLS forced, no policies, reachable only through the functions), `session_*` and `token_*` functions, `profiles` with a tenant-scoped directory (`app.shares_tenant_with`) and `profile_upsert`.
 - Token consumption sets `auth.users.email_confirmed_at` in the database, atomically with consuming the token, instead of calling the GoTrue admin API afterwards (a crash between two calls would strand the user). The auth module still owns everything else about GoTrue.
-- Slice B (database, done): tenant settings (`timezone`, `default_currency`, `closing_soon_days` default 30); the onboarding state machine as data (`onboarding_steps`, `onboarding_progress`; owner flow profile, organisation, defaults, invite, done; invitee flow profile, done) with `onboarding_state/advance/skip`; `create_organisation` (verified email, only at its step, once per user remembered by the append-only tenant trail, validated time zone) as the only way users create tenants (`create_tenant` is revoked from `authenticated`); `update_tenant_settings` (needs `role.manage`); `token_consume` for `verify_email` now starts the owner flow; `invitations` (token hash never readable by users, one pending per email, 7-day expiry, capped at 50 pending per tenant, same no-escalation rule as `grant_role`), `invite_member`, `revoke_invitation`, `invitation_preview` and `invitation_accept` (api_service; email-bound, atomic, verifies the invited address, reactivates a deactivated member, starts the invitee flow, SoD trigger still applies). New tenant trail kinds; an explicit `app.actor` setting lets an api_service-run function record the invitee as the actor (explicit actor wins, cleared at the end of the function).
-- Decisions to confirm with the owner: the closing-soon default is 30 days per `onboarding-flow.md` (ADR 0011 speaks of a 60-day window; they may be different things, check when feature 03 uses it); `role.manage` (Owner only) guards organisation settings rather than a new permission, because system roles are immutable after seeding.
-- Debt: the onboarding step order has no SQL/TS parity fixture yet (the design asks for shared fixtures); add it with the TS mirror when the web stepper is built.
-- Then: API auth module (sign-up, verify, resend, login, logout, refresh single-flight, CSRF, rate limits, Mailer), signed-out route sweep, web pages and nonce CSP.
+- Slice B (database, done): tenant settings (`timezone`, `default_currency`, `closing_soon_days` initially defaulted to 30); the onboarding state machine as data (`onboarding_steps`, `onboarding_progress`; owner flow profile, organisation, defaults, invite, done; invitee flow profile, done) with `onboarding_state/advance/skip`; `create_organisation` (verified email, only at its step, once per user remembered by the append-only tenant trail, validated time zone) as the only way users create tenants (`create_tenant` is revoked from `authenticated`); `update_tenant_settings` (needs `role.manage`); `token_consume` for `verify_email` now starts the owner flow; `invitations` (token hash never readable by users, one pending per email, 7-day expiry, capped at 50 pending per tenant, same no-escalation rule as `grant_role`), `invite_member`, `revoke_invitation`, `invitation_preview` and `invitation_accept` (api_service; email-bound, atomic, verifies the invited address, reactivates a deactivated member, starts the invitee flow, SoD trigger still applies). New tenant trail kinds; an explicit `app.actor` setting lets an api_service-run function record the invitee as the actor (explicit actor wins, cleared at the end of the function).
+- ADR 0011 explicitly supersedes the earlier 30-day assumption. Migration `20261106000000_closing_soon_default.sql` sets the future-tenant default to 60 days without rewriting existing tenant choices. `role.manage` (Owner only) guards organisation settings rather than a new permission, because system roles are immutable after seeding.
+- The owner/invitee onboarding order now comes from `packages/shared/fixtures/onboarding-steps.json`; Vitest and pgTAP compare the TypeScript and database definitions to that same fixture. Both parity checks pass.
+- API and web implementation includes the GoTrue adapter, session resolver, auth/onboarding/invitation routes, SMTP templates and transport, auth pages, and nonce CSP proxy.
+- Onboarding now has step-specific URLs. The active step still comes from the database; visiting a different step URL redirects to that canonical step. Validation failures focus a linked error summary.
+- Database slices C–F add exact account lookup, authenticated tenant choices, permission-checked pending invitation listing, and ADR 0011's future-tenant 60-day default. Their focused tests and the complete pgTAP suite pass.
+- The verification flow is aligned with ADR 0009: email verification does not create a session; password sign-in follows.
 
 ## Tasks
 - [x] Slice A tests written first (`supabase/tests/08_api_service.test.sql`, 46 assertions), run red, then green
 - [x] Slice B tests written first and run red (`09_onboarding` 36, `10_invitations` 37), then green
 - [x] Migration slice A: `20261101000000_api_service_sessions_tokens_profiles.sql`
 - [x] Migration slice B: `20261102000000_onboarding_and_invitations.sql`
-- [ ] API
-- [ ] Web
-- [ ] Docs updated
+- [x] API implementation: GoTrue adapter; verification, resend, login/logout, reset, invitation and onboarding routes; session refresh, CSRF and rate-limit declarations; SMTP mailer.
+- [x] Web implementation: auth and invitation pages, onboarding flow, session-backed API helpers, signed-out page policy, tenant switcher and nonce CSP.
+- [x] Add step-specific onboarding routes and an accessible, field-linked validation summary.
+- [x] Validate API and web with typecheck, lint, stylelint, format check, full Vitest, production build and compose smoke test.
+- [x] Validate the account lookup, tenant choices, pending invitation and 60-day default migrations and full database suite against the current compose stack.
+- [x] Align verification/session behavior with ADR 0009: manual password sign-in follows email verification.
+- [x] Update progress and handoff records to describe the current tree.
 
 ## Tests
 What is covered, where it lives, how to run it.
 
+- `pnpm typecheck`, `pnpm lint`, `pnpm stylelint`, `pnpm format:check`, `pnpm test`, and `pnpm build` pass locally. Vitest reports 28 files and 405 passing tests. Lint is clean. The web build uses Next's Webpack builder because Turbopack worker startup cannot bind a local port in this environment.
+- `make COMPOSE='podman compose' test-db` passes: 16 pgTAP files, 337 assertions, no failures.
+- `scripts/compose-smoke.sh` passes against Podman, including the build, service health, gateway/network boundaries, auth, realtime, role switching, and negative migration/test checks. The script now detects Podman and strips terminal color codes from command output before comparing protocol results.
+
 ## Security checklist (from SECURITY_STANDARDS.md)
-- [ ] New tables have `tenant_id`, RLS enabled and forced, policies, tests for each role and cross-tenant.
-- [ ] New routes declare auth and permission; signed-out test passes.
-- [ ] No client-supplied tenant/author/role/timestamp is trusted.
-- [ ] Append-only data cannot be mutated by any role including owner/service.
-- [ ] Inputs validated by zod; errors do not leak internals.
-- [ ] No secrets, tokens, or PII in logs.
-- [ ] Web still has no Supabase dependency.
+- [x] New database tables/functions have corresponding privilege and pgTAP coverage in slices A–E; verify the new migrations with the full database suite.
+- [x] Routes use public/session route constructors and auth tests cover key signed-out and CSRF paths; full suite passes.
+- [x] Tenant, author, role and timestamps are sourced from session/DB context for the implemented flows.
+- [x] Existing append-only database design remains in place; new account lookup migration is read-only.
+- [x] Request and RPC response inputs are schema validated; generic auth responses avoid account enumeration.
+- [x] Verify logs and runtime config through lint/review and compose smoke.
+- [x] Web imports shared schemas and does not use Supabase.
 
 ## Tests
-`make test-db` (313 assertions in total; slice A is `08_api_service`, slice B is `09_onboarding` and `10_invitations`) and the compose smoke test, which now also proves PostgREST switches roles from the JWT.
+`make test-db`: 337 pgTAP assertions across 16 files, all passing. `scripts/compose-smoke.sh`: all checks pass, including the new migrations, PostgREST role switching and negative tests. `pnpm test`: 405 tests pass across 28 files. SMTP tests cover Mailpit defaults, rendered messages, TLS/auth settings, and fail-closed invalid configuration.
 
 ## Log
 - 2026-10-26: ADR 0015. Slice A written test-first (red: role missing), migration, green. pgTAP lives in the `extensions` schema, so the test grants `api_service` usage on it inside its own rolled-back transaction; production does not. Real PostgREST check: role switching and `app.uid()` work. Smoke script extended (not sabotage-tested; `shellcheck` not installed locally, CI runs it).
@@ -51,3 +62,9 @@ What is covered, where it lives, how to run it.
 
 ## Deviations / debt
 Anything that differs from the plan or is deferred (also mirror in README "next steps").
+
+- SMTP uses Nodemailer with configurable implicit TLS or required STARTTLS; optional credentials must be paired and are rejected unless TLS is enabled. Mailpit remains the local no-auth default. Production relay connectivity and certificate behavior still need deployment verification.
+- **Multi-instance risk:** refresh single-flight is process-local. Concurrent refresh requests handled by different API instances are not coordinated, although session persistence is in Postgres.
+- Component tests cover stepper semantics, canonical step selection, redirects from a mismatched URL, and focus/link behavior for validation errors.
+- Password reset consumes the one-use token before calling GoTrue to change the password. If GoTrue fails after consumption, the user must request another reset link.
+- Existing organisations retain their current `closing_soon_days`; the forward migration changes only the default for newly created tenants.

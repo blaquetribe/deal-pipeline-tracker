@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
+import { GoTrueError } from '../auth/gotrue';
 import { RpcError } from '../db/rpc';
 import { HttpError, toHttpError } from './errors';
 
@@ -52,6 +53,21 @@ describe('toHttpError', () => {
     });
     expect(toHttpError('a string')).toMatchObject({ status: 500, code: 'internal' });
     expect(toHttpError(new RpcError('upstream', 'unexpected', 502))).toMatchObject({
+      status: 500,
+      code: 'internal',
+    });
+  });
+
+  it("maps GoTrue failures: a weak password is the client's to fix, an outage is a 503, a rejection is opaque", () => {
+    expect(toHttpError(new GoTrueError('weak_password', 'x'))).toMatchObject({
+      status: 422,
+      code: 'weak_password',
+    });
+    expect(toHttpError(new GoTrueError('unavailable', 'x'))).toMatchObject({
+      status: 503,
+      code: 'unavailable',
+    });
+    expect(toHttpError(new GoTrueError('rejected', 'secret detail'))).toMatchObject({
       status: 500,
       code: 'internal',
     });

@@ -20,7 +20,7 @@ select set_eq(
 insert into auth.users (id, instance_id, aud, role, email, email_confirmed_at) values
   ('aaaaaaaa-0000-4000-8000-000000000001', '00000000-0000-0000-0000-000000000000', 'authenticated', 'authenticated', 'u1@example.test', now());
 insert into public.tenants (id, name) values ('bbbbbbbb-0000-4000-8000-00000000000a', 'Tenant A');
-select app.seed_system_roles(id) from public.tenants;
+select app.seed_system_roles(id) from public.tenants where id in ('bbbbbbbb-0000-4000-8000-00000000000a');
 insert into public.memberships (tenant_id, user_id) values ('bbbbbbbb-0000-4000-8000-00000000000a', 'aaaaaaaa-0000-4000-8000-000000000001');
 insert into public.membership_roles (tenant_id, membership_id, role_id)
 select m.tenant_id, m.id, r.id from public.memberships m join public.roles r on r.tenant_id = m.tenant_id and r.key = 'deal_lead';

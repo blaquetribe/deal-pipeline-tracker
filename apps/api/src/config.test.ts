@@ -16,6 +16,10 @@ describe('loadConfig', () => {
       APP_ORIGIN: 'http://localhost:8080',
       SMTP_HOST: 'mailpit',
       SMTP_PORT: 1025,
+      SMTP_SECURE: false,
+      SMTP_REQUIRE_TLS: false,
+      SMTP_USER: '',
+      SMTP_PASS: '',
       MAIL_FROM: 'no-reply@dpt.local',
       cookieSecure: false,
     });
@@ -44,5 +48,20 @@ describe('loadConfig', () => {
   it('rejects secrets shorter than 32 characters', () => {
     expect(() => loadConfig({ ...base, JWT_SECRET: 'short' })).toThrow(/JWT_SECRET/);
     expect(() => loadConfig({ ...base, SESSION_SECRET: 'short' })).toThrow(/SESSION_SECRET/);
+  });
+
+  it('requires both SMTP credentials and TLS when credentials are set', () => {
+    expect(() => loadConfig({ ...base, SMTP_USER: 'mailer' })).toThrow(/configured together/);
+    expect(() => loadConfig({ ...base, SMTP_USER: 'mailer', SMTP_PASS: 'secret' })).toThrow(
+      /requires TLS/,
+    );
+    expect(
+      loadConfig({
+        ...base,
+        SMTP_USER: 'mailer',
+        SMTP_PASS: 'secret',
+        SMTP_REQUIRE_TLS: 'true',
+      }).SMTP_REQUIRE_TLS,
+    ).toBe(true);
   });
 });

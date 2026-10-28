@@ -15,6 +15,7 @@ name: deal-pipeline-tracker
 x-dev-secrets:
   pg-password: &pg-password '${POSTGRES_PASSWORD:-dev-only-postgres-password-change-me}'
   jwt-secret: &jwt-secret '${JWT_SECRET:-dev-only-jwt-secret-change-me-minimum-32-characters}'
+  session-secret: &session-secret '${SESSION_SECRET:-dev-only-session-secret-change-me-minimum-32-characters}'
   secret-key-base: &secret-key-base '${SECRET_KEY_BASE:-dev-only-secret-key-base-change-me-minimum-64-characters-0123456789abcdef}'
   realtime-enc-key: &realtime-enc-key '${REALTIME_DB_ENC_KEY:-dev-only-rt-key!}'
   dashboard-password: &dashboard-password '${DASHBOARD_PASSWORD:-dev-only-dashboard-password}'
@@ -66,6 +67,7 @@ services:
     environment:
       PORT: '3000'
       HOSTNAME: 0.0.0.0
+      APP_ORIGIN: '${PUBLIC_BASE_URL:-http://localhost:8080}'
     # Next writes its runtime cache here; everything else stays read-only.
     tmpfs: [/tmp, /app/apps/web/.next/cache]
     networks: [edge]
@@ -87,6 +89,16 @@ services:
       PORT: '3001'
       # The BFF is the only client of Supabase (reached over the internal network only).
       SUPABASE_URL: http://supabase-gateway:8000
+      JWT_SECRET: *jwt-secret
+      SESSION_SECRET: *session-secret
+      APP_ORIGIN: '${PUBLIC_BASE_URL:-http://localhost:8080}'
+      SMTP_HOST: mailpit
+      SMTP_PORT: '1025'
+      SMTP_SECURE: '${SMTP_SECURE:-false}'
+      SMTP_REQUIRE_TLS: '${SMTP_REQUIRE_TLS:-false}'
+      SMTP_USER: '${SMTP_USER:-}'
+      SMTP_PASS: '${SMTP_PASS:-}'
+      MAIL_FROM: no-reply@dpt.local
     tmpfs: [/tmp]
     networks: [edge, internal]
     expose: ['3001']

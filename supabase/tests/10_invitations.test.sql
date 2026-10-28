@@ -22,7 +22,7 @@ select ('aaaaaaaa-0000-4000-8000-00000000000' || n)::uuid, '00000000-0000-0000-0
        case when n = 6 then null else now() end
 from generate_series(1, 6) as n;
 insert into public.tenants (id, name) values ('bbbbbbbb-0000-4000-8000-00000000000a', 'Acme Capital');
-select app.seed_system_roles(id) from public.tenants;
+select app.seed_system_roles(id) from public.tenants where id in ('bbbbbbbb-0000-4000-8000-00000000000a');
 insert into public.memberships (tenant_id, user_id) values
   ('bbbbbbbb-0000-4000-8000-00000000000a', 'aaaaaaaa-0000-4000-8000-000000000001'),
   ('bbbbbbbb-0000-4000-8000-00000000000a', 'aaaaaaaa-0000-4000-8000-000000000002'),

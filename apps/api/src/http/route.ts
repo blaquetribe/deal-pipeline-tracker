@@ -1,6 +1,7 @@
 import type { Context, Hono } from 'hono';
 import { bodyLimit } from 'hono/body-limit';
 import { deleteCookie, getCookie, setCookie } from 'hono/cookie';
+import type { ContentfulStatusCode } from 'hono/utils/http-status';
 import { z } from 'zod';
 
 import { safeEqual } from '../auth/crypto';
@@ -20,6 +21,8 @@ export interface Session {
   readonly sessionId: string;
   readonly userId: string;
   readonly tenantId: string | null;
+  /** Server-side only: database calls that must run with the user's RLS identity use this token. */
+  readonly accessToken: string;
   /** Bound to this session; sent back by the web app in X-CSRF-Token on unsafe requests. */
   readonly csrfToken: string;
 }
@@ -47,6 +50,8 @@ const isNoBody = (schema: z.ZodType): boolean => schema === noBody;
 
 interface BaseContext<B> {
   readonly body: B;
+  readonly params: Record<string, string>;
+  readonly query: URLSearchParams;
   readonly requestId: string;
   readonly clientIp: string;
   /** Opens (or replaces) the session cookie. The id is opaque; only its hash is stored (ADR 0015). */
@@ -60,7 +65,7 @@ export interface SessionContext<B> extends BaseContext<B> {
 }
 
 export interface Reply {
-  readonly status?: 200 | 201 | 202 | 204;
+  readonly status?: ContentfulStatusCode | 204;
   readonly body?: unknown;
 }
 
@@ -220,6 +225,8 @@ function mountRoute<B>(
       const reply = await run(
         {
           body,
+          params: c.req.param(),
+          query: new URL(c.req.url).searchParams,
           requestId,
           clientIp,
           setSessionCookie: (id) =>

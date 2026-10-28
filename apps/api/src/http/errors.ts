@@ -1,5 +1,6 @@
 import type { ContentfulStatusCode } from 'hono/utils/http-status';
 
+import { GoTrueError } from '../auth/gotrue';
 import { RpcError } from '../db/rpc';
 
 /** An error that is safe to show a client: a status, a stable code and a message we wrote. */
@@ -35,6 +36,18 @@ const GENERIC: Record<string, HttpError> = {
 export function toHttpError(error: unknown): HttpError {
   if (error instanceof HttpError) {
     return error;
+  }
+  if (error instanceof GoTrueError) {
+    if (error.kind === 'weak_password') {
+      return new HttpError(
+        422,
+        'weak_password',
+        'That password is not accepted. Choose a longer, less common one.',
+      );
+    }
+    return error.kind === 'unavailable'
+      ? (GENERIC['unavailable'] ?? new HttpError(503, 'unavailable', 'Unavailable.'))
+      : (GENERIC['internal'] ?? new HttpError(500, 'internal', 'Something went wrong.'));
   }
   if (!(error instanceof RpcError)) {
     return GENERIC['internal'] ?? new HttpError(500, 'internal', 'Something went wrong.');

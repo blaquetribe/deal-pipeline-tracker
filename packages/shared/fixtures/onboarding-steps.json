@@ -1,0 +1,15 @@
+{
+  "flows": {
+    "owner": [
+      { "position": 1, "step": "profile", "required": true },
+      { "position": 2, "step": "organisation", "required": true },
+      { "position": 3, "step": "defaults", "required": false },
+      { "position": 4, "step": "invite", "required": false },
+      { "position": 5, "step": "done", "required": true }
+    ],
+    "invitee": [
+      { "position": 1, "step": "profile", "required": true },
+      { "position": 2, "step": "done", "required": true }
+    ]
+  }
+}

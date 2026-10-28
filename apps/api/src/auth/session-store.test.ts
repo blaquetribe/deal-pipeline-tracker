@@ -13,6 +13,8 @@ const tokens: StoredTokens = {
   accessToken: 'access',
   refreshToken: 'refresh-me',
   expiresAt: 1_900_000_000_000,
+  email: 'ada@example.test',
+  fullName: 'Ada Lovelace',
 };
 
 interface Call {

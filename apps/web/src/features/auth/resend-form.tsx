@@ -1,0 +1,78 @@
+'use client';
+
+import { resendBodySchema } from '@dpt/shared';
+import { useEffect, useId, useRef, useState, type FormEvent } from 'react';
+
+import { authRequest } from './api';
+
+export function ResendForm() {
+  const id = useId();
+  const [pending, setPending] = useState(false);
+  const [message, setMessage] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(null);
+  const statusRef = useRef<HTMLParagraphElement>(null);
+
+  useEffect(() => {
+    if (message || error) statusRef.current?.focus();
+  }, [error, message]);
+
+  async function submit(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    setError(null);
+    setMessage(null);
+    const parsed = resendBodySchema.safeParse({
+      email: new FormData(event.currentTarget).get('email'),
+    });
+    if (!parsed.success) {
+      setError('Enter a valid email address.');
+      return;
+    }
+    setPending(true);
+    try {
+      await authRequest('/auth/resend', parsed.data);
+      setMessage('If the account needs verification, a new link will arrive shortly.');
+    } catch (cause) {
+      setError(
+        cause instanceof Error ? cause.message : 'The request could not be completed. Try again.',
+      );
+    } finally {
+      setPending(false);
+    }
+  }
+
+  return (
+    <form className="space-y-4" onSubmit={submit}>
+      {(message || error) && (
+        <p
+          ref={statusRef}
+          tabIndex={-1}
+          className={error ? 'text-sm text-danger-fg' : 'text-sm text-fg-muted'}
+          role={error ? 'alert' : 'status'}
+        >
+          {error ?? message}
+        </p>
+      )}
+      <div>
+        <label className="mb-1 block text-sm font-medium" htmlFor={`${id}-email`}>
+          Email address
+        </label>
+        <input
+          autoComplete="email"
+          className="w-full rounded-control border border-line bg-surface-raised px-3 py-2 text-fg outline-focus focus-visible:outline-2"
+          id={`${id}-email`}
+          maxLength={254}
+          name="email"
+          required
+          type="email"
+        />
+      </div>
+      <button
+        className="w-full rounded-control bg-brand px-4 py-2 font-medium text-fg-on-brand hover:bg-brand-hover focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus disabled:cursor-wait disabled:opacity-60"
+        disabled={pending}
+        type="submit"
+      >
+        {pending ? 'Sending…' : 'Resend verification link'}
+      </button>
+    </form>
+  );
+}

@@ -21,6 +21,7 @@ const session: Session = {
   sessionId: 'sid',
   userId: 'user-1',
   tenantId: 'tenant-1',
+  accessToken: 'user-access-token',
   csrfToken: 'csrf-ok',
 };
 

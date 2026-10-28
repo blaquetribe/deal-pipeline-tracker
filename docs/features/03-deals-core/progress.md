@@ -1,7 +1,7 @@
 # 03 Deals core: progress
 
-Status: not started
-Owner/branch: feat/03-deals-core
+Status: in progress (deal create/list/stage/assignment/update/detail/activity and notes implemented; closing-soon dashboard remains)
+Owner/branch: feat/02-api-auth (continuing the existing working tree; do not branch-reset or replace)
 Depends on: 01, 02
 
 ## Goal
@@ -13,28 +13,45 @@ Deal CRUD, stage state machine, notes UI, pipeline overview, closing soon. Cover
 
 ## Design notes
 Key decisions, schema/API shape, links to ADRs.
+- Deal responsibility is stored in `deal_assignees` as owner, lead or member; it does not grant visibility. Assignment mutations require `deal.edit`, active tenant membership, an expected deal version and produce a ledger event.
+- The first list contract is `list_deals`: tenant scope comes from the server-side active session, filters and pagination are bounded in Postgres, and `amount` crosses JSON as an integer string (E10).
+- The current list provides the keyboard-accessible “Move to…” stage control through the existing database stage machine. Kanban remains an extended UI item per ADR 0009; if added, drag-and-drop must stay an enhancement to this accessible path and target smooth 60 fps motion.
+- API routes use the authenticated user JWT and Postgres remains the authorization boundary. No browser Supabase client was added.
 
 ## Tasks
-- [ ] Failing tests written (security/negative first)
-- [ ] Migration(s)
-- [ ] API
-- [ ] Web
-- [ ] Docs updated
+- [x] Database security tests for assignments and deal list, including cross-tenant, permission, anonymous, stale-version and null-parameter cases.
+- [x] Additive migrations for assignees, assignment reads, deal list, fail-closed null guards, and tenant-authorized detail/activity reads (`20261107000000` through `20261112000000`).
+- [x] Session-gated API for deal list and assignment reads/replacement.
+- [x] Session-gated deal creation through the existing database function.
+- [x] Session-gated stage movement through the existing database state machine with optimistic versioning.
+- [x] Dashboard deal create/list with server-side stage/search filters, pagination, empty/error/loading states, and exact minor-unit formatting.
+- [x] Optimistic deal updates through a strict API allow-list and accessible edit form.
+- [x] Tenant-authorized detail and activity APIs; exact bigint sequence cursors; append-only note API and UI; visible integrity result and accessible ordered timeline.
+- [x] Bounded activity pagination with exact bigint cursors.
+- [ ] Closing-soon countdown/dashboard summaries.
+- [ ] Closing-soon calculations, dashboard summary and alerts in the planned feature order.
+- [x] Progress and handoff docs updated for this slice.
 
 ## Tests
 What is covered, where it lives, how to run it.
+- `pnpm test`: 33 files and 445 tests pass. Focused route, dashboard, detail, and shared-schema tests pass.
+- `pnpm typecheck`, `pnpm lint`, `pnpm stylelint`, `pnpm format:check`, and `pnpm build` pass. `make COMPOSE='podman compose' test-db` passes with 396 assertions across 20 files; migration 12 was restored to its applied checksum and exact bigint cursor serialization moved into additive migration 13. The full `KEEP_UP=1 scripts/compose-smoke.sh` passes.
+- Browser evidence: authenticated deal detail with exact ZAR display, verified integrity cue, immutable note warning and a saved timeline note captured on 2026-10-28.
 
 ## Security checklist (from SECURITY_STANDARDS.md)
-- [ ] New tables have `tenant_id`, RLS enabled and forced, policies, tests for each role and cross-tenant.
-- [ ] New routes declare auth and permission; signed-out test passes.
-- [ ] No client-supplied tenant/author/role/timestamp is trusted.
-- [ ] Append-only data cannot be mutated by any role including owner/service.
-- [ ] Inputs validated by zod; errors do not leak internals.
+- [x] The new assignment table has `tenant_id`, forced RLS, role tests and cross-tenant tests.
+- [x] Assignment read/write routes are session-gated and declare `deal.view` / `deal.edit`; signed-out and CSRF tests pass.
+- [x] Deal create/list and assignment APIs derive tenant and author context from the active session/database; no client-supplied tenant/author/role/timestamp is trusted.
+- [x] Deal notes use the append-only event ledger and expose no edit/delete action; pgTAP verifies activity reads and ledger integrity.
+- [x] Assignment and list inputs are schema-validated; errors do not expose database details.
 - [ ] No secrets, tokens, or PII in logs.
 - [ ] Web still has no Supabase dependency.
 
 ## Log
 Dated notes: what changed, what was learned, problems.
+- 2026-10-28: Added tenant-scoped deal assignments with `owner | lead | member`, versioned set operation, ledger audit, authenticated RLS read RPC and bounded tenant deal-list RPC. Added session-gated deal create and stage-move APIs plus accessible dashboard controls for creating and moving deals; Postgres remains authoritative for stage transitions. Full Vitest passes (432 tests); pgTAP passes (373 assertions across 19 files); production build and full compose smoke pass. SQL fixture role seeding is now scoped to fixture tenants after local persistent data exposed tests that assumed the database contained no other tenants. A review caught that explicit SQL NULL could bypass ordinary numeric bound comparisons, so a separate forward migration now guards null versions/limits/offsets. Kanban drag-and-drop is deferred; preserve the accessible move control and target smooth 60 fps motion if implemented.
 
 ## Deviations / debt
 Anything that differs from the plan or is deferred (also mirror in README "next steps").
+
+- 2026-10-28 (later): Added strict optimistic deal updates, SQL NULL guards for stage/update version checks, tenant-scoped deal detail and activity reads, session-gated APIs, and a detail page with exact money display, integrity cue, ordered event timeline, append-only note composer and bounded older-event pagination. Preserved the applied migration checksum by moving exact bigint cursor serialization to migration 13. Vitest passes 445 tests; typecheck, lint, stylelint, format check, build, pgTAP (396 assertions/20 files) and compose smoke pass. Captured the authenticated detail page with a saved test note. Kanban drag-and-drop remains deferred; keep the keyboard move control and target smooth 60 fps if implemented.
