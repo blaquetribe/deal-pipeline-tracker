@@ -23,7 +23,8 @@ const notification = {
 
 describe('notification schema', () => {
   it('preserves exact money strings and validates safe in-app links', () => {
-    expect(notificationSchema.parse(notification).payload.amount).toBe('9007199254740993');
+    const parsed = notificationSchema.parse(notification);
+    expect(parsed.kind === 'closing_soon' && parsed.payload.amount).toBe('9007199254740993');
     expect(() =>
       notificationSchema.parse({
         ...notification,
@@ -42,5 +43,30 @@ describe('notification schema', () => {
     expect(() => notificationSchema.parse({ ...notification, tenantId: 'spoofed' })).toThrow(
       /tenantId/,
     );
+  });
+
+  it('validates approval quorum alerts with only a same-origin deal link', () => {
+    const approvalAlert = {
+      id: 'bbbbbbbb-0000-4000-8000-000000000003',
+      kind: 'approval_quorum_unreachable',
+      payload: {
+        dealId: 'bbbbbbbb-0000-4000-8000-000000000002',
+        dealName: 'Example deal',
+        message: 'Approval quorum can no longer be reached.',
+        href: '/deals/bbbbbbbb-0000-4000-8000-000000000002',
+      },
+      created_at: '2026-10-28T10:00:00Z',
+      read_at: null,
+    };
+    expect(notificationSchema.parse(approvalAlert).kind).toBe('approval_quorum_unreachable');
+    expect(() =>
+      notificationSchema.parse({
+        ...approvalAlert,
+        payload: {
+          ...approvalAlert.payload,
+          href: 'https://attacker.example',
+        },
+      }),
+    ).toThrow(/href/);
   });
 });

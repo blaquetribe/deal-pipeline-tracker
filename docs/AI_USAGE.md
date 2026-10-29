@@ -10,6 +10,12 @@ Running log feeding the README reflection required by the brief. Add an entry pe
 - **What went wrong or was surprising:**
 
 ## Entries
+### 2026-10-29 / Feature 04 quorum reachability alerts
+- **What Codex did:** added ADR 0021, migration 28, and an hourly database scanner for unreachable approval quorum; it notifies the request creator and active tenant Owners/Admins with deduplicated in-app alerts. Extended notification validation and UI handling and updated project handoff/progress docs.
+- **What the human decided or corrected:** continued the existing implementation, with the standing requirement to verify green CI before merging and leave the requested UI pass and walkthrough presentation until after feature work.
+- **How it was verified:** targeted shared-schema and notification component tests pass; typecheck, lint, stylelint, format, 603 Vitest tests (1 skipped), coverage thresholds, and production build pass. Local pgTAP could not start because the Podman API returned EOF; GitHub CI must verify the new migration and assertions.
+- **What went wrong or was surprising:** the existing notification payload contract was specific to closing-soon alerts, so the new alert kind required a discriminated union and separate rendering path.
+
 ### 2026-10-29 / Feature 04 scoped approval delegation
 - **What Codex did:** added tenant opt-in, time-bounded delegation in Postgres; preserved the original approver slot while recording the acting delegate; added API/shared contracts for delegate choices, listing, creation, revocation, policy setting, and delegated decision status; wrote ADR 0020 and refreshed progress/handoff docs. The delegation UI remains deferred.
 - **What the human decided or corrected:** asked to continue with the existing project work. Standing requirements are to wait for green CI before merging, capture UI evidence, complete the DoorSprint-informed UI pass before the final walkthrough presentation, and keep any future drag interactions smooth and keyboard accessible.
