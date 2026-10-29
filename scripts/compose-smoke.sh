@@ -323,7 +323,14 @@ dc_exec db psql -U supabase_admin -tA -c "delete from public.api_sessions; delet
 echo "== database =="
 recorded=$(dc_exec db psql -U postgres -tA -c "select count(*) from supabase_migrations.schema_migrations" 2>/dev/null | tr -d '[:space:]')
 [ "${recorded:-0}" -ge 1 ] && pass "migrations are recorded (${recorded})" || fail "migrations are recorded"
-check "pgTAP suite passes" dc_exec db sh /tests/run.sh
+pgtap_log=$(mktemp "${TMPDIR:-/tmp}/smoke-pgtap.XXXXXX")
+tmp_dirs+=("$pgtap_log")
+if dc_exec db sh /tests/run.sh >"$pgtap_log" 2>&1; then
+  pass "pgTAP suite passes"
+else
+  cat "$pgtap_log" >&2
+  fail "pgTAP suite passes"
+fi
 # The same checks must be able to FAIL: a deliberately failing test and a tampered migration.
 failing_sql=$'begin;\nselect plan(1);\nselect ok(false, \'deliberate failure\');\nselect * from finish();\nrollback;\n'
 expect_failure "pgTAP detects a failing assertion (negative test)" \
