@@ -24,6 +24,8 @@ One line per ADR: what we decided and why. ADRs are never edited after acceptanc
 | [0018](0018-approval-gate-core.md) | Initial IC approval gate: tenant-configured quorum; submit-time approver snapshot; approve/reject only; decision and signing are database-atomic and ledgered | Preserves maker-checker, fail-closed quorum, immutable role definitions, and a reviewable first slice; absence/delegation are explicit follow-up work |
 | [0019](0019-approval-absence-and-reassignment.md) | Self-managed absence windows; fail-closed quorum reachability; Owner/Admin reassignment that preserves the original approval slot | Keeps unavailable members out of the reachable quorum and makes replacements explicit and auditable without rewriting the request snapshot |
 | [0020](0020-approval-delegation.md) | Tenant-opt-in, time-bounded approval delegation; proxy preserves the original slot and may cast only one vote per request | Adds coverage for temporary absence without self-approval, extra quorum weight, or mutable request snapshots |
+| [0021](0021-quorum-alerts.md) | Hourly idempotent in-app alerts when a pending request cannot reach its snapshotted quorum | Makes a stalled approval visible to its requester and tenant administrators without weakening fail-closed signing |
+| [0022](0022-custom-role-management.md) | Tenant-scoped custom roles saved through guarded database functions with SoD checks and append-only audit | Gives role managers flexibility while keeping system roles immutable and authorization enforced in Postgres |
 
 ## How we record a decision (so every step has its reason)
 Context, decision, why, alternatives, what we verified locally versus only read, known gaps, and when to revisit. Anything unconfirmed is marked **verify**.

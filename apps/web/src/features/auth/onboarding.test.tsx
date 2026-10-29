@@ -153,7 +153,23 @@ describe('Onboarding focus and route behavior', () => {
     ];
     mocks.pathname = '/onboarding/organisation';
     mocks.sessionRead.mockImplementation(async (path) =>
-      path === '/onboarding/state' ? states.shift() : { invitations: [] },
+      path === '/onboarding/state'
+        ? states.shift()
+        : path === '/roles'
+          ? {
+              canManageRoles: true,
+              roles: [
+                {
+                  id: 'aaaaaaaa-0000-4000-8000-000000000001',
+                  key: 'deal_member',
+                  name: 'Deal Team Member',
+                  isSystem: true,
+                  permissions: ['deal.view'],
+                },
+              ],
+              permissionCatalog: [{ key: 'deal.view', description: 'See deals' }],
+            }
+          : { invitations: [] },
     );
     render(<Onboarding />);
     await user.type(await screen.findByLabelText('Organisation name'), 'Atlas Capital');
@@ -176,6 +192,64 @@ describe('Onboarding focus and route behavior', () => {
       currency: 'ZAR',
       closingSoonDays: 45,
     });
+  });
+
+  it('offers tenant custom roles in the invite form and never offers Owner', async () => {
+    mocks.pathname = '/onboarding/invite';
+    mocks.sessionRead.mockImplementation(async (path) => {
+      if (path === '/onboarding/state') {
+        return {
+          onboarding: { flow: 'owner', current_step: 'invite', completed: false, skipped: [] },
+        };
+      }
+      if (path === '/roles') {
+        return {
+          canManageRoles: true,
+          roles: [
+            {
+              id: 'aaaaaaaa-0000-4000-8000-000000000001',
+              key: 'owner',
+              name: 'Owner',
+              isSystem: true,
+              permissions: ['role.manage'],
+            },
+            {
+              id: 'aaaaaaaa-0000-4000-8000-000000000002',
+              key: 'custom_abcdefgh',
+              name: 'Investment Reviewer',
+              isSystem: false,
+              permissions: ['deal.view'],
+            },
+          ],
+          permissionCatalog: [{ key: 'deal.view', description: 'See deals' }],
+        };
+      }
+      return { invitations: [] };
+    });
+    render(<Onboarding />);
+
+    const role = await screen.findByRole('combobox', { name: 'Role' });
+    expect(await within(role).findByRole('option', { name: 'Investment Reviewer' })).toHaveValue(
+      'custom_abcdefgh',
+    );
+    expect(within(role).queryByRole('option', { name: 'Owner' })).not.toBeInTheDocument();
+  });
+
+  it('disables invitations and explains when the tenant role catalog cannot load', async () => {
+    mocks.pathname = '/onboarding/invite';
+    mocks.sessionRead.mockImplementation(async (path) => {
+      if (path === '/onboarding/state') {
+        return {
+          onboarding: { flow: 'owner', current_step: 'invite', completed: false, skipped: [] },
+        };
+      }
+      if (path === '/roles') throw new Error('Role list unavailable.');
+      return { invitations: [] };
+    });
+    render(<Onboarding />);
+
+    expect(await screen.findByRole('alert')).toHaveTextContent('Role list unavailable.');
+    expect(screen.getByRole('combobox', { name: 'Role' })).toBeDisabled();
   });
 
   it('shows safe load/save errors, the no-flow state, and an action error', async () => {

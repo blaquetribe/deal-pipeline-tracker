@@ -22,6 +22,7 @@ describe('requiresSessionCookie', () => {
     '/onboarding/organisation',
     '/onboarding/defaults',
     '/onboarding/invite',
+    '/roles',
     '/unknown',
   ])('protects the page %s by default', (path) => {
     expect(requiresSessionCookie(path)).toBe(true);

@@ -7,6 +7,7 @@ import { mountDealRoutes } from './features/deals/routes';
 import { createFileRoutes } from './features/files/routes';
 import { mountNotificationRoutes } from './features/notifications/routes';
 import { mountRealtimeRoutes, type RealtimeRoutesOptions } from './features/realtime/routes';
+import { mountRoleRoutes } from './features/roles/routes';
 import { createRateLimiter } from './http/rate-limit';
 import type { HttpDeps } from './http/route';
 import type { ObjectStore } from './storage/object-store';
@@ -54,6 +55,7 @@ export function createApp(options?: AppOptions): Hono {
     mountDealRoutes(app, httpDeps, { userRpc: options.auth.userRpc });
     mountApprovalRoutes(app, httpDeps, { userRpc: options.auth.userRpc });
     mountNotificationRoutes(app, httpDeps, { userRpc: options.auth.userRpc });
+    mountRoleRoutes(app, httpDeps, { userRpc: options.auth.userRpc });
     if (options.files) {
       for (const route of createFileRoutes(options.files)) route.mount(app, httpDeps);
     }

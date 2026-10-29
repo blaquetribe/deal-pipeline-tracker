@@ -56,7 +56,7 @@ Only the gateway publishes a host port. Set `GATEWAY_PORT` if port 8080 is alrea
 - Postgres is authoritative for tenant authorization, role permissions, stage transitions, approval quorum and separation of duties. TypeScript validation mirrors database rules for clear UI feedback, with parity tests where applicable.
 - Notes, approval decisions, and audit events are append-only. Money is stored as integer minor units, not floating-point values.
 - The local Compose stack is optimized for a reproducible review path, not production hosting. It uses development defaults, local Mailpit, and a file-backed object store. There is no hosted deployment pipeline.
-- The schema uses system roles only. Approval absences, reassignment, and opt-in scoped delegation use database-enforced, audited workflows; delegation management UI and a custom role editor remain follow-up. Presence is outside the core review path.
+- System role definitions are immutable; tenant members with `role.manage` can define audited custom roles through database functions that enforce permission catalog membership and separation of duties. Approval absences, reassignment, and opt-in scoped delegation also use database-enforced, audited workflows. Presence is outside the core review path.
 
 More detail and the rationale behind locked choices live in [`docs/decisions/`](docs/decisions/), [`docs/standards/`](docs/standards/), and [`docs/HANDOFF.md`](docs/HANDOFF.md).
 
@@ -82,11 +82,11 @@ GitHub Actions runs the quality, database, image, security-scan, and Compose smo
 
 ## What I would do next
 
-- Complete the Feature 04 custom role editor before claiming the extended approval workflow is complete. Database/API delegation is tenant opt-in, time-bounded, and preserves the original approver slot; the UI lets approvers schedule and revoke their own delegation. Unavailable slots without an eligible replacement intentionally block signing. Unreachable quorum now produces an hourly in-app alert to the request creator and active Owner/Admin members.
+- Complete and merge the Feature 04 custom role editor after its database migration and pgTAP coverage pass CI. Database/API delegation is tenant opt-in, time-bounded, and preserves the original approver slot; the UI lets approvers schedule and revoke their own delegation. Unavailable slots without an eligible replacement intentionally block signing. Unreachable quorum now produces an hourly in-app alert to the request creator and active Owner/Admin members.
 - Add notification preference controls and absence/delegation-aware recipients. Decide how to handle the rare duplicate email after SMTP succeeds but outbox completion persistence fails. Presence remains deferred.
 - Run a real Cloudflare R2 smoke test with a dedicated bucket-scoped token; Feature 08's S3-compatible driver, local file store, BFF file routes, avatar upload, and initials fallback are implemented. Virus scanning and presigned URLs remain out of scope.
 - After planned feature work is complete, do a project-wide UI pass using Doorsprint as a visual reference and evaluate shadcn primitives. Prepare the full feature walkthrough presentation, including the rationale for key decisions, as the final project task.
-- Add a custom role editor, SLA escalation notifications, and the optional document-extraction stretch feature if time allows.
+- Add SLA escalation notifications and the optional document-extraction stretch feature if time allows.
 - Measure memory and disk use on Docker Desktop and verify the stack on both amd64 and arm64 hosts; local container verification to date has primarily used Podman on arm64.
 
 Kanban boards and drag-and-drop are deferred. The current deal list retains keyboard-accessible stage movement. If drag-and-drop is added, keep those controls and target smooth 60 fps interactions.

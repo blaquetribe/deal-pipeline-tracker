@@ -81,6 +81,15 @@ export {
   tokenSchema,
   verifyBodySchema,
 } from './auth';
+
+export {
+  customRoleBodySchema,
+  customRoleResponseSchema,
+  permissionSchema,
+  tenantRoleSchema,
+  tenantRolesCatalogResponseSchema,
+} from './roles';
+export type { CustomRoleBody, Permission, TenantRole, TenantRolesCatalogResponse } from './roles';
 export type {
   InvitationPreviewResponse,
   LoginBody,

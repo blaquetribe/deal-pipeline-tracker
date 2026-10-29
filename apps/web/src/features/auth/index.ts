@@ -11,3 +11,5 @@ export { SignupForm } from './signup-form';
 export { TenantSwitcher } from './tenant-switcher';
 export { ProfileAvatar } from './profile-avatar';
 export { VerifyEmail } from './verify-email';
+export { authRequest, sessionRead, sessionRequest } from './api';
+export { ApiClientError } from './api';

@@ -10,6 +10,12 @@ Running log feeding the README reflection required by the brief. Add an entry pe
 - **What went wrong or was surprising:**
 
 ## Entries
+### 2026-10-29 / Feature 04 custom role editor
+- **What Codex did:** added a tenant-scoped role catalog and atomic custom-role create/edit function, with permission catalog validation, role/member SoD checks, and append-only audit events. Added shared contracts, caller-JWT API routes, a protected `/roles` editor, and invitation role choices sourced from the tenant catalog. Recorded the decision in ADR 0022.
+- **What the human decided or corrected:** continued after PR #22 was merged and asked to keep this work focused on the project; a separate screenshot follow-up was not part of this task.
+- **How it was verified:** focused Vitest passes (39 tests across five files); full coverage passes (634 passed, 1 skipped; 85.1% branch coverage); typecheck, lint, stylelint, and production build pass. Local pgTAP could not start because Podman returned API EOF; CI must verify migration 30 and test 28 before merge.
+- **What went wrong or was surprising:** tenant-driven invitation options needed to preserve the existing rule that Owner assignments use the established invitation workflow rather than adding a separate membership-role mutation path.
+
 ### 2026-10-29 / Feature 04 delegation management UI
 - **What Codex did:** added the personal delegation schedule/revoke panel, connected it to the existing BFF endpoints, and added an Owner-authorized approval-policy read plus a UI toggle for tenant opt-in. Added a PostgreSQL migration and pgTAP coverage for that read contract; updated route/schema/component tests and current handoff/progress notes.
 - **What the human decided or corrected:** continued on clean main after PR #21 merged; the Doorsprint-inspired styling pass and the final walkthrough presentation remain later project steps.

@@ -1,3 +1,5 @@
+import Link from 'next/link';
+
 import { ProfileAvatar, SignOutButton, TenantSwitcher } from '../features/auth';
 import { DealsDashboard } from '../features/deals';
 import { NotificationBell } from '../features/notifications';
@@ -13,6 +15,9 @@ export default function HomePage() {
         <div className="flex flex-wrap items-center gap-4">
           <ProfileAvatar />
           <TenantSwitcher />
+          <Link className="text-sm text-brand-fg underline" href="/roles">
+            Roles
+          </Link>
           <NotificationBell />
           <SignOutButton />
         </div>
