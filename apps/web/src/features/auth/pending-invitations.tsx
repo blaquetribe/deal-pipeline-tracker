@@ -3,6 +3,7 @@
 import { pendingInvitationsResponseSchema, type PendingInvitationsResponse } from '@dpt/shared';
 import { useEffect, useState } from 'react';
 
+import { Button } from '../ui/button';
 import { sessionRead, sessionRequest } from './api';
 
 export function PendingInvitations() {
@@ -80,14 +81,16 @@ export function PendingInvitations() {
                   </time>
                 </p>
               </div>
-              <button
-                className="rounded-control border border-line px-3 py-2 text-sm hover:bg-surface-hover disabled:opacity-60"
+              <Button
+                className="text-sm"
                 disabled={pendingId !== null}
                 onClick={() => void revoke(invitation.invitationId)}
+                size="small"
                 type="button"
+                variant="danger"
               >
                 {pendingId === invitation.invitationId ? 'Revoking…' : 'Revoke'}
-              </button>
+              </Button>
             </li>
           ))}
         </ul>
