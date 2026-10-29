@@ -190,3 +190,9 @@ Running log feeding the README reflection required by the brief. Add an entry pe
 - **What the human decided or corrected:** directed continuing the UI pass and preserving existing work. The initial controls/header slice has already merged; this work is the next UI slice, with the walkthrough presentation still reserved for last.
 - **How it was verified:** typecheck, lint, stylelint, format check, production build, full coverage (640 tests passed, 1 skipped; 85.06% global branches), and focused shell/auth/deal/notification tests (33 passed) pass. The authenticated screens still need visual review and current-build screenshot evidence against a running seeded stack; the local Podman API is unavailable.
 - **What went wrong or was surprising:** visual review of the authenticated app is still constrained by the unavailable local Podman stack; the screenshot from PR #24 only covers the current sign-in page.
+
+### 2026-10-29 / UI pass: control cascade consistency
+- **What Codex did:** placed shared native-control styles in Tailwind's `components` layer so utility classes can override border radius, surface, and spacing as intended. Aligned default shared button height to the 40px control baseline. No form behavior or workflow logic changed.
+- **What the human decided or corrected:** continue the project-wide UI pass, preserve existing work, capture current-build evidence, and leave the full walkthrough presentation until last.
+- **How it was verified:** web typecheck, stylelint, format check, `git diff --check`, and production build pass. Opened the current Next build and visually reviewed the sign-in controls; the screenshot is preserved as browser evidence.
+- **What went wrong or was surprising:** the previous stylesheet was unlayered, which outranked Tailwind's layered utilities and silently defeated intended per-control styling. Authenticated page review still depends on the seeded container stack.
