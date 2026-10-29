@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useEffect, useId, useRef, useState, type FormEvent } from 'react';
 
+import { Button } from '../ui/button';
 import { authRequest } from './api';
 
 export function SignupForm() {
@@ -103,13 +104,9 @@ export function SignupForm() {
           Use at least 12 characters. Password managers and paste are welcome.
         </p>
       </div>
-      <button
-        className="w-full rounded-control bg-brand px-4 py-2 font-medium text-fg-on-brand hover:bg-brand-hover focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus disabled:cursor-wait disabled:opacity-60"
-        disabled={pending}
-        type="submit"
-      >
+      <Button className="w-full" disabled={pending} variant="primary" type="submit">
         {pending ? 'Creating account…' : 'Create account'}
-      </button>
+      </Button>
       <p className="text-sm text-fg-muted">
         Already registered?{' '}
         <Link className="text-brand-fg underline underline-offset-4" href="/login">

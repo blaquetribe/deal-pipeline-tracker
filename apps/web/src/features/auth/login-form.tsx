@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useEffect, useId, useRef, useState, type FormEvent } from 'react';
 
+import { Button } from '../ui/button';
 import { authRequest } from './api';
 
 export function LoginForm({ onAuthenticated }: { readonly onAuthenticated?: () => Promise<void> }) {
@@ -84,13 +85,9 @@ export function LoginForm({ onAuthenticated }: { readonly onAuthenticated?: () =
           type="password"
         />
       </div>
-      <button
-        className="w-full rounded-control bg-brand px-4 py-2 font-medium text-fg-on-brand hover:bg-brand-hover focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus disabled:cursor-wait disabled:opacity-60"
-        disabled={pending}
-        type="submit"
-      >
+      <Button className="w-full" disabled={pending} variant="primary" type="submit">
         {pending ? 'Signing in…' : 'Sign in'}
-      </button>
+      </Button>
       <div className="flex flex-wrap justify-between gap-3 text-sm">
         <Link className="text-brand-fg underline underline-offset-4" href="/forgot-password">
           Forgot password?

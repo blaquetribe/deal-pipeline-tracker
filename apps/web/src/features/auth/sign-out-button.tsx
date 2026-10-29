@@ -3,6 +3,7 @@
 import { useRouter } from 'next/navigation';
 import { useState } from 'react';
 
+import { Button } from '../ui/button';
 import { sessionRequest } from './api';
 
 export function SignOutButton() {
@@ -31,14 +32,15 @@ export function SignOutButton() {
           {error}
         </p>
       )}
-      <button
-        className="rounded-control border border-line px-3 py-2 text-sm hover:bg-surface-hover focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus disabled:cursor-wait disabled:opacity-60"
+      <Button
+        className="text-sm"
         disabled={pending}
         onClick={() => void signOut()}
         type="button"
+        variant="quiet"
       >
         {pending ? 'Signing out…' : 'Sign out'}
-      </button>
+      </Button>
     </div>
   );
 }

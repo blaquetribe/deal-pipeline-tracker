@@ -10,13 +10,14 @@ The app uses the DoorSprint-derived semantic token layer, but buttons and form c
 ## Decision
 
 - Keep native HTML buttons and form controls for the current basic control set, and apply one shared control baseline from `packages/ui/src/styles/controls.css` using the existing light/dark semantic tokens.
-- Keep layout and width in Tailwind utilities. Existing `bg-brand` intent marks primary buttons; other buttons use the shared secondary treatment. Standardize control height, radius, font, border contrast, select arrow, focus ring, hover, and disabled behavior.
+- Expose button intent and size through a typed React `Button` wrapper that still renders a native `<button>`. Start migrating shared auth actions to its primary, secondary, quiet, and danger variants; callers keep ownership of layout.
+- Keep layout and width in Tailwind utilities. Migrated buttons declare their intent with the shared variants; legacy buttons retain their existing `bg-brand` primary marker and shared secondary treatment during migration. Standardize control height, radius, font, border contrast, select arrow, focus ring, hover, and disabled behavior.
 - Do not add React UI dependencies just to reproduce the basic Button/Input/Select/Textarea primitives. Evaluate shadcn/ui components when a feature needs a complex interaction such as menus, popovers, or dialogs; use a vetted React implementation if the project adopts one.
 - Keep reduced-motion behavior and native keyboard/accessibility semantics from the existing design layer.
 
 ## Consequences
 
-Visual fixes to control shape and focus behavior now apply across pages and themes in one place. Feature markup still owns labels, field grouping, responsive layout, and primary-versus-secondary intent. The shared border token is covered by the contrast test at 3:1 in both themes.
+Visual fixes to control shape and focus behavior now apply across pages and themes in one place. Migrated buttons declare their semantic intent rather than repeating visual classes, while feature markup still owns labels, field grouping, and layout. The shared border token is covered by the contrast test at 3:1 in both themes.
 
 ## Verification
 
