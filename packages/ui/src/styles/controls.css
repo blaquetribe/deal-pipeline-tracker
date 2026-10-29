@@ -37,7 +37,7 @@ a.bg-brand {
 
 /* React button primitive: variants provide intent, while callers own layout. */
 button[data-ui-button] {
-  min-height: 2.25rem;
+  min-height: 2.5rem;
   padding: 0.5rem 0.875rem;
   border-color: var(--line);
   background: var(--surface-raised);
