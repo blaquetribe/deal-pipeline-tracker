@@ -12,7 +12,7 @@ import { useEffect, useId, useState } from 'react';
 import type { FormEvent } from 'react';
 
 import { StageBadge } from '../pipeline';
-import { PageHeading } from '../shell';
+import { PageHeading } from '../shell/page-heading';
 import {
   configureDealApprovalPolicy,
   cancelApprovalAbsence,
@@ -320,12 +320,12 @@ export function DealDetail({ dealId }: DealDetailProps) {
   return (
     <div className="space-y-8">
       <PageHeading
-        className="mb-0"
         eyebrow={
           <Link className="text-sm text-fg-muted underline focus-visible:outline-2" href="/">
             Back to deals
           </Link>
         }
+        spacing="compact"
         title={deal.name}
         action={<StageBadge stage={deal.stage} />}
       />

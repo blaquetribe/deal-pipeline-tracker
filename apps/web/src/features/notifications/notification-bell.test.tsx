@@ -90,6 +90,9 @@ describe('notification bell', () => {
     render(<NotificationBell />);
     fireEvent.click(screen.getByRole('button', { name: 'Notifications' }));
     await screen.findByText('You’re all caught up.');
+    expect(screen.getByRole('region', { name: 'Notifications' })).toHaveClass(
+      'material-glass-strong',
+    );
     expect(FakeWebSocket.instances[0]?.url).toContain('/ws');
     FakeWebSocket.instances[0]?.open();
     await waitFor(() => expect(readNotifications).toHaveBeenCalledTimes(2));
@@ -153,6 +156,9 @@ describe('notification bell', () => {
     const view = render(<NotificationBell />);
     FakeWebSocket.instances[0]?.message({ type: 'notification', data: row });
     expect(await screen.findByText('Closing soon alert')).toBeInTheDocument();
+    expect(screen.getByText('Closing soon alert').closest('aside')).toHaveClass(
+      'material-glass-strong',
+    );
     view.unmount();
   });
 });

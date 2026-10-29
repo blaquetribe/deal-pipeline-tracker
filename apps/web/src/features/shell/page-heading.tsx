@@ -5,13 +5,19 @@ interface PageHeadingProps {
   readonly description?: string;
   readonly eyebrow?: ReactNode;
   readonly action?: ReactNode;
-  readonly className?: string;
+  readonly spacing?: 'normal' | 'compact';
 }
 
-export function PageHeading({ title, description, eyebrow, action, className }: PageHeadingProps) {
+export function PageHeading({
+  title,
+  description,
+  eyebrow,
+  action,
+  spacing = 'normal',
+}: PageHeadingProps) {
   return (
     <header
-      className={`mb-8 flex flex-wrap items-end justify-between gap-4 border-b border-line-subtle pb-6 ${className ?? ''}`}
+      className={`${spacing === 'compact' ? 'mb-4' : 'mb-8'} flex flex-wrap items-end justify-between gap-4 border-b border-line-subtle pb-6`}
     >
       <div className="space-y-2">
         {eyebrow ? <div className="text-sm font-medium text-brand-fg">{eyebrow}</div> : null}

@@ -36,6 +36,7 @@ describe('AppShell', () => {
       ).toBe(true);
       expect(nav.querySelector('a[href="/"]')).toHaveTextContent('Pipeline');
     }
+    expect(screen.getByRole('complementary')).toHaveClass('material-glass');
     expect(screen.getByRole('heading', { name: 'Role management' })).toBeVisible();
   });
 
@@ -47,6 +48,7 @@ describe('AppShell', () => {
     );
 
     expect(screen.getByText('Investment pipeline')).toBeVisible();
+    expect(screen.getByText('Investment pipeline').closest('header')).toHaveClass('material-glass');
     expect(screen.getByText('Organisation')).toBeVisible();
     expect(screen.getByText('Profile')).toBeVisible();
     expect(screen.getByRole('button', { name: 'Notifications' })).toBeVisible();

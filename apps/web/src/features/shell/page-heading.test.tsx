@@ -9,15 +9,16 @@ describe('PageHeading', () => {
 
     expect(screen.getByRole('heading', { level: 1, name: 'Deal pipeline' })).toBeVisible();
     expect(container.querySelector('p')).not.toBeInTheDocument();
+    expect(container.querySelector('header')).toHaveClass('mb-8');
   });
 
-  it('renders the eyebrow, description, action, and supplied class', () => {
+  it('renders the eyebrow, description, action, and compact spacing', () => {
     render(
       <PageHeading
         action={<button>New deal</button>}
-        className="mb-0"
         description="Opportunities across the organisation."
         eyebrow="Pipeline"
+        spacing="compact"
         title="Deal pipeline"
       />,
     );
@@ -25,6 +26,6 @@ describe('PageHeading', () => {
     expect(screen.getByText('Pipeline')).toBeVisible();
     expect(screen.getByText('Opportunities across the organisation.')).toBeVisible();
     expect(screen.getByRole('button', { name: 'New deal' })).toBeVisible();
-    expect(screen.getByRole('banner')).toHaveClass('mb-0');
+    expect(screen.getByRole('banner')).toHaveClass('mb-4');
   });
 });

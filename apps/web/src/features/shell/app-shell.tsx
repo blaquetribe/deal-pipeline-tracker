@@ -41,7 +41,7 @@ export function AppShell({
 }) {
   return (
     <div className="grid gap-5 lg:grid-cols-[13rem_minmax(0,1fr)] xl:gap-8">
-      <aside className="flex flex-col gap-5 border-b border-line-subtle pb-4 lg:sticky lg:top-6 lg:h-[calc(100vh-3rem)] lg:border-e lg:border-b-0 lg:pe-5 lg:pb-0">
+      <aside className="material-glass flex flex-col gap-5 rounded-panel p-4 lg:sticky lg:top-6 lg:h-[calc(100vh-3rem)] lg:self-start">
         <Link aria-label="Deal Pipeline Tracker home" className="flex items-center gap-3" href="/">
           <span
             aria-hidden="true"
@@ -60,7 +60,7 @@ export function AppShell({
       </aside>
 
       <div className="min-w-0">
-        <header className="mb-8 flex flex-wrap items-center justify-between gap-4 border-b border-line-subtle pb-5">
+        <header className="material-glass mb-8 flex flex-wrap items-center justify-between gap-4 rounded-panel p-4">
           <p className="text-sm font-medium text-fg-muted">
             {currentPage === 'pipeline' ? 'Investment pipeline' : 'Organisation settings'}
           </p>
