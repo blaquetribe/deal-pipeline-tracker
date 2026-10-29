@@ -77,6 +77,14 @@ insert into public.profiles (user_id, display_name) values
   ('26262626-0000-4000-8000-000000000008', 'IC Five');
 create temporary table approval_absence_ids (key text primary key, id uuid);
 grant all on approval_absence_ids to public;
+insert into approval_absence_ids (key, id)
+select 'ic1-membership', id from public.memberships
+where tenant_id = '26262626-0000-4000-8000-00000000000a'
+  and user_id = '26262626-0000-4000-8000-000000000003';
+insert into approval_absence_ids (key, id)
+select 'ic5-membership', id from public.memberships
+where tenant_id = '26262626-0000-4000-8000-00000000000a'
+  and user_id = '26262626-0000-4000-8000-000000000008';
 
 set local role authenticated;
 select set_config('request.jwt.claims', '{"sub":"26262626-0000-4000-8000-000000000001"}', true);
@@ -119,25 +127,25 @@ select lives_ok($$select public.grant_role(
 select ok(
   (public.approval_reassignment_options((select id from approval_absence_ids where key = 'request'))
     ->'unavailableApprovers'->0->>'membershipId')::uuid =
-      (select id from public.memberships where user_id = '26262626-0000-4000-8000-000000000003')
+      (select id from approval_absence_ids where key = 'ic1-membership')
   and exists (select 1 from jsonb_array_elements(public.approval_reassignment_options(
     (select id from approval_absence_ids where key = 'request'))->'eligibleReplacements') option
-    where option->>'membershipId' = (select id::text from public.memberships
-      where user_id = '26262626-0000-4000-8000-000000000008')),
+    where option->>'membershipId' = (select id::text from approval_absence_ids
+      where key = 'ic5-membership')),
   'replacement options expose the absent slot and only eligible members');
 select lives_ok(format($$select public.reassign_approval_approver(%L, %L, %L)$$,
   (select id from approval_absence_ids where key = 'request'),
-  (select id from public.memberships where user_id = '26262626-0000-4000-8000-000000000003'),
-  (select id from public.memberships where user_id = '26262626-0000-4000-8000-000000000008')),
+  (select id from approval_absence_ids where key = 'ic1-membership'),
+  (select id from approval_absence_ids where key = 'ic5-membership')),
   'Owner reassigns an absent slot to an active IC member');
 select ok(exists (select 1 from public.approval_request_approvers a
   where a.request_id = (select id from approval_absence_ids where key = 'request')
-    and a.membership_id = (select id from public.memberships where user_id = '26262626-0000-4000-8000-000000000003')
-    and a.superseded_by = (select id from public.memberships where user_id = '26262626-0000-4000-8000-000000000008')),
+    and a.membership_id = (select id from approval_absence_ids where key = 'ic1-membership')
+    and a.superseded_by = (select id from approval_absence_ids where key = 'ic5-membership')),
   'reassignment preserves and links the original approver slot');
 select ok(exists (select 1 from public.approval_request_approvers a
   where a.request_id = (select id from approval_absence_ids where key = 'request')
-    and a.membership_id = (select id from public.memberships where user_id = '26262626-0000-4000-8000-000000000008')),
+    and a.membership_id = (select id from approval_absence_ids where key = 'ic5-membership')),
   'the replacement receives a new approval slot');
 select ok(exists (select 1 from public.deal_events e
   where e.deal_id = (select id from approval_absence_ids where key = 'deal')
