@@ -7,7 +7,8 @@ export default defineConfig({
   platform: 'node',
   clean: true,
   sourcemap: true,
-  // Bundle the API and workspace code, but keep native sharp and ws in production deps.
-  noExternal: [/^(?!ws$).*/],
+  // Bundle the API and workspace contract; deploy production dependencies separately so
+  // native packages and their CommonJS runtime dependencies retain their native module format.
+  noExternal: ['@dpt/shared'],
   external: ['ws', 'sharp'],
 });

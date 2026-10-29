@@ -1,6 +1,6 @@
 # 06 Seed and polish: progress
 
-Status: in progress
+Status: done (PR #16 merged to `main` as `fa31267` after all required checks passed)
 Owner/branch: feat/06-seed-polish
 Depends on: 03, 04, 05
 
@@ -37,7 +37,7 @@ Unit tests cover fixed identities, `api_service` token use, disabled mode, and f
 ## Log
 - 2026-10-29: Added a one-shot internal API image seed service, fixed fictional demo users, two tenant fixtures with all six system roles, ten sample deals, and an additive restricted SQL function. Added API/GoTrue and pgTAP tests, expanded compose smoke coverage, and replaced the README stub. Initial browser verification caught an origin mismatch on a non-default gateway port; Compose now derives the app origin from `GATEWAY_PORT`, and the smoke test sends that origin. Captured the seeded Asteron dashboard in the browser during the first successful local stack run.
 - 2026-10-29: Verification: 561 Vitest tests pass; coverage passes (85.23% global branches, 90.47% API branches); typecheck, lint, stylelint, format, and production build pass. A clean migration/pgTAP run passes 479 assertions across 25 files. The full compose smoke could not finish locally because Podman closed its API connection during image build. GitHub CI successfully exercised the seeded reviewer flow, then found the notification pgTAP test counted alerts from the seeded deals; the test now moves those samples outside the alert window within its rollback-only transaction. Reproducing the seeded database state locally now passes all 479 pgTAP assertions. The smoke script prints full pgTAP output when that check fails.
-- PR #16 rerun passed all checks: typecheck/lint/coverage/build, secret scan, database tests, API/web/gateway images, and clean-clone Compose smoke. Advisory review passed on the initial PR run. Branch is ready for review; not merged.
+- PR #16 merged to `main` as `fa31267` on 2026-10-29 after all required checks passed: typecheck/lint/coverage/build, secret scan, database tests, API/web/gateway images, and clean-clone Compose smoke. Advisory review passed on the initial PR run.
 
 ## Deviations / debt
 Anything that differs from the plan or is deferred (also mirror in README "next steps").

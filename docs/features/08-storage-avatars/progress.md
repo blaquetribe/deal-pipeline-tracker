@@ -31,18 +31,19 @@ What is covered, where it lives, how to run it.
 - Local checks on 2026-10-29: 588 Vitest tests pass (1 S3 integration test skipped without a local RustFS endpoint); coverage passes (85.72% global branches; 91.17% API branches), as do typecheck, lint, stylelint, format check, and production build. Isolated local pgTAP could not complete because the Podman API repeatedly returned unexpected EOF while starting the migration job; rerun in CI.
 
 ## Security checklist (from SECURITY_STANDARDS.md)
-- [ ] New tables have `tenant_id`, RLS enabled and forced, policies, tests for each role and cross-tenant.
-- [ ] New routes declare auth and permission; signed-out test passes.
-- [ ] No client-supplied tenant/author/role/timestamp is trusted.
-- [ ] Append-only data cannot be mutated by any role including owner/service.
-- [ ] Inputs validated by zod; errors do not leak internals.
-- [ ] No secrets, tokens, or PII in logs.
-- [ ] Web still has no Supabase dependency.
+- [x] New tables have `tenant_id`, RLS enabled and forced, policies, and cross-tenant tests.
+- [x] New routes declare auth and permission; signed-out tests pass.
+- [x] Tenant and owner metadata are derived from the authenticated session; client timestamps, roles, and object keys are not accepted.
+- [x] No append-only audit data was added; file state transitions and stale pending cleanup use narrow database functions.
+- [x] Inputs validated by zod; errors do not expose storage internals.
+- [x] No secrets, tokens, or PII in logs.
+- [x] Web still has no Supabase dependency.
 
 ## Log
 Dated notes: what changed, what was learned, problems.
 
 - 2026-10-29: Added the private tenant-scoped files table and narrow metadata RPCs, fs and S3 ObjectStore drivers, BFF streaming routes, image re-encoding, PDF attachments, stale/orphan cleanup, and profile/deal UI. Added RustFS-backed S3 contract coverage to CI. R2 credentials are not required for the S3-compatible implementation; a dedicated bucket token is still needed for a real Cloudflare R2 smoke test. Local pgTAP is blocked by repeat Podman API EOFs; all other local checks listed above pass. UI screenshot evidence is still pending because the app available in the browser is the prior build and Podman could not rebuild the stack.
+- CI commit `760d05b` passed pgTAP and the quality/image checks; Compose smoke caught `detect-libc` bundled into the API ESM output and calling unsupported dynamic `require("child_process")`. A local tsup adjustment excludes third-party packages from bundling; latest branch CI must verify this fix before merge.
 
 ## Deviations / debt
 Anything that differs from the plan or is deferred (also mirror in README "next steps").
