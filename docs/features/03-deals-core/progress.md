@@ -15,7 +15,7 @@ Deal CRUD, stage state machine, notes UI, pipeline overview, closing soon. Cover
 Key decisions, schema/API shape, links to ADRs.
 - Deal responsibility is stored in `deal_assignees` as owner, lead or member; it does not grant visibility. Assignment mutations require `deal.edit`, active tenant membership, an expected deal version and produce a ledger event.
 - The first list contract is `list_deals`: tenant scope comes from the server-side active session, filters and pagination are bounded in Postgres, and `amount` crosses JSON as an integer string (E10).
-- The current list provides the keyboard-accessible “Move to…” stage control through the existing database stage machine. Kanban remains an extended UI item per ADR 0009; if added, drag-and-drop must stay an enhancement to this accessible path and target smooth 60 fps motion.
+- The deal list provides keyboard-accessible “Move to…” stage controls; Board view adds drag-and-drop as an enhancement to those controls, using the existing database stage machine and version checks. The board currently covers the same bounded, paginated result set as List view.
 - API routes use the authenticated user JWT and Postgres remains the authorization boundary. No browser Supabase client was added.
 
 ## Tasks
@@ -31,6 +31,7 @@ Key decisions, schema/API shape, links to ADRs.
 - [x] Tenant-local 60-day closing-soon summary, per-currency open pipeline totals, stage counts, and live countdown with day/minute-aligned refreshes and clock-skew correction.
 - [x] Server-side closing alerts and delivery through the Feature 02 mailer and Feature 05 realtime path (see `closing-soon.md` and `docs/features/05-realtime/progress.md`).
 - [x] Progress and handoff docs updated for this slice.
+- [x] Board view with seven stages, valid-transition drop targets, reduced-motion-aware feedback, and preserved keyboard move controls.
 
 ## Tests
 What is covered, where it lives, how to run it.
@@ -58,3 +59,5 @@ Anything that differs from the plan or is deferred (also mirror in README "next 
 - 2026-10-28 (later): Added a database-authorized dashboard summary for per-stage counts, per-currency open pipeline totals and tenant-local closing dates. The browser shows a 60-day closing-soon list, timezone-aware countdown chips, and minute/midnight-aligned updates using the API's server clock. Vitest passes 450 tests; typecheck, lint, stylelint, format check and build pass; pgTAP passes 408 assertions across 21 files. Server alert delivery remains with feature 02/05 dependencies.
 - 2026-10-29: Feature 05 delivered the hourly closing-soon scan, idempotent in-app alerts, realtime delivery, and grouped email digest. PR #15 merged after all required CI checks passed. Alert recipient preferences, absence/delegation handling, and presence remain documented follow-up scope.
 - 2026-10-28 (later): Coverage follow-up adds API route, dashboard, detail and money edge-state tests without changing the deal UI or database. The suite now passes 502 tests and global branch coverage meets the gate at 85.04%. Existing dashboard evidence remains applicable because this follow-up only changes tests and API error mapping.
+- 2026-10-29: Added a Board/List view switch to the deals page. The board shows all seven pipeline stages for the active paginated result set, links cards to deal details, and only accepts transitions allowed by the shared stage machine with required fields present. Moves still use the versioned API and database authority. List view remains the keyboard-accessible alternative. Focused dashboard tests and web typecheck pass; full checks and UI evidence remain pending.
+- Verification: full checks pass on `codex/feature-03-deal-kanban`: 649 Vitest tests pass, one test is skipped; coverage is 85.03% against the 85% branch threshold; format, lint, stylelint, typecheck and production build pass. Current-build browser evidence is pending because the local app on port 8080 and Podman socket are unavailable.

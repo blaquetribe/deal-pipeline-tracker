@@ -1,5 +1,5 @@
 import type { DashboardSummary } from '@dpt/shared';
-import { render, screen, waitFor } from '@testing-library/react';
+import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
@@ -33,6 +33,21 @@ function stubFetch(body: unknown, status = 200, summary = dashboardSummary) {
   const fetch = vi.fn<(input: RequestInfo | URL, init?: RequestInit) => Promise<Response>>(
     async (input) => {
       const url = input instanceof Request ? input.url : String(input);
+      if (url === '/api/auth/session') {
+        return new Response(
+          JSON.stringify({
+            csrfToken: 'csrf-test',
+            user: {
+              id: 'aaaaaaaa-0000-4000-8000-000000000002',
+              email: 'person@example.test',
+              fullName: 'Test User',
+            },
+            tenantId: 'aaaaaaaa-0000-4000-8000-000000000003',
+          }),
+          { status: 200, headers: { 'Content-Type': 'application/json' } },
+        );
+      }
+      if (url.endsWith('/stage')) return new Response(null, { status: 204 });
       const isSummary = url.endsWith('/dashboard-summary');
       return new Response(JSON.stringify(isSummary ? summary : body), {
         status: isSummary ? 200 : status,
@@ -62,6 +77,49 @@ describe('DealsDashboard', () => {
         cache: 'no-store',
       }),
     );
+  });
+
+  it('offers a stage board and moves a deal only to an allowed, complete destination', async () => {
+    const fetch = stubFetch({ total: 1, items: [deal] });
+    const user = userEvent.setup();
+    render(<DealsDashboard />);
+
+    await screen.findByRole('row', { name: /Northstar Systems/ });
+    await user.click(screen.getByRole('button', { name: 'Board' }));
+    expect(screen.getByRole('region', { name: 'Sourcing stage, 1 deals' })).toBeVisible();
+    expect(screen.getByRole('link', { name: 'Northstar Systems' })).toHaveAttribute(
+      'href',
+      `/deals/${deal.id}`,
+    );
+
+    const dataTransfer = {
+      effectAllowed: 'none',
+      dropEffect: 'none',
+      getData: () => deal.id,
+      setData: vi.fn<(...values: string[]) => void>(),
+    };
+    const card = screen.getByRole('link', { name: 'Northstar Systems' }).closest('article');
+    const screening = screen.getByRole('region', { name: 'Screening stage, 0 deals' });
+    const closed = screen.getByRole('region', { name: 'Closed stage, 0 deals' });
+    if (!card) throw new Error('Deal card was not rendered.');
+    fireEvent.drop(closed, { dataTransfer });
+    expect(fetch).not.toHaveBeenCalledWith(`/api/deals/${deal.id}/stage`, expect.anything());
+    fireEvent.dragStart(card, { dataTransfer });
+    fireEvent.dragEnter(screening, { dataTransfer });
+    fireEvent.dragLeave(screening, { dataTransfer, relatedTarget: null });
+    fireEvent.dragEnter(screening, { dataTransfer });
+    fireEvent.dragOver(screening, { dataTransfer });
+    fireEvent.drop(screening, { dataTransfer });
+
+    await waitFor(() =>
+      expect(fetch).toHaveBeenCalledWith(
+        `/api/deals/${deal.id}/stage`,
+        expect.objectContaining({ method: 'POST' }),
+      ),
+    );
+    expect(dataTransfer.setData).toHaveBeenCalledWith('text/plain', deal.id);
+    fireEvent.dragStart(card, { dataTransfer });
+    fireEvent.dragEnd(card, { dataTransfer });
   });
 
   it('submits stage and search filters and provides an empty state', async () => {
