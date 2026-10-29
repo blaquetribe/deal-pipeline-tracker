@@ -50,6 +50,7 @@ What is covered, where it lives, how to run it.
 
 ## Log
 Dated notes: what changed, what was learned, problems.
+- 2026-10-29: The deal activity timeline now formats the legacy assignee-change ledger text into a readable summary using role names and counts, and suppresses raw user IDs/JSON. The append-only ledger and migrations are unchanged. Four focused formatter regression tests pass; typecheck, lint, stylelint and format checks pass. Browser screenshot verification is pending because the current browser session cannot load authenticated deal data.
 - 2026-10-28: Added tenant-scoped deal assignments with `owner | lead | member`, versioned set operation, ledger audit, authenticated RLS read RPC and bounded tenant deal-list RPC. Added session-gated deal create and stage-move APIs plus accessible dashboard controls for creating and moving deals; Postgres remains authoritative for stage transitions. Full Vitest passes (432 tests); pgTAP passes (373 assertions across 19 files); production build and full compose smoke pass. SQL fixture role seeding is now scoped to fixture tenants after local persistent data exposed tests that assumed the database contained no other tenants. A review caught that explicit SQL NULL could bypass ordinary numeric bound comparisons, so a separate forward migration now guards null versions/limits/offsets. Kanban drag-and-drop is deferred; preserve the accessible move control and target smooth 60 fps motion if implemented.
 
 ## Deviations / debt

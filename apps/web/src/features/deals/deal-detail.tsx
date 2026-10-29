@@ -14,6 +14,7 @@ import type { FormEvent } from 'react';
 import { StageBadge } from '../pipeline';
 import { PageHeading } from '../shell/page-heading';
 import { Button } from '../ui/button';
+import { formatActivityBody } from './activity-format';
 import {
   configureDealApprovalPolicy,
   cancelApprovalAbsence,
@@ -652,7 +653,9 @@ export function DealDetail({ dealId }: DealDetailProps) {
                 <p className="font-medium">
                   {item.kind === 'note' ? 'Note' : item.kind.replaceAll('_', ' ')}
                 </p>
-                <p className="mt-2 whitespace-pre-wrap">{item.body}</p>
+                <p className="mt-2 whitespace-pre-wrap">
+                  {formatActivityBody(item.kind, item.body)}
+                </p>
                 <p className="mt-3 text-sm text-fg-muted">
                   {item.actorName ?? item.actorEmail} ·{' '}
                   <time dateTime={item.createdAt}>{formatDate(item.createdAt)}</time>
