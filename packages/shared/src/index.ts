@@ -13,6 +13,9 @@ export {
   approvalAbsenceBodySchema,
   approvalAbsencesResponseSchema,
   approvalDecisionBodySchema,
+  approvalDelegateOptionsSchema,
+  approvalDelegationBodySchema,
+  approvalDelegationsResponseSchema,
   approvalPolicyBodySchema,
   approvalReassignmentBodySchema,
   approvalReassignmentOptionsSchema,
@@ -36,6 +39,7 @@ export {
 export type {
   DashboardSummary,
   ApprovalAbsence,
+  ApprovalDelegation,
   ApprovalReassignmentOptions,
   DealApprovalStatus,
   CreateDealBody,

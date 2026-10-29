@@ -10,6 +10,12 @@ Running log feeding the README reflection required by the brief. Add an entry pe
 - **What went wrong or was surprising:**
 
 ## Entries
+### 2026-10-29 / Feature 04 scoped approval delegation
+- **What Codex did:** added tenant opt-in, time-bounded delegation in Postgres; preserved the original approver slot while recording the acting delegate; added API/shared contracts for delegate choices, listing, creation, revocation, policy setting, and delegated decision status; wrote ADR 0020 and refreshed progress/handoff docs. The delegation UI remains deferred.
+- **What the human decided or corrected:** asked to continue with the existing project work. Standing requirements are to wait for green CI before merging, capture UI evidence, complete the DoorSprint-informed UI pass before the final walkthrough presentation, and keep any future drag interactions smooth and keyboard accessible.
+- **How it was verified:** `pnpm test:coverage` passes all 601 tests (1 skipped) and the configured thresholds; typecheck, lint, stylelint, format check, build, and secret scan pass. The first CI run found duplicate decisions returned `42501` because the pending-slot check ran first; the corrected order preserves the established `23505` behavior. GitHub Actions run `40870860435` then passed pgTAP, quality, secret scan, all image builds/scans, and clean-clone Compose smoke.
+- **What went wrong or was surprising:** adding delegated slot information to the shared approval status required updating web fixtures even though no delegation UI is included in this slice. CI also caught the existing duplicate-vote error contract, which local TypeScript tests cannot exercise.
+
 ### 2026-10-26 / planning
 - **What Claude did:** read the brief, produced a requirements report, proposed architecture, tenancy, onboarding, RBAC and approval designs, and the gotcha analysis (`docs/brief/GOTCHAS.md`); scaffolded docs and standards.
 - **What the human decided or corrected:** chose Next.js + Hono + Supabase SDK with a separate API boundary and a UI with no Supabase knowledge; required realtime and multi-tenancy; corrected Claude's invite-only suggestion to open sign-up with an Owner; pushed for best-practice financial roles, approvals and absence handling; set quorum, delegation and rejection rules.

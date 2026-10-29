@@ -1,18 +1,18 @@
 # 04 Approvals: progress
 
-Status: in progress (IC gate and absence/reassignment implemented; remaining extended items are delegation, custom roles, and notifications)
-Owner/branch: codex/feature-04-absence-reassignment
+Status: in progress (IC gate, absence/reassignment, and scoped delegation implemented; custom roles and notifications remain)
+Owner/branch: codex/feature-04-approval-delegation
 Depends on: 03
 
 ## Goal
 Approval gates, quorum, decisions, absence, delegation, custom roles and SoD. Covers GOTCHAS row 16.
 
 ## Scope
-- In (delivered slices): Owner-configured IC k-of-N quorum; submit-time approver snapshot; request/decision/status RPCs; maker-checker enforcement; absence scheduling/cancellation; unavailable-slot reassignment; 2xx API routes; deal-detail controls.
-- Out (follow-up): delegation, custom role editor, alerts when the eligible pool falls below quorum, SLA escalation, and gates beyond IC review. Delegation UI remains on the cut list. See ADRs 0018 and 0019.
+- In (delivered slices): Owner-configured IC k-of-N quorum; submit-time approver snapshot; request/decision/status RPCs; maker-checker enforcement; absence scheduling/cancellation; unavailable-slot reassignment; scoped approval delegation with actor attribution; 2xx API routes; deal-detail controls for quorum, absence, and reassignment.
+- Out (follow-up): delegation management UI, custom role editor, alerts when the eligible pool falls below quorum, SLA escalation, and gates beyond IC review. See ADRs 0018–0020.
 
 ## Design notes
-ADR 0018. Configuration uses existing Owner-only `role.manage`; no mutation of immutable system roles. Only approve/reject; requests snapshot the quorum and eligible memberships; rejection fails when quorum is no longer reachable. `decide_approval` signs the deal and writes ledger events under the deal lock.
+ADRs 0018–0020. Configuration uses existing Owner-only `role.manage`; no mutation of immutable system roles. Only approve/reject; requests snapshot the quorum and eligible memberships; rejection fails when quorum is no longer reachable. Delegation is tenant opt-in, time-bound, and substitutes for the delegate's own vote; decisions record both the original slot and acting member. `decide_approval` signs the deal and writes ledger events under the deal lock.
 
 ## Tasks
 - [x] Failing tests written (security/negative first)
@@ -21,7 +21,8 @@ ADR 0018. Configuration uses existing Owner-only `role.manage`; no mutation of i
 - [x] Web
 - [x] Docs updated
 - [x] Absence/reassignment follow-up
-- [ ] Delegation follow-up
+- [x] Delegation database/API follow-up
+- [ ] Delegation management UI
 - [ ] Custom role editor and notification follow-up
 
 ## Tests
@@ -42,7 +43,8 @@ Dated notes: what changed, what was learned, problems.
 - 2026-10-29: added migration 26 for self-managed absence windows and Owner/Admin replacement of unavailable approval slots. Reassignment preserves and supersedes the original slot and is recorded in the deal hash chain; absence changes are recorded in the tenant trail. API routes and deal-detail controls use caller JWTs and strict shared schemas. See ADR 0019. Typecheck, lint, stylelint, format, build, and 597 Vitest tests (1 skipped) pass. Local pgTAP could not start because the Podman-backed Docker API stalled before creating containers; CI must run migration 26 and test 26 before merge.
 - 2026-10-29: first CI run exposed a fixture bug in test 26: authenticated owner queries for other members' membership IDs were hidden by RLS, so the reassignment call received null IDs. The test now captures fixture IDs before switching roles. PR #19 head `5d13633` passed every required CI check on run `40864349477`, including pgTAP and clean-clone Compose smoke.
 - 2026-10-28: captured the running dashboard/detail UI in the browser after rebuilding the local web/API containers. The approval controls are covered in component tests; no persistent deal was moved just to create an IC-review screenshot because stage changes are audited and append-only.
+- 2026-10-29: started scoped delegation on clean main after PR #19 merged. ADR 0020 and migration 27 add tenant opt-in, bounded self-scheduling and revocation, immutable original approver slots, acting-member attribution, one-vote enforcement, delegated status, and caller-JWT API operations. The management UI remains cut-list scope. `pnpm test:coverage` passes all 601 tests with 1 skipped and thresholds met; typecheck, lint, stylelint, format check, and build also pass. `make test-db` is blocked by Podman socket permissions. PR #20 head `329b9a6` passed all required GitHub checks on run `40870860435`, including pgTAP and clean-clone Compose smoke. Its first CI attempt found the duplicate-decision error order; commit `329b9a6` corrected it without changing the established error contract.
 
 ## Deviations / debt
 Anything that differs from the plan or is deferred (also mirror in README "next steps").
-- Open follow-up: delegation, custom role editing, notification when quorum is unreachable, and gates beyond IC review. Current unavailable slots can be reassigned when an eligible member exists; otherwise requests remain pending and fail closed.
+- Open follow-up: delegation management UI, custom role editing, notification when quorum is unreachable, and gates beyond IC review. Current unavailable slots can be reassigned when an eligible member exists; otherwise requests remain pending and fail closed.

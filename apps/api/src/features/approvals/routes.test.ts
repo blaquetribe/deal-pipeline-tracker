@@ -27,6 +27,7 @@ function harness(tenantId: string | null = TENANT) {
             pendingCount: 0,
             rejectedCount: 0,
             currentUserDecision: null,
+            delegatedSlots: [],
             canRequest: true,
             canDecide: false,
             canConfigure: true,
@@ -38,6 +39,8 @@ function harness(tenantId: string | null = TENANT) {
         if (name === 'decide_approval') return 'pending';
         if (name === 'set_approval_absence') return ABSENCE;
         if (name === 'my_approval_absences') return [];
+        if (name === 'my_approval_delegations' || name === 'eligible_approval_delegates') return [];
+        if (name === 'set_approval_delegation') return ABSENCE;
         if (name === 'approval_reassignment_options') {
           return { unavailableApprovers: [], eligibleReplacements: [] };
         }
@@ -85,6 +88,10 @@ describe('approval routes', () => {
       { method: 'GET', path: '/approval-absences', access: 'session' },
       { method: 'POST', path: '/approval-absences', access: 'session' },
       { method: 'DELETE', path: '/approval-absences/:absenceId', access: 'session' },
+      { method: 'GET', path: '/approval-delegations', access: 'session' },
+      { method: 'GET', path: '/approval-delegation-options', access: 'session' },
+      { method: 'POST', path: '/approval-delegations', access: 'session' },
+      { method: 'DELETE', path: '/approval-delegations/:delegationId', access: 'session' },
       {
         method: 'GET',
         path: '/approval-requests/:requestId/reassignment-options',
@@ -97,6 +104,10 @@ describe('approval routes', () => {
       'deal.request_approval',
       'approval.decide',
       'role.manage',
+      'approval.decide',
+      'approval.decide',
+      'approval.decide',
+      'approval.decide',
       'approval.decide',
       'approval.decide',
       'approval.decide',
@@ -187,7 +198,7 @@ describe('approval routes', () => {
     expect(await response.json()).toEqual({ status: 'pending' });
     expect(userRpc.call).toHaveBeenCalledWith(
       'decide_approval',
-      { p_request: REQUEST, p_decision: 'approve', p_reason: null },
+      { p_request: REQUEST, p_decision: 'approve', p_reason: null, p_on_behalf_of: null },
       'caller-jwt',
     );
   });
@@ -202,7 +213,12 @@ describe('approval routes', () => {
     expect(response.status).toBe(200);
     expect(userRpc.call).toHaveBeenCalledWith(
       'decide_approval',
-      { p_request: REQUEST, p_decision: 'reject', p_reason: 'Insufficient diligence' },
+      {
+        p_request: REQUEST,
+        p_decision: 'reject',
+        p_reason: 'Insufficient diligence',
+        p_on_behalf_of: null,
+      },
       'caller-jwt',
     );
   });
@@ -229,6 +245,124 @@ describe('approval routes', () => {
     expect(userRpc.call).toHaveBeenCalledWith(
       'configure_approval_policy',
       { p_tenant: TENANT, p_required_approvals: 2 },
+      'caller-jwt',
+    );
+  });
+
+  it('passes explicit delegation configuration and creates delegation for selected tenant', async () => {
+    const { app, userRpc } = harness();
+    const configured = await app.request('/approval-policy', {
+      method: 'PUT',
+      headers: jsonHeaders,
+      body: JSON.stringify({ requiredApprovals: 2, delegationEnabled: true }),
+    });
+    expect(configured.status).toBe(204);
+    expect(userRpc.call).toHaveBeenLastCalledWith(
+      'configure_approval_policy',
+      {
+        p_tenant: TENANT,
+        p_required_approvals: 2,
+        p_delegation_enabled: true,
+      },
+      'caller-jwt',
+    );
+
+    const created = await app.request('/approval-delegations', {
+      method: 'POST',
+      headers: jsonHeaders,
+      body: JSON.stringify({
+        delegateMembershipId: REPLACEMENT,
+        startsAt: '2027-03-01T09:00:00Z',
+        endsAt: '2027-03-03T17:00:00Z',
+      }),
+    });
+    expect(created.status).toBe(201);
+    expect(await created.json()).toEqual({ delegationId: ABSENCE });
+    expect(userRpc.call).toHaveBeenLastCalledWith(
+      'set_approval_delegation',
+      {
+        p_tenant: TENANT,
+        p_delegate: REPLACEMENT,
+        p_starts_at: '2027-03-01T09:00:00Z',
+        p_ends_at: '2027-03-03T17:00:00Z',
+      },
+      'caller-jwt',
+    );
+  });
+
+  it('reads delegation records and eligible choices with the selected tenant and caller JWT', async () => {
+    const { app, userRpc } = harness();
+    const records = await app.request('/approval-delegations', { headers: { Cookie: COOKIE } });
+    expect(records.status).toBe(200);
+    expect(await records.json()).toEqual([]);
+    expect(userRpc.call).toHaveBeenLastCalledWith(
+      'my_approval_delegations',
+      { p_tenant: TENANT },
+      'caller-jwt',
+    );
+
+    const options = await app.request('/approval-delegation-options', {
+      headers: { Cookie: COOKIE },
+    });
+    expect(options.status).toBe(200);
+    expect(await options.json()).toEqual([]);
+    expect(userRpc.call).toHaveBeenLastCalledWith(
+      'eligible_approval_delegates',
+      { p_tenant: TENANT },
+      'caller-jwt',
+    );
+  });
+
+  it('requires a selected tenant for delegation reads and creation', async () => {
+    const { app, userRpc } = harness(null);
+    const records = await app.request('/approval-delegations', { headers: { Cookie: COOKIE } });
+    expect(records.status).toBe(409);
+    const options = await app.request('/approval-delegation-options', {
+      headers: { Cookie: COOKIE },
+    });
+    expect(options.status).toBe(409);
+    const created = await app.request('/approval-delegations', {
+      method: 'POST',
+      headers: jsonHeaders,
+      body: JSON.stringify({
+        delegateMembershipId: REPLACEMENT,
+        startsAt: '2027-03-01T09:00:00Z',
+        endsAt: '2027-03-03T17:00:00Z',
+      }),
+    });
+    expect(created.status).toBe(409);
+    expect(userRpc.call).not.toHaveBeenCalled();
+  });
+
+  it('rejects invalid delegation windows and revokes valid delegation ids', async () => {
+    const { app, userRpc } = harness();
+    const invalidWindow = await app.request('/approval-delegations', {
+      method: 'POST',
+      headers: jsonHeaders,
+      body: JSON.stringify({
+        delegateMembershipId: REPLACEMENT,
+        startsAt: '2027-03-02T09:00:00Z',
+        endsAt: '2027-03-01T09:00:00Z',
+      }),
+    });
+    expect(invalidWindow.status).toBe(400);
+    expect(userRpc.call).not.toHaveBeenCalled();
+
+    const invalidId = await app.request('/approval-delegations/not-a-uuid', {
+      method: 'DELETE',
+      headers: jsonHeaders,
+    });
+    expect(invalidId.status).toBe(400);
+    expect(userRpc.call).not.toHaveBeenCalled();
+
+    const revoked = await app.request(`/approval-delegations/${ABSENCE}`, {
+      method: 'DELETE',
+      headers: jsonHeaders,
+    });
+    expect(revoked.status).toBe(204);
+    expect(userRpc.call).toHaveBeenCalledWith(
+      'cancel_approval_delegation',
+      { p_delegation: ABSENCE },
       'caller-jwt',
     );
   });

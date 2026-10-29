@@ -44,6 +44,7 @@ const approvalStatus = {
   pendingCount: 0,
   rejectedCount: 0,
   currentUserDecision: null,
+  delegatedSlots: [],
   canRequest: false,
   canDecide: false,
   canConfigure: false,
