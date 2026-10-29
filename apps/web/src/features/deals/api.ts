@@ -2,13 +2,19 @@ import {
   dealListResponseSchema,
   dealDetailResponseSchema,
   dealActivityResponseSchema,
+  approvalAbsenceBodySchema,
+  approvalAbsencesResponseSchema,
   createNoteBodySchema,
   approvalDecisionBodySchema,
   approvalPolicyBodySchema,
+  approvalReassignmentBodySchema,
+  approvalReassignmentOptionsSchema,
   approvalRequestBodySchema,
   dealApprovalStatusSchema,
   dashboardSummarySchema,
   type CreateDealBody,
+  type ApprovalAbsence,
+  type ApprovalReassignmentOptions,
   type Stage,
   type UpdateDealBody,
 } from '@dpt/shared';
@@ -56,6 +62,42 @@ export async function configureDealApprovalPolicy(requiredApprovals: number): Pr
     '/approval-policy',
     'PUT',
     approvalPolicyBodySchema.parse({ requiredApprovals }),
+  );
+}
+
+export async function readApprovalAbsences(): Promise<ApprovalAbsence[]> {
+  return approvalAbsencesResponseSchema.parse(await sessionRead('/approval-absences'));
+}
+
+export async function setApprovalAbsence(startsAt: string, endsAt: string): Promise<void> {
+  await sessionRequest(
+    '/approval-absences',
+    'POST',
+    approvalAbsenceBodySchema.parse({ startsAt, endsAt }),
+  );
+}
+
+export async function cancelApprovalAbsence(absenceId: string): Promise<void> {
+  await sessionRequest(`/approval-absences/${absenceId}`, 'DELETE');
+}
+
+export async function readApprovalReassignmentOptions(
+  requestId: string,
+): Promise<ApprovalReassignmentOptions> {
+  return approvalReassignmentOptionsSchema.parse(
+    await sessionRead(`/approval-requests/${requestId}/reassignment-options`),
+  );
+}
+
+export async function reassignApprovalApprover(
+  requestId: string,
+  fromMembershipId: string,
+  toMembershipId: string,
+): Promise<void> {
+  await sessionRequest(
+    `/approval-requests/${requestId}/reassignments`,
+    'POST',
+    approvalReassignmentBodySchema.parse({ fromMembershipId, toMembershipId }),
   );
 }
 

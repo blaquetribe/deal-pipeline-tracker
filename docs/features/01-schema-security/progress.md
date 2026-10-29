@@ -1,7 +1,7 @@
 # 01 Schema and security: progress
 
-Status: in progress (schema and database security shipped; final privilege assertion is awaiting CI)
-Owner/branch: main; follow-up review on codex/feature-01-function-privileges
+Status: done (schema and database security shipped; function exposure is tested in both `public` and `app`)
+Owner/branch: main
 Depends on: 00
 
 ## Goal
@@ -43,7 +43,7 @@ Contract the tests fix (names and behaviour the migration must satisfy): `deals.
 - 2026-10-26: slice 3 tests (`04_stage_machine.test.sql`, 33) and migration `20261029000000_stage_machine.sql`; suite green, 124 assertions. Honest note: the migration was written after the tests but the tests were not run red first this time. Sabotage runs (open `ic_review -> signed`, empty `stage_requirements`, drop the version check) each failed the intended test; a transitions sabotage aborted the file at the fixture step. Concurrent moves are not tested (needs two sessions); the row lock is by inspection only.
 - 2026-10-26: slice 2 (RBAC) tests written first (`03_rbac.test.sql`, 35), migration `20261028000000_rbac.sql`; suite green, 91 assertions. Sabotage run (SoD and system-role triggers dropped) failed exactly the 7 intended tests. Slice 1 fixtures now assign an observer role because reads are default deny.
 - 2026-10-26: slice 1 migration written; all green. Found that `auth.uid()` returns null under our PostgREST settings; added `app.uid()` (GOTCHAS 98). Owner roles bypass RLS in this image (GOTCHAS 99), so the ledger relies on privileges plus triggers. Owner roles bypass RLS in this image (GOTCHAS 99), so the ledger's protection is privileges plus triggers.
-- 2026-10-29: final review found the broad function-exposure assertion covered `public` but not helper functions in `app`. Added an explicit pgTAP assertion for `app`; latest full pgTAP run on PR #17 was green before this follow-up. CI for this assertion is pending in the current PR.
+- 2026-10-29: final review found the broad function-exposure assertion covered `public` but not helper functions in `app`. Added an explicit pgTAP assertion for `app` in PR #18. Full GitHub CI, including pgTAP, passed; PR #18 merged to `main` as `68e0718`.
 
 ## Deviations / debt
 Anything that differs from the plan or is deferred (also mirror in README "next steps").

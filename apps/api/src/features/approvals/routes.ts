@@ -1,6 +1,10 @@
 import {
+  approvalAbsenceBodySchema,
+  approvalAbsencesResponseSchema,
   approvalDecisionBodySchema,
   approvalPolicyBodySchema,
+  approvalReassignmentBodySchema,
+  approvalReassignmentOptionsSchema,
   approvalRequestBodySchema,
   dealApprovalStatusSchema,
 } from '@dpt/shared';
@@ -104,7 +108,130 @@ export function createApprovalRoutes({ userRpc }: ApprovalRoutesOptions): Route[
     },
   });
 
-  return [status, request, decide, configure];
+  const readAbsences = sessionRoute({
+    method: 'GET',
+    path: '/approval-absences',
+    body: noBody,
+    permission: 'approval.decide',
+    handler: async ({ session }) => {
+      if (!session.tenantId) {
+        throw new HttpError(
+          409,
+          'tenant_required',
+          'Choose an organisation to manage approval absences.',
+        );
+      }
+      return {
+        body: approvalAbsencesResponseSchema.parse(
+          await userRpc.call(
+            'my_approval_absences',
+            { p_tenant: session.tenantId },
+            session.accessToken,
+          ),
+        ),
+      };
+    },
+  });
+
+  const setAbsence = sessionRoute({
+    method: 'POST',
+    path: '/approval-absences',
+    body: approvalAbsenceBodySchema,
+    permission: 'approval.decide',
+    handler: async ({ body, session }) => {
+      if (!session.tenantId) {
+        throw new HttpError(
+          409,
+          'tenant_required',
+          'Choose an organisation to manage approval absences.',
+        );
+      }
+      const absenceId = uuidSchema.parse(
+        await userRpc.call(
+          'set_approval_absence',
+          { p_tenant: session.tenantId, p_starts_at: body.startsAt, p_ends_at: body.endsAt },
+          session.accessToken,
+        ),
+      );
+      return { status: 201, body: { absenceId } };
+    },
+  });
+
+  const cancelAbsence = sessionRoute({
+    method: 'DELETE',
+    path: '/approval-absences/:absenceId',
+    body: noBody,
+    permission: 'approval.decide',
+    handler: async ({ params, session }) => {
+      const absenceId = uuidSchema.safeParse(params.absenceId);
+      if (!absenceId.success) {
+        throw new HttpError(400, 'invalid_request', 'The approval absence id is invalid.');
+      }
+      await userRpc.call(
+        'cancel_approval_absence',
+        { p_absence: absenceId.data },
+        session.accessToken,
+      );
+      return { status: 204 };
+    },
+  });
+
+  const reassignmentOptions = sessionRoute({
+    method: 'GET',
+    path: '/approval-requests/:requestId/reassignment-options',
+    body: noBody,
+    permission: 'member.manage',
+    handler: async ({ params, session }) => {
+      const requestId = uuidSchema.safeParse(params.requestId);
+      if (!requestId.success) {
+        throw new HttpError(400, 'invalid_request', 'The approval request id is invalid.');
+      }
+      return {
+        body: approvalReassignmentOptionsSchema.parse(
+          await userRpc.call(
+            'approval_reassignment_options',
+            { p_request: requestId.data },
+            session.accessToken,
+          ),
+        ),
+      };
+    },
+  });
+
+  const reassign = sessionRoute({
+    method: 'POST',
+    path: '/approval-requests/:requestId/reassignments',
+    body: approvalReassignmentBodySchema,
+    permission: 'member.manage',
+    handler: async ({ params, body, session }) => {
+      const requestId = uuidSchema.safeParse(params.requestId);
+      if (!requestId.success) {
+        throw new HttpError(400, 'invalid_request', 'The approval request id is invalid.');
+      }
+      await userRpc.call(
+        'reassign_approval_approver',
+        {
+          p_request: requestId.data,
+          p_from: body.fromMembershipId,
+          p_to: body.toMembershipId,
+        },
+        session.accessToken,
+      );
+      return { status: 204 };
+    },
+  });
+
+  return [
+    status,
+    request,
+    decide,
+    configure,
+    readAbsences,
+    setAbsence,
+    cancelAbsence,
+    reassignmentOptions,
+    reassign,
+  ];
 }
 
 export function mountApprovalRoutes(

@@ -10,8 +10,12 @@ export { daysUntil, formatCloseCountdown } from './countdown';
 export { dealFilesResponseSchema, fileUploadResponseSchema } from './files';
 export {
   dashboardSummarySchema,
+  approvalAbsenceBodySchema,
+  approvalAbsencesResponseSchema,
   approvalDecisionBodySchema,
   approvalPolicyBodySchema,
+  approvalReassignmentBodySchema,
+  approvalReassignmentOptionsSchema,
   approvalRequestBodySchema,
   dealApprovalStatusSchema,
   createDealBodySchema,
@@ -31,6 +35,8 @@ export {
 } from './deals';
 export type {
   DashboardSummary,
+  ApprovalAbsence,
+  ApprovalReassignmentOptions,
   DealApprovalStatus,
   CreateDealBody,
   Deal,

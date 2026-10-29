@@ -1,5 +1,5 @@
 import type { DealApprovalStatus } from '@dpt/shared';
-import { render, screen, waitFor } from '@testing-library/react';
+import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
@@ -47,6 +47,8 @@ const approvalStatus = {
   canRequest: false,
   canDecide: false,
   canConfigure: false,
+  canManageAbsence: false,
+  canReassign: false,
 };
 
 afterEach(() => vi.unstubAllGlobals());
@@ -232,6 +234,166 @@ describe('DealDetail', () => {
     );
   });
 
+  it('schedules and cancels the signed-in approver’s own absence', async () => {
+    const absenceId = 'dddddddd-0000-4000-8000-000000000001';
+    let absence: {
+      id: string;
+      startsAt: string;
+      endsAt: string;
+      active: boolean;
+    } | null = null;
+    const status = { ...approvalStatus, canManageAbsence: true };
+    const fetch = vi.fn<(input: RequestInfo | URL, init?: RequestInit) => Promise<Response>>(
+      async (input, init) => {
+        const url = input instanceof Request ? input.url : String(input);
+        if (url === '/api/auth/session') {
+          return new Response(
+            JSON.stringify({
+              csrfToken: 'csrf-test',
+              user: {
+                id: 'cccccccc-0000-4000-8000-000000000001',
+                email: 'person@example.test',
+                fullName: 'Test User',
+              },
+              tenantId: 'cccccccc-0000-4000-8000-000000000002',
+            }),
+            { status: 200, headers: { 'Content-Type': 'application/json' } },
+          );
+        }
+        if (url === '/api/approval-absences' && init?.method === 'POST') {
+          absence = {
+            id: absenceId,
+            startsAt: new Date('2027-03-01T09:00').toISOString(),
+            endsAt: new Date('2027-03-03T17:00').toISOString(),
+            active: false,
+          };
+          return new Response(JSON.stringify({ absenceId }), {
+            status: 201,
+            headers: { 'Content-Type': 'application/json' },
+          });
+        }
+        if (url === `/api/approval-absences/${absenceId}` && init?.method === 'DELETE') {
+          absence = null;
+          return new Response(null, { status: 204 });
+        }
+        const body = url.endsWith('/activity')
+          ? activity
+          : url.endsWith('/approval')
+            ? status
+            : url === '/api/approval-absences'
+              ? absence
+                ? [absence]
+                : []
+              : deal;
+        return new Response(JSON.stringify(body), {
+          status: 200,
+          headers: { 'Content-Type': 'application/json' },
+        });
+      },
+    );
+    vi.stubGlobal('fetch', fetch);
+    const user = userEvent.setup();
+
+    render(<DealDetail dealId={dealId} />);
+    const startsAt = await screen.findByLabelText('Starts');
+    const endsAt = screen.getByLabelText('Ends');
+    fireEvent.change(startsAt, { target: { value: '2027-03-01T09:00' } });
+    fireEvent.change(endsAt, { target: { value: '2027-03-03T17:00' } });
+    await user.click(screen.getByRole('button', { name: 'Schedule absence' }));
+
+    expect(await screen.findByText(/Upcoming/)).toBeVisible();
+    const expectedStartsAt = new Date('2027-03-01T09:00').toISOString();
+    const expectedEndsAt = new Date('2027-03-03T17:00').toISOString();
+    expect(fetch).toHaveBeenCalledWith(
+      '/api/approval-absences',
+      expect.objectContaining({
+        method: 'POST',
+        body: JSON.stringify({ startsAt: expectedStartsAt, endsAt: expectedEndsAt }),
+      }),
+    );
+
+    await user.click(screen.getByRole('button', { name: 'Cancel absence' }));
+    await waitFor(() =>
+      expect(screen.queryByRole('button', { name: 'Cancel absence' })).not.toBeInTheDocument(),
+    );
+    expect(fetch).toHaveBeenCalledWith(
+      `/api/approval-absences/${absenceId}`,
+      expect.objectContaining({ method: 'DELETE' }),
+    );
+  });
+
+  it('lets a tenant manager reassign an unavailable approval slot from the deal panel', async () => {
+    const requestId = 'bbbbbbbb-0000-4000-8000-000000000003';
+    const unavailableMemberId = 'dddddddd-0000-4000-8000-000000000001';
+    const replacementMemberId = 'dddddddd-0000-4000-8000-000000000002';
+    let reassigned = false;
+    const options = {
+      unavailableApprovers: [{ membershipId: unavailableMemberId, displayName: 'Unavailable IC' }],
+      eligibleReplacements: [{ membershipId: replacementMemberId, displayName: 'Replacement IC' }],
+    };
+    const status: DealApprovalStatus = {
+      ...approvalStatus,
+      requestId,
+      status: 'pending',
+      requiredApprovals: 2,
+      configuredApprovals: 2,
+      canReassign: true,
+    };
+    const fetch = vi.fn<(input: RequestInfo | URL, init?: RequestInit) => Promise<Response>>(
+      async (input, init) => {
+        const url = input instanceof Request ? input.url : String(input);
+        if (url === '/api/auth/session') {
+          return new Response(
+            JSON.stringify({
+              csrfToken: 'csrf-test',
+              user: {
+                id: 'cccccccc-0000-4000-8000-000000000001',
+                email: 'person@example.test',
+                fullName: 'Test User',
+              },
+              tenantId: 'cccccccc-0000-4000-8000-000000000002',
+            }),
+            { status: 200, headers: { 'Content-Type': 'application/json' } },
+          );
+        }
+        if (url.endsWith('/reassignments') && init?.method === 'POST') {
+          reassigned = true;
+          return new Response(null, { status: 204 });
+        }
+        const body = url.endsWith('/activity')
+          ? activity
+          : url.endsWith('/approval')
+            ? { ...status, canReassign: !reassigned }
+            : url.endsWith('/reassignment-options')
+              ? options
+              : deal;
+        return new Response(JSON.stringify(body), {
+          status: 200,
+          headers: { 'Content-Type': 'application/json' },
+        });
+      },
+    );
+    vi.stubGlobal('fetch', fetch);
+    const user = userEvent.setup();
+
+    render(<DealDetail dealId={dealId} />);
+    await user.click(await screen.findByRole('button', { name: 'Reassign approver' }));
+
+    await waitFor(() =>
+      expect(screen.queryByRole('button', { name: 'Reassign approver' })).not.toBeInTheDocument(),
+    );
+    expect(fetch).toHaveBeenCalledWith(
+      `/api/approval-requests/${requestId}/reassignments`,
+      expect.objectContaining({
+        method: 'POST',
+        body: JSON.stringify({
+          fromMembershipId: unavailableMemberId,
+          toMembershipId: replacementMemberId,
+        }),
+      }),
+    );
+  });
+
   it('configures quorum and lets an assigned IC member reject with a reason', async () => {
     const icDeal = { ...deal, stage: 'ic_review' as const };
     let status: DealApprovalStatus = {
@@ -244,6 +406,8 @@ describe('DealDetail', () => {
       pendingCount: 1,
       canDecide: true,
       canConfigure: true,
+      canManageAbsence: false,
+      canReassign: false,
     };
     const fetch = vi.fn<(input: RequestInfo | URL, init?: RequestInit) => Promise<Response>>(
       async (input, init) => {
@@ -318,6 +482,8 @@ describe('DealDetail', () => {
     const configurableStatus: DealApprovalStatus = {
       ...approvalStatus,
       canConfigure: true,
+      canManageAbsence: false,
+      canReassign: false,
     };
     vi.stubGlobal(
       'fetch',

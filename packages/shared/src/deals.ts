@@ -207,6 +207,39 @@ export const approvalPolicyBodySchema = z.strictObject({
   requiredApprovals: z.number().int().min(1).max(50),
 });
 
+export const approvalAbsenceBodySchema = z
+  .strictObject({
+    startsAt: z.iso.datetime({ offset: true }),
+    endsAt: z.iso.datetime({ offset: true }),
+  })
+  .refine(({ startsAt, endsAt }) => Date.parse(endsAt) > Date.parse(startsAt), {
+    path: ['endsAt'],
+    message: 'The end time must be after the start time.',
+  });
+
+export const approvalAbsencesResponseSchema = z.array(
+  z.strictObject({
+    id: z.uuid(),
+    startsAt: z.iso.datetime({ offset: true }),
+    endsAt: z.iso.datetime({ offset: true }),
+    active: z.boolean(),
+  }),
+);
+
+export const approvalReassignmentOptionsSchema = z.strictObject({
+  unavailableApprovers: z.array(
+    z.strictObject({ membershipId: z.uuid(), displayName: z.string().nullable() }),
+  ),
+  eligibleReplacements: z.array(
+    z.strictObject({ membershipId: z.uuid(), displayName: z.string().nullable() }),
+  ),
+});
+
+export const approvalReassignmentBodySchema = z.strictObject({
+  fromMembershipId: z.uuid(),
+  toMembershipId: z.uuid(),
+});
+
 export const dealApprovalStatusSchema = z.strictObject({
   requestId: z.uuid().nullable(),
   status: z.enum(['pending', 'approved', 'rejected']).nullable(),
@@ -219,6 +252,8 @@ export const dealApprovalStatusSchema = z.strictObject({
   canRequest: z.boolean(),
   canDecide: z.boolean(),
   canConfigure: z.boolean(),
+  canManageAbsence: z.boolean(),
+  canReassign: z.boolean(),
 });
 
 export type DealAssignee = z.infer<typeof dealAssigneeSchema>;
@@ -234,3 +269,5 @@ export type DealAssigneesResponse = z.infer<typeof dealAssigneesResponseSchema>;
 export type DealListQuery = z.infer<typeof dealListQuerySchema>;
 export type DealListResponse = z.infer<typeof dealListResponseSchema>;
 export type DealApprovalStatus = z.infer<typeof dealApprovalStatusSchema>;
+export type ApprovalAbsence = z.infer<typeof approvalAbsencesResponseSchema>[number];
+export type ApprovalReassignmentOptions = z.infer<typeof approvalReassignmentOptionsSchema>;
