@@ -62,6 +62,15 @@ function formatDate(value: string): string {
   );
 }
 
+function formatExpectedClose(date: string, time: string | null): string {
+  const formattedDate = new Intl.DateTimeFormat('en-ZA', {
+    dateStyle: 'medium',
+    timeZone: 'UTC',
+  }).format(new Date(`${date}T00:00:00.000Z`));
+  const formattedTime = time?.slice(0, 5);
+  return formattedTime ? `${formattedDate} at ${formattedTime}` : formattedDate;
+}
+
 export function DealDetail({ dealId }: DealDetailProps) {
   const noteId = useId();
   const quorumId = useId();
@@ -346,8 +355,9 @@ export function DealDetail({ dealId }: DealDetailProps) {
           <div>
             <dt className="text-sm text-fg-muted">Expected close</dt>
             <dd>
-              {deal.expected_close_date ?? 'Not set'}
-              {deal.expected_close_time ? ` at ${deal.expected_close_time.slice(0, 5)}` : ''}
+              {deal.expected_close_date
+                ? formatExpectedClose(deal.expected_close_date, deal.expected_close_time)
+                : 'Not set'}
             </dd>
           </div>
           <div>
@@ -651,7 +661,11 @@ export function DealDetail({ dealId }: DealDetailProps) {
             {activity.events.map((item) => (
               <li className="material-card p-4" key={item.id}>
                 <p className="font-medium">
-                  {item.kind === 'note' ? 'Note' : item.kind.replaceAll('_', ' ')}
+                  {item.kind === 'note'
+                    ? 'Note'
+                    : item.kind === 'closing_soon_alert'
+                      ? 'Closing soon alert'
+                      : item.kind.replaceAll('_', ' ')}
                 </p>
                 <p className="mt-2 whitespace-pre-wrap">
                   {formatActivityBody(item.kind, item.body)}

@@ -90,6 +90,17 @@ function harness(tenantId: string | null = 'cccccccc-0000-4000-8000-000000000001
               created_at: '2026-10-28T10:00:00+00:00',
               amends_event_id: null,
             },
+            {
+              seq: '899',
+              id: 'bbbbbbbb-0000-4000-8000-000000000003',
+              kind: 'closing_soon_alert',
+              body: '{"closeDate":"2026-11-02","thresholdDays":5,"recipients":[]}',
+              actor_id: null,
+              actor_name: 'System',
+              actor_email: 'system',
+              created_at: '2026-10-28T09:00:00+00:00',
+              amends_event_id: null,
+            },
           ],
           hasMore: false,
           integrityOk: true,
@@ -441,7 +452,10 @@ describe('deal assignment routes', () => {
     );
     expect(response.status).toBe(200);
     expect(await response.json()).toMatchObject({
-      events: [{ seq: '9007199254740993', actorId: USER, body: 'Plain text note' }],
+      events: [
+        { seq: '9007199254740993', actorId: USER, body: 'Plain text note' },
+        { kind: 'closing_soon_alert', actorId: null, actorEmail: 'system' },
+      ],
       hasMore: false,
       integrityOk: true,
     });

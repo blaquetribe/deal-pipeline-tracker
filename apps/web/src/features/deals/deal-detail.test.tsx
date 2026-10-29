@@ -75,6 +75,7 @@ describe('DealDetail', () => {
     expect(screen.getByText('Activity integrity verified')).toBeVisible();
     expect(screen.getByText('Initial diligence started.')).toBeVisible();
     expect(screen.getByText(/R 1 250 000,75/)).toBeVisible();
+    expect(screen.getByText('31 Mar 2027 at 15:30')).toBeVisible();
     expect(screen.getByText(/cannot be edited or deleted/)).toBeVisible();
   });
 

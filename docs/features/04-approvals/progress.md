@@ -1,7 +1,7 @@
 # 04 Approvals: progress
 
-Status: in progress (IC gate, absence/reassignment, scoped delegation, quorum alerts, personal delegation controls, custom role editor, and 24-hour IC SLA escalation implemented; gates beyond IC are outside the approved scope)
-Owner/branch: codex/feature-04-ic-sla-escalation
+Status: done within the owner-approved scope (IC gate and notification-only SLA escalation; gates beyond IC are out of scope)
+Owner/branch: main
 Depends on: 03
 
 ## Goal
@@ -54,4 +54,5 @@ Dated notes: what changed, what was learned, problems.
 ## Deviations / debt
 Anything that differs from the plan or is deferred (also mirror in README "next steps").
 - Out of agreed scope: approval gates beyond IC review. Current unavailable slots can be reassigned when an eligible member exists; otherwise requests remain pending and fail closed. Quorum alerts are hourly and in-app only. SLA alerts are one-time and in-app after 24 hours; no email escalation or repeat reminders are implemented.
-- 2026-10-29: the owner chose to keep approvals on the IC gate and add SLA escalation there only. ADR 0024 records a 24-hour pending threshold, hourly scan, one-time recipient dedupe, and notification-only behavior. Migration 31 adds a scheduler-owned scanner that notifies active undecided approvers (including valid delegates), the requester, and active Owners/Admins. Shared notification validation and distinct notification-bell wording are covered. Local `test-db` passes 605 pgTAP assertions across 30 files; focused shared and UI tests pass (9). Full Vitest and coverage pass (648 passed, 1 skipped; 85.04% branches), as do typecheck, lint, stylelint, format, build, and `make env-check`. PR CI remains before merge.
+- 2026-10-29: the owner chose to keep approvals on the IC gate and add SLA escalation there only. ADR 0024 records a 24-hour pending threshold, hourly scan, one-time recipient dedupe, and notification-only behavior. Migration 31 adds a scheduler-owned scanner that notifies active undecided approvers (including valid delegates), the requester, and active Owners/Admins. Shared notification validation and distinct notification-bell wording are covered. Local `test-db` passes 605 pgTAP assertions across 30 files; focused shared and UI tests pass (9). Full Vitest and coverage pass (648 passed, 1 skipped; 85.04% branches), as do typecheck, lint, stylelint, format, build, and `make env-check`. PR #33 merged after all required checks passed.
+- 2026-10-29: PR #33 merged after all required checks passed. The owner-approved IC-only approval scope is complete; other pipeline-stage gates remain out of scope.
