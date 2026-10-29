@@ -162,7 +162,7 @@ export function NotificationBell() {
         {announcement}
       </span>
       {toast ? (
-        <aside className="border-border fixed inset-x-4 bottom-4 z-30 flex max-w-lg items-start justify-between gap-4 rounded-panel border bg-surface-raised p-4 shadow-lg sm:inset-x-auto sm:end-4">
+        <aside className="material-glass-strong fixed inset-x-4 bottom-4 z-30 flex max-w-lg items-start justify-between gap-4 rounded-panel p-4 sm:inset-x-auto sm:end-4">
           <div>
             <p className="text-sm text-fg-muted">
               {toast.kind === 'closing_soon' ? 'Closing soon alert' : 'Approval alert'}
@@ -192,7 +192,7 @@ export function NotificationBell() {
         <section
           id="notification-panel"
           aria-label="Notifications"
-          className="border-border absolute start-0 end-0 z-20 mt-2 w-[min(24rem,calc(100vw-3rem))] rounded-panel border bg-surface-raised p-4 shadow-lg sm:start-auto"
+          className="material-glass-strong absolute start-0 end-0 z-20 mt-2 w-[min(24rem,calc(100vw-3rem))] rounded-panel p-4 sm:start-auto"
         >
           <div className="flex items-center justify-between gap-3">
             <h2 className="text-lg font-semibold">Notifications</h2>

@@ -15,6 +15,7 @@ import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import { useEffect, useId, useRef, useState, type FormEvent } from 'react';
 
+import { PageHeading } from '../shell/page-heading';
 import { sessionRead, sessionRequest } from './api';
 import { PendingInvitations } from './pending-invitations';
 import { SignOutButton } from './sign-out-button';
@@ -247,13 +248,12 @@ export function Onboarding() {
 
   return (
     <section className="material-card mx-auto max-w-2xl p-6 sm:p-8">
-      <header className="flex flex-wrap items-start justify-between gap-4">
-        <div>
-          <p className="text-sm font-medium text-brand-fg">Deal Pipeline Tracker</p>
-          <h1 className="mt-3 text-3xl font-semibold tracking-tight">Set up your account</h1>
-        </div>
-        <SignOutButton />
-      </header>
+      <PageHeading
+        action={<SignOutButton />}
+        eyebrow="Deal Pipeline Tracker"
+        spacing="compact"
+        title="Set up your account"
+      />
       {error && (
         <p
           className="mt-4 rounded-control border border-danger/40 bg-danger-soft p-3 text-sm text-danger-fg"
