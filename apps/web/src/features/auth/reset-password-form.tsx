@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useId, useState, type FormEvent } from 'react';
 
+import { Button } from '../ui/button';
 import { authRequest } from './api';
 
 export function ResetPasswordForm({ token }: { readonly token: string | null }) {
@@ -73,20 +74,12 @@ export function ResetPasswordForm({ token }: { readonly token: string | null }) 
           Use at least 12 characters. Password managers and paste are welcome.
         </p>
       </div>
-      <button
-        className="w-full rounded-control bg-brand px-4 py-2 font-medium text-fg-on-brand hover:bg-brand-hover focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus disabled:cursor-wait disabled:opacity-60"
-        disabled={pending}
-        type="submit"
-      >
+      <Button className="w-full" disabled={pending} variant="primary" type="submit">
         {pending ? 'Updating…' : 'Set new password'}
-      </button>
-      <button
-        className="text-sm text-brand-fg underline underline-offset-4"
-        onClick={() => router.push('/login')}
-        type="button"
-      >
+      </Button>
+      <Button className="mt-2" onClick={() => router.push('/login')} type="button" variant="quiet">
         Back to sign in
-      </button>
+      </Button>
     </form>
   );
 }

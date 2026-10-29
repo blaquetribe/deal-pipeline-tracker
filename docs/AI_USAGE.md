@@ -10,6 +10,12 @@ Running log feeding the README reflection required by the brief. Add an entry pe
 - **What went wrong or was surprising:**
 
 ## Entries
+### 2026-10-29 / UI pass: shared button variants
+- **What Codex did:** added a typed native-button wrapper with primary, secondary, quiet, and danger intents plus compact sizing, styled from the existing DoorSprint-derived light/dark tokens, and migrated sign-in, registration, password recovery, verification resend, and sign-out actions. Captured the current sign-in screen as UI evidence and updated ADR 0023.
+- **What the human decided or corrected:** continued the project-wide DoorSprint-informed UI pass before the final walkthrough presentation; preserve the existing app architecture and accessible native behavior.
+- **How it was verified:** web typecheck, Stylelint, formatter, and `git diff --check` pass. The current Next development build was inspected at `/login`; screenshot evidence was marked in the browser. Tests were not run in this slice.
+- **What went wrong or was surprising:** the open port 8080 browser tab was an older signed-out Compose build, while port 3001 was not running. Starting the checked-out app locally on port 3000 gave a reliable visual QA target.
+
 ### 2026-10-29 / Feature 04 custom role editor
 - **What Codex did:** added a tenant-scoped role catalog and atomic custom-role create/edit function, with permission catalog validation, role/member SoD checks, and append-only audit events. Added shared contracts, caller-JWT API routes, a protected `/roles` editor, and invitation role choices sourced from the tenant catalog. Recorded the decision in ADR 0022.
 - **What the human decided or corrected:** continued after PR #22 was merged and asked to keep this work focused on the project; a separate screenshot follow-up was not part of this task.

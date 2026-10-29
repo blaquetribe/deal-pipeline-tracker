@@ -3,6 +3,7 @@
 import { resetRequestBodySchema } from '@dpt/shared';
 import { useId, useState, type FormEvent } from 'react';
 
+import { Button } from '../ui/button';
 import { authRequest } from './api';
 
 export function ResetRequestForm() {
@@ -59,13 +60,9 @@ export function ResetRequestForm() {
           type="email"
         />
       </div>
-      <button
-        className="w-full rounded-control bg-brand px-4 py-2 font-medium text-fg-on-brand hover:bg-brand-hover focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus disabled:cursor-wait disabled:opacity-60"
-        disabled={pending}
-        type="submit"
-      >
+      <Button className="w-full" disabled={pending} variant="primary" type="submit">
         {pending ? 'Sending…' : 'Send reset link'}
-      </button>
+      </Button>
     </form>
   );
 }
