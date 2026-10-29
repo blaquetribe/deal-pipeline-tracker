@@ -145,7 +145,7 @@ select ok(exists (select 1 from public.approval_request_approvers a
 select throws_ok(format($$select public.decide_approval(%L, 'approve', null, %L)$$,
   (select id from approval_delegation_ids where key = 'request'),
   (select id from approval_delegation_ids where key = 'ic-one')),
-  '23505', 'approval decision already recorded by this member', 'delegate cannot cast another vote for the same request');
+  '23505', 'approval decision already recorded', 'delegate cannot cast another vote for the same request');
 select set_config('request.jwt.claims', '{"sub":"31313131-0000-4000-8000-000000000001"}', true);
 select throws_ok($$select public.configure_approval_policy('31313131-0000-4000-8000-00000000000a', 2, false)$$,
   'DP422', 'cannot change delegation while approvals are pending', 'Owner cannot disable delegation mid-request');

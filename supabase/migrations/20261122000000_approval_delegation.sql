@@ -399,15 +399,15 @@ begin
       and absence.cancelled_at is null and absence.starts_at <= now() and absence.ends_at > now()) then
     raise exception 'approver is absent' using errcode = 'DP422';
   end if;
+  if exists (select 1 from public.approval_request_approvers a
+    where a.tenant_id = r.tenant_id and a.request_id = r.id
+      and a.decision is not null and a.decided_by_membership_id = v_actor) then
+    raise exception 'approval decision already recorded' using errcode = '23505';
+  end if;
   perform 1 from public.approval_request_approvers a
     where a.tenant_id = r.tenant_id and a.request_id = r.id and a.membership_id = v_slot
       and a.decision is null and a.superseded_by is null for update;
   if not found then raise exception 'permission denied' using errcode = '42501'; end if;
-  if exists (select 1 from public.approval_request_approvers a
-    where a.tenant_id = r.tenant_id and a.request_id = r.id
-      and a.decision is not null and a.decided_by_membership_id = v_actor) then
-    raise exception 'approval decision already recorded by this member' using errcode = '23505';
-  end if;
   if d.stage <> 'ic_review' then raise exception 'deal is not at IC review' using errcode = 'DP422'; end if;
   update public.approval_request_approvers set decision = p_decision,
     decision_reason = nullif(p_reason, ''), decided_at = now(), decided_by_membership_id = v_actor
