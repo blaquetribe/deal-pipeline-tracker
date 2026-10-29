@@ -60,6 +60,7 @@ describe('api app', () => {
         createUser: vi.fn<
           (...args: [{ email: string; password: string; fullName: string }]) => Promise<'exists'>
         >(async () => 'exists'),
+        ensureDemoUser: async () => undefined,
         setPassword: vi.fn<(...args: [string, string]) => Promise<void>>(async () => undefined),
       },
       sessions: {

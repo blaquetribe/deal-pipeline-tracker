@@ -1,3 +1,3 @@
--- Development seed data. Applied by the `migrate` service when SEED_DEV_DATA=true.
--- MUST be idempotent (safe to run on every start). Empty until feature 06 adds realistic data.
--- Seed users are created through the auth admin API by a script, not by SQL.
+-- User identities are created through GoTrue's admin API by the internal `demo-seed` service.
+-- That service then invokes public.seed_demo_data() using the restricted api_service role.
+-- Keep this file empty: the database seed function is versioned as a migration and checksummed.

@@ -70,9 +70,9 @@ select set_config('request.jwt.claims', '{}', true);
 update public.deals set expected_close_date = current_date + 4 where id = '23232323-0000-4000-8000-0000000000d1';
 insert into public.deal_assignees (tenant_id, deal_id, user_id, role) values
   ('23232323-0000-4000-8000-00000000000a', '23232323-0000-4000-8000-0000000000d1', '23232323-0000-4000-8000-000000000001', 'owner');
-select is(public.scan_closing_soon((current_date::timestamp + time '12:00') at time zone 'Africa/Johannesburg'), 1,
+select is(public.scan_closing_soon(now()), 1,
   'first scan creates one due five-day alert');
-select is(public.scan_closing_soon((current_date::timestamp + time '12:00') at time zone 'Africa/Johannesburg'), 0,
+select is(public.scan_closing_soon(now()), 0,
   'repeated scan creates no duplicate notification');
 select is((select count(*) from public.deal_events where deal_id = '23232323-0000-4000-8000-0000000000d1'
   and kind = 'closing_soon_alert' and actor_kind = 'system' and actor_id is null), 1::bigint,

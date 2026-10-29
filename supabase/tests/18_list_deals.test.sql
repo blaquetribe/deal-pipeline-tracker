@@ -22,7 +22,7 @@ insert into public.memberships (tenant_id, user_id) values
   ('13131313-0000-4000-8000-00000000000b', '12121212-0000-4000-8000-000000000002');
 insert into public.membership_roles (tenant_id, membership_id, role_id)
 select m.tenant_id, m.id, r.id from public.memberships m join public.roles r on r.tenant_id = m.tenant_id
-where r.key = 'deal_lead';
+where r.key = 'deal_lead' and m.tenant_id in ('13131313-0000-4000-8000-00000000000a', '13131313-0000-4000-8000-00000000000b');
 create temporary table deal_list_ids (full_id uuid, bare_id uuid);
 grant all on deal_list_ids to public;
 set local role authenticated;

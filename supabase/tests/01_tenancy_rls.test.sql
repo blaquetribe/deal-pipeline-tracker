@@ -67,7 +67,8 @@ select app.seed_system_roles(id) from public.tenants
 where id in ('bbbbbbbb-0000-4000-8000-00000000000a', 'bbbbbbbb-0000-4000-8000-00000000000b');
 insert into public.membership_roles (tenant_id, membership_id, role_id)
 select m.tenant_id, m.id, r.id from public.memberships m
-join public.roles r on r.tenant_id = m.tenant_id and r.key = 'observer_compliance';
+join public.roles r on r.tenant_id = m.tenant_id and r.key = 'observer_compliance'
+where m.tenant_id in ('bbbbbbbb-0000-4000-8000-00000000000a', 'bbbbbbbb-0000-4000-8000-00000000000b');
 insert into public.deals (id, tenant_id, name) values
   ('cccccccc-0000-4000-8000-0000000000da', 'bbbbbbbb-0000-4000-8000-00000000000a', 'Deal A'),
   ('cccccccc-0000-4000-8000-0000000000db', 'bbbbbbbb-0000-4000-8000-00000000000b', 'Deal B');

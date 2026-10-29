@@ -153,6 +153,135 @@ describe('refresh and logout', () => {
 });
 
 describe('admin operations (ADR 0016)', () => {
+  it('rejects invalid development account identifiers before making an admin request', async () => {
+    const { gotrue, seen } = harness(() => ok({}));
+    await expect(
+      gotrue.ensureDemoUser({
+        userId: 'invalid',
+        email: 'owner@asteron.example.test',
+        password: 'DptDemoPass-2026-local',
+        fullName: 'Amara Ndlovu',
+      }),
+    ).rejects.toBeInstanceOf(GoTrueError);
+    await expect(
+      gotrue.ensureDemoUser({
+        userId: '22222222-2222-4222-8222-222222222222',
+        email: 'not-an-email',
+        password: 'DptDemoPass-2026-local',
+        fullName: 'Amara Ndlovu',
+      }),
+    ).rejects.toBeInstanceOf(GoTrueError);
+    expect(seen).toHaveLength(0);
+  });
+
+  it('creates a confirmed development user at a stable id', async () => {
+    const id = '22222222-2222-4222-8222-222222222222';
+    const { gotrue, seen } = harness(() => ok({ id, email: 'owner@asteron.example.test' }));
+    await gotrue.ensureDemoUser({
+      userId: id,
+      email: 'owner@asteron.example.test',
+      password: 'DptDemoPass-2026-local',
+      fullName: 'Amara Ndlovu',
+    });
+    expect(seen[0]).toMatchObject({
+      url: 'http://gw:8000/auth/v1/admin/users',
+      method: 'POST',
+      body: {
+        id,
+        email: 'owner@asteron.example.test',
+        email_confirm: true,
+        user_metadata: { full_name: 'Amara Ndlovu' },
+      },
+    });
+    expect(claimsOf(seen[0]?.headers['Authorization'])).toMatchObject({
+      role: 'service_role',
+      exp: 1_800_000_030,
+    });
+  });
+
+  it('repairs an existing development account only when its stable id and email match', async () => {
+    const id = '22222222-2222-4222-8222-222222222222';
+    const { gotrue, seen } = harness((request) => {
+      if (request.method === 'POST') return err(422, 'email_exists');
+      if (request.method === 'GET') return ok({ id, email: 'owner@asteron.example.test' });
+      return new Response(null, { status: 204 });
+    });
+    await expect(
+      gotrue.ensureDemoUser({
+        userId: id,
+        email: 'owner@asteron.example.test',
+        password: 'DptDemoPass-2026-local',
+        fullName: 'Amara Ndlovu',
+      }),
+    ).resolves.toBeUndefined();
+    expect(seen.map(({ method }) => method)).toEqual(['POST', 'GET', 'PUT']);
+    expect(seen[1]?.url).toBe(`http://gw:8000/auth/v1/admin/users/${id}`);
+    expect(seen[2]?.body).toMatchObject({
+      password: 'DptDemoPass-2026-local',
+      email_confirm: true,
+      user_metadata: { full_name: 'Amara Ndlovu' },
+    });
+  });
+
+  it('does not repair a conflicting email or mismatched account identity', async () => {
+    const id = '22222222-2222-4222-8222-222222222222';
+    const { gotrue, seen } = harness((request) => {
+      if (request.method === 'POST') return err(422, 'email_exists');
+      return ok({ id, email: 'someone-else@example.test' });
+    });
+    await expect(
+      gotrue.ensureDemoUser({
+        userId: id,
+        email: 'owner@asteron.example.test',
+        password: 'DptDemoPass-2026-local',
+        fullName: 'Amara Ndlovu',
+      }),
+    ).rejects.toBeInstanceOf(GoTrueError);
+    expect(seen.map(({ method }) => method)).toEqual(['POST', 'GET']);
+  });
+
+  it('fails closed when account creation is rejected or returns an unexpected identity', async () => {
+    const input = {
+      userId: '22222222-2222-4222-8222-222222222222',
+      email: 'owner@asteron.example.test',
+      password: 'DptDemoPass-2026-local',
+      fullName: 'Amara Ndlovu',
+    };
+    await expect(
+      harness(() => err(500, 'unexpected_failure')).gotrue.ensureDemoUser(input),
+    ).rejects.toBeInstanceOf(GoTrueError);
+    await expect(
+      harness(() => ok({ id: '33333333-3333-4333-8333-333333333333' })).gotrue.ensureDemoUser(
+        input,
+      ),
+    ).rejects.toBeInstanceOf(GoTrueError);
+  });
+
+  it('rejects an unusable existing account and reports failed password repair generically', async () => {
+    const input = {
+      userId: '22222222-2222-4222-8222-222222222222',
+      email: 'owner@asteron.example.test',
+      password: 'DptDemoPass-2026-local',
+      fullName: 'Amara Ndlovu',
+    };
+    const missing = harness((request) =>
+      request.method === 'POST' ? err(422, 'email_exists') : new Response(null, { status: 404 }),
+    );
+    await expect(missing.gotrue.ensureDemoUser(input)).rejects.toBeInstanceOf(GoTrueError);
+    const malformed = harness((request) =>
+      request.method === 'POST'
+        ? err(422, 'email_exists')
+        : ok({ id: input.userId, email: 'not-an-email' }),
+    );
+    await expect(malformed.gotrue.ensureDemoUser(input)).rejects.toBeInstanceOf(GoTrueError);
+    const failedUpdate = harness((request) => {
+      if (request.method === 'POST') return err(422, 'email_exists');
+      if (request.method === 'GET') return ok({ id: input.userId, email: input.email });
+      return err(500, 'unexpected_failure');
+    });
+    await expect(failedUpdate.gotrue.ensureDemoUser(input)).rejects.toBeInstanceOf(GoTrueError);
+  });
+
   it('creates an unconfirmed user with a 30 second service_role token', async () => {
     const { gotrue, seen } = harness(() =>
       ok({ id: '22222222-2222-4222-8222-222222222222', email: 'new@example.test' }),
