@@ -201,10 +201,12 @@ export const approvalRequestBodySchema = z.strictObject({
 export const approvalDecisionBodySchema = z.strictObject({
   decision: z.enum(['approve', 'reject']),
   reason: z.string().trim().min(1).max(2000).optional(),
+  onBehalfOfMembershipId: z.uuid().optional(),
 });
 
 export const approvalPolicyBodySchema = z.strictObject({
   requiredApprovals: z.number().int().min(1).max(50),
+  delegationEnabled: z.boolean().optional(),
 });
 
 export const approvalAbsenceBodySchema = z
@@ -224,6 +226,35 @@ export const approvalAbsencesResponseSchema = z.array(
     endsAt: z.iso.datetime({ offset: true }),
     active: z.boolean(),
   }),
+);
+
+export const approvalDelegationBodySchema = z
+  .strictObject({
+    delegateMembershipId: z.uuid(),
+    startsAt: z.iso.datetime({ offset: true }),
+    endsAt: z.iso.datetime({ offset: true }),
+  })
+  .refine(({ startsAt, endsAt }) => Date.parse(endsAt) > Date.parse(startsAt), {
+    path: ['endsAt'],
+    message: 'The end time must be after the start time.',
+  });
+
+export const approvalDelegationsResponseSchema = z.array(
+  z.strictObject({
+    id: z.uuid(),
+    delegatorMembershipId: z.uuid(),
+    delegatorName: z.string().nullable(),
+    delegateMembershipId: z.uuid(),
+    delegateName: z.string().nullable(),
+    startsAt: z.iso.datetime({ offset: true }),
+    endsAt: z.iso.datetime({ offset: true }),
+    active: z.boolean(),
+    canCancel: z.boolean(),
+  }),
+);
+
+export const approvalDelegateOptionsSchema = z.array(
+  z.strictObject({ membershipId: z.uuid(), displayName: z.string().nullable() }),
 );
 
 export const approvalReassignmentOptionsSchema = z.strictObject({
@@ -249,6 +280,9 @@ export const dealApprovalStatusSchema = z.strictObject({
   pendingCount: z.number().int().nonnegative(),
   rejectedCount: z.number().int().nonnegative(),
   currentUserDecision: z.enum(['approve', 'reject']).nullable(),
+  delegatedSlots: z.array(
+    z.strictObject({ membershipId: z.uuid(), displayName: z.string().nullable() }),
+  ),
   canRequest: z.boolean(),
   canDecide: z.boolean(),
   canConfigure: z.boolean(),
@@ -270,4 +304,5 @@ export type DealListQuery = z.infer<typeof dealListQuerySchema>;
 export type DealListResponse = z.infer<typeof dealListResponseSchema>;
 export type DealApprovalStatus = z.infer<typeof dealApprovalStatusSchema>;
 export type ApprovalAbsence = z.infer<typeof approvalAbsencesResponseSchema>[number];
+export type ApprovalDelegation = z.infer<typeof approvalDelegationsResponseSchema>[number];
 export type ApprovalReassignmentOptions = z.infer<typeof approvalReassignmentOptionsSchema>;

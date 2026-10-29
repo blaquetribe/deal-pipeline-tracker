@@ -2,6 +2,9 @@ import {
   approvalAbsenceBodySchema,
   approvalAbsencesResponseSchema,
   approvalDecisionBodySchema,
+  approvalDelegateOptionsSchema,
+  approvalDelegationBodySchema,
+  approvalDelegationsResponseSchema,
   approvalPolicyBodySchema,
   approvalReassignmentBodySchema,
   approvalReassignmentOptionsSchema,
@@ -78,6 +81,7 @@ export function createApprovalRoutes({ userRpc }: ApprovalRoutesOptions): Route[
             p_request: requestId.data,
             p_decision: body.decision,
             p_reason: body.reason ?? null,
+            p_on_behalf_of: body.onBehalfOfMembershipId ?? null,
           },
           session.accessToken,
         ),
@@ -99,11 +103,12 @@ export function createApprovalRoutes({ userRpc }: ApprovalRoutesOptions): Route[
           'Choose an organisation to configure approvals.',
         );
       }
-      await userRpc.call(
-        'configure_approval_policy',
-        { p_tenant: session.tenantId, p_required_approvals: body.requiredApprovals },
-        session.accessToken,
-      );
+      const args: Record<string, unknown> = {
+        p_tenant: session.tenantId,
+        p_required_approvals: body.requiredApprovals,
+      };
+      if (body.delegationEnabled !== undefined) args.p_delegation_enabled = body.delegationEnabled;
+      await userRpc.call('configure_approval_policy', args, session.accessToken);
       return { status: 204 };
     },
   });
@@ -176,6 +181,103 @@ export function createApprovalRoutes({ userRpc }: ApprovalRoutesOptions): Route[
     },
   });
 
+  const readDelegations = sessionRoute({
+    method: 'GET',
+    path: '/approval-delegations',
+    body: noBody,
+    permission: 'approval.decide',
+    handler: async ({ session }) => {
+      if (!session.tenantId) {
+        throw new HttpError(
+          409,
+          'tenant_required',
+          'Choose an organisation to manage approval delegations.',
+        );
+      }
+      return {
+        body: approvalDelegationsResponseSchema.parse(
+          await userRpc.call(
+            'my_approval_delegations',
+            { p_tenant: session.tenantId },
+            session.accessToken,
+          ),
+        ),
+      };
+    },
+  });
+
+  const delegateOptions = sessionRoute({
+    method: 'GET',
+    path: '/approval-delegation-options',
+    body: noBody,
+    permission: 'approval.decide',
+    handler: async ({ session }) => {
+      if (!session.tenantId) {
+        throw new HttpError(
+          409,
+          'tenant_required',
+          'Choose an organisation to manage approval delegations.',
+        );
+      }
+      return {
+        body: approvalDelegateOptionsSchema.parse(
+          await userRpc.call(
+            'eligible_approval_delegates',
+            { p_tenant: session.tenantId },
+            session.accessToken,
+          ),
+        ),
+      };
+    },
+  });
+
+  const setDelegation = sessionRoute({
+    method: 'POST',
+    path: '/approval-delegations',
+    body: approvalDelegationBodySchema,
+    permission: 'approval.decide',
+    handler: async ({ body, session }) => {
+      if (!session.tenantId) {
+        throw new HttpError(
+          409,
+          'tenant_required',
+          'Choose an organisation to manage approval delegations.',
+        );
+      }
+      const delegationId = uuidSchema.parse(
+        await userRpc.call(
+          'set_approval_delegation',
+          {
+            p_tenant: session.tenantId,
+            p_delegate: body.delegateMembershipId,
+            p_starts_at: body.startsAt,
+            p_ends_at: body.endsAt,
+          },
+          session.accessToken,
+        ),
+      );
+      return { status: 201, body: { delegationId } };
+    },
+  });
+
+  const cancelDelegation = sessionRoute({
+    method: 'DELETE',
+    path: '/approval-delegations/:delegationId',
+    body: noBody,
+    permission: 'approval.decide',
+    handler: async ({ params, session }) => {
+      const delegationId = uuidSchema.safeParse(params.delegationId);
+      if (!delegationId.success)
+        throw new HttpError(400, 'invalid_request', 'The approval delegation id is invalid.');
+      await userRpc.call(
+        'cancel_approval_delegation',
+        { p_delegation: delegationId.data },
+        session.accessToken,
+      );
+      return { status: 204 };
+    },
+  });
+
   const reassignmentOptions = sessionRoute({
     method: 'GET',
     path: '/approval-requests/:requestId/reassignment-options',
@@ -229,6 +331,10 @@ export function createApprovalRoutes({ userRpc }: ApprovalRoutesOptions): Route[
     readAbsences,
     setAbsence,
     cancelAbsence,
+    readDelegations,
+    delegateOptions,
+    setDelegation,
+    cancelDelegation,
     reassignmentOptions,
     reassign,
   ];

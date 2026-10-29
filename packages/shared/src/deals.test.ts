@@ -6,6 +6,7 @@ import {
   approvalAbsenceBodySchema,
   approvalAbsencesResponseSchema,
   approvalDecisionBodySchema,
+  approvalDelegationBodySchema,
   approvalPolicyBodySchema,
   approvalRequestBodySchema,
   approvalReassignmentBodySchema,
@@ -281,6 +282,26 @@ describe('approval schemas', () => {
     expect(approvalPolicyBodySchema.parse({ requiredApprovals: 2 })).toEqual({
       requiredApprovals: 2,
     });
+    expect(
+      approvalDecisionBodySchema.parse({ decision: 'approve', onBehalfOfMembershipId: userA }),
+    ).toEqual({ decision: 'approve', onBehalfOfMembershipId: userA });
+    expect(
+      approvalPolicyBodySchema.parse({ requiredApprovals: 2, delegationEnabled: true }),
+    ).toEqual({ requiredApprovals: 2, delegationEnabled: true });
+    expect(
+      approvalDelegationBodySchema.parse({
+        delegateMembershipId: userA,
+        startsAt: '2027-03-01T09:00:00Z',
+        endsAt: '2027-03-02T09:00:00Z',
+      }).delegateMembershipId,
+    ).toBe(userA);
+    expect(() =>
+      approvalDelegationBodySchema.parse({
+        delegateMembershipId: userA,
+        startsAt: '2027-03-02T09:00:00Z',
+        endsAt: '2027-03-01T09:00:00Z',
+      }),
+    ).toThrow(/end time/);
     expect(() => approvalDecisionBodySchema.parse({ decision: 'abstain' })).toThrow(/decision/);
     expect(() => approvalRequestBodySchema.parse({ expectedVersion: 0 })).toThrow(
       /expectedVersion/,
@@ -303,6 +324,7 @@ describe('approval schemas', () => {
       pendingCount: 0,
       rejectedCount: 0,
       currentUserDecision: null,
+      delegatedSlots: [],
       canRequest: false,
       canDecide: false,
       canConfigure: true,
