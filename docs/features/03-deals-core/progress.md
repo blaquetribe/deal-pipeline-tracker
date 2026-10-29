@@ -1,7 +1,7 @@
 # 03 Deals core: progress
 
-Status: in progress (deal create/list/stage/assignment/update/detail/activity/notes and closing-soon dashboard are implemented; server alerts depend on features 02 and 05)
-Owner/branch: feat/02-api-auth (continuing the existing working tree; do not branch-reset or replace)
+Status: done (core deal flows, closing-soon dashboard, and server-side alerts are implemented)
+Owner/branch: main
 Depends on: 01, 02
 
 ## Goal
@@ -29,7 +29,7 @@ Key decisions, schema/API shape, links to ADRs.
 - [x] Tenant-authorized detail and activity APIs; exact bigint sequence cursors; append-only note API and UI; visible integrity result and accessible ordered timeline.
 - [x] Bounded activity pagination with exact bigint cursors.
 - [x] Tenant-local 60-day closing-soon summary, per-currency open pipeline totals, stage counts, and live countdown with day/minute-aligned refreshes and clock-skew correction.
-- [ ] Server-side closing alerts and delivery (owned across feature 02 mail and feature 05 realtime; see `closing-soon.md`).
+- [x] Server-side closing alerts and delivery through the Feature 02 mailer and Feature 05 realtime path (see `closing-soon.md` and `docs/features/05-realtime/progress.md`).
 - [x] Progress and handoff docs updated for this slice.
 
 ## Tests
@@ -56,4 +56,5 @@ Anything that differs from the plan or is deferred (also mirror in README "next 
 
 - 2026-10-28 (later): Added strict optimistic deal updates, SQL NULL guards for stage/update version checks, tenant-scoped deal detail and activity reads, session-gated APIs, and a detail page with exact money display, integrity cue, ordered event timeline, append-only note composer and bounded older-event pagination. Preserved the applied migration checksum by moving exact bigint cursor serialization to migration 13. Vitest passes 445 tests; typecheck, lint, stylelint, format check, build, pgTAP (396 assertions/20 files) and compose smoke pass. Captured the authenticated detail page with a saved test note. Kanban drag-and-drop remains deferred; keep the keyboard move control and target smooth 60 fps if implemented.
 - 2026-10-28 (later): Added a database-authorized dashboard summary for per-stage counts, per-currency open pipeline totals and tenant-local closing dates. The browser shows a 60-day closing-soon list, timezone-aware countdown chips, and minute/midnight-aligned updates using the API's server clock. Vitest passes 450 tests; typecheck, lint, stylelint, format check and build pass; pgTAP passes 408 assertions across 21 files. Server alert delivery remains with feature 02/05 dependencies.
+- 2026-10-29: Feature 05 delivered the hourly closing-soon scan, idempotent in-app alerts, realtime delivery, and grouped email digest. PR #15 merged after all required CI checks passed. Alert recipient preferences, absence/delegation handling, and presence remain documented follow-up scope.
 - 2026-10-28 (later): Coverage follow-up adds API route, dashboard, detail and money edge-state tests without changing the deal UI or database. The suite now passes 502 tests and global branch coverage meets the gate at 85.04%. Existing dashboard evidence remains applicable because this follow-up only changes tests and API error mapping.

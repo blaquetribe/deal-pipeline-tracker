@@ -1,6 +1,6 @@
 # Closing soon: the countdown and the alerts
 
-Status: countdown and dashboard summary implemented; server-side alert delivery remains planned across features 02 and 05. Owner decisions confirmed 2026-10-26. Decision record: [ADR 0011](../../decisions/0011-closing-soon-countdown-and-alert.md).
+Status: countdown, dashboard summary, and core server-side alert delivery implemented. Owner decisions confirmed 2026-10-26. Decision record: [ADR 0011](../../decisions/0011-closing-soon-countdown-and-alert.md). Recipient preferences and absence/delegation remain follow-up scope.
 Owners: feature 03 (date maths, countdown UI), feature 05 (realtime delivery), feature 02 (Mailer).
 
 **Requirement:** "closing soon" shows a real countdown, including **hours on the final day**. When a deal reaches **5 days** (and **1 day**, and when it becomes **overdue**) from its expected closing date, the **team and the person assigned** are notified, by an in-app notification and by email that uses the **deal details and a link to the deal**.
@@ -48,7 +48,7 @@ Always text on a chip; an urgent style (tokens, plus icon) at 5 days or fewer an
 - **5-day and 1-day:** notify when the tenant-local date is on or after `expected_close_date - threshold` and no alert exists for that deal, close date and threshold. `on or after` (not "equals") means deals created or rescheduled inside the window, and missed runs, still alert exactly once.
 - **Overdue:** notify once when `now >= close_at`, where `close_at` is the close time on the close date, or the start of the next day when no time is set.
 
-**Scheduler:** a SQL function `scan_closing_soon(now)` (`SECURITY DEFINER`, revoked from PUBLIC) runs **hourly**, judging each tenant on its own local time, so an overdue alert can arrive up to an hour late (accepted). Run it with `pg_cron` (**verified available**: `pg_cron` 1.6.4 is in the Supabase Postgres 17.6 image and preloaded; enable it in a migration), otherwise a timer in the BFF guarded by `pg_try_advisory_lock` so several API instances never double-run it.
+**Scheduler (implemented):** `scan_closing_soon(now)` runs hourly through `pg_cron`, judging each tenant on its own local time. An overdue alert can arrive up to an hour late, as accepted. The migration enables and schedules the job.
 
 **Idempotent by construction:** `notifications.dedupe_key` is unique.
 - 5-day and 1-day: `closing:{deal}:{close_date}:{d5|d1}`. Editing only the close time does not duplicate them. Moving to a different date re-arms them.
@@ -85,6 +85,8 @@ Close date today, past or edited; time set later, earlier or removed; deal creat
 - **Parity:** TypeScript `daysUntil` and `timeLeft` against SQL on shared fixtures.
 - **Realtime:** the recipient's socket receives it; another tenant's does not.
 - **Email:** digest groups per recipient; subject has no deal data; body has the details and the correct link built from config; content escaped; `not_before` respected.
+
+Core alert scan, dedupe, notification authorization, realtime delivery, and email outbox behavior are covered by `supabase/tests/23_notifications.test.sql`, API/email Vitest coverage, and the full compose smoke. Active recipients are deal assignees, falling back to active Owner/Admin when there are none; Owner/Admin preferences, broader tenant-wide recipients, and delegation-aware delivery are not implemented.
 
 ## Decisions confirmed by the owner (2026-10-26)
 1. "The team" = the deal's assignees and team members, with the Owner/Admin fallback.

@@ -1,7 +1,7 @@
 -- Feature 01, slice 1: tenant isolation, forced RLS and write privileges on the core tables.
 -- Written before the migration (tests first): every assertion fails until the schema exists.
 begin;
-select plan(21);
+select plan(22);
 
 -- Structure -----------------------------------------------------------------------------------
 select has_table('public', 'tenants', 'tenants exists');
@@ -49,6 +49,13 @@ select is(
       and (has_function_privilege('anon', p.oid, 'EXECUTE') or has_function_privilege('public', p.oid, 'EXECUTE'))),
   0::bigint,
   'no function in public is executable by PUBLIC or anon'
+);
+select is(
+  (select count(*) from pg_proc p join pg_namespace n on n.oid = p.pronamespace
+    where n.nspname = 'app'
+      and (has_function_privilege('anon', p.oid, 'EXECUTE') or has_function_privilege('public', p.oid, 'EXECUTE'))),
+  0::bigint,
+  'no helper function in app is executable by PUBLIC or anon'
 );
 
 -- Fixtures (as the superuser running the tests): two tenants, one deal and one note each ----------
