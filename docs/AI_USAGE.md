@@ -10,6 +10,12 @@ Running log feeding the README reflection required by the brief. Add an entry pe
 - **What went wrong or was surprising:**
 
 ## Entries
+### 2026-10-29 / Human-readable deal assignment activity
+- **What Codex did:** restored the formatter for legacy assignee-change activity entries, summarizing role counts while hiding raw user IDs and JSON. The append-only event ledger is unchanged.
+- **What the human decided or corrected:** earlier reported that assignment changes were not human readable and asked to continue the project; requested the DoorSprint-informed styling pass and walkthrough presentation after product work is finished.
+- **How it was verified:** four formatter tests and the focused deal detail suite (17 tests total) pass, along with web typecheck, lint, and format checks. The merged Board view has full local and CI checks passing. The app stack is refreshed, but the current browser session cannot load authenticated deal data, so visual review remains pending.
+- **What went wrong or was surprising:** the saved formatter was in a stash created on an older branch, so current handoff and progress documents needed reconciliation during restoration.
+
 ### 2026-10-29 / Cross-instance auth refresh coordination
 - **What Codex did:** added a short hashed refresh lease per session in Postgres, updated the API resolver to claim and complete rotation only under that lease, and made competing API instances wait for the committed tokens. Disabled the old uncoordinated token-write RPC for `api_service`.
 - **What the human decided or corrected:** asked to finish product work before the styling pass and final presentation; required every PR check to pass before merging.
