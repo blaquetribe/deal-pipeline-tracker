@@ -100,6 +100,22 @@ export interface Route {
   mount(app: Hono, deps: HttpDeps): void;
 }
 
+export interface StreamSessionContext {
+  readonly params: Record<string, string>;
+  readonly query: URLSearchParams;
+  readonly requestId: string;
+  readonly session: Session;
+  readonly body: ReadableStream<Uint8Array> | null;
+}
+
+export interface StreamSessionRouteDef {
+  readonly method: 'GET' | 'POST' | 'PUT';
+  readonly path: string;
+  readonly permission: string;
+  readonly maxBytes: number;
+  handler(ctx: StreamSessionContext): Promise<Response>;
+}
+
 const MAX_BODY_BYTES = 64 * 1024;
 
 export function cookieName(secure: boolean): string {
@@ -287,6 +303,81 @@ export function sessionRoute<B = undefined>(def: SessionRouteDef<B>): Route {
           throw new HttpError(401, 'unauthenticated', 'Sign in to continue.');
         }
         return def.handler({ ...ctx, session });
+      });
+    },
+  };
+}
+
+/** Authenticated raw-body route for bounded uploads; it never parses or buffers the request body. */
+export function streamSessionRoute(def: StreamSessionRouteDef): Route {
+  return {
+    method: def.method,
+    path: def.path,
+    access: 'session',
+    permission: def.permission,
+    mount: (app, deps) => {
+      app.on(def.method, def.path, async (c) => {
+        const requestId = c.req.header('x-request-id') ?? crypto.randomUUID();
+        c.header('X-Request-Id', requestId);
+        try {
+          const unsafe = def.method !== 'GET';
+          if (unsafe && !originOk(c, deps.appOrigin)) {
+            return fail(
+              c,
+              new HttpError(403, 'bad_origin', 'This request did not come from the application.'),
+            );
+          }
+          const sessionId = getCookie(c, cookieName(deps.cookieSecure));
+          const session = sessionId ? await deps.resolver.resolve(sessionId) : null;
+          if (!session)
+            return fail(c, new HttpError(401, 'unauthenticated', 'Sign in to continue.'));
+          if (unsafe && !safeEqual(c.req.header('x-csrf-token') ?? '', session.csrfToken)) {
+            return fail(
+              c,
+              new HttpError(
+                403,
+                'bad_csrf',
+                'The request could not be verified. Reload and try again.',
+              ),
+            );
+          }
+          const length = Number(c.req.header('content-length'));
+          if (Number.isFinite(length) && length > def.maxBytes) {
+            return fail(c, new HttpError(413, 'payload_too_large', 'The file is too large.'));
+          }
+          const body =
+            c.req.raw.body?.pipeThrough(
+              new TransformStream<Uint8Array, Uint8Array>({
+                transform(chunk, controller) {
+                  total += chunk.byteLength;
+                  if (total > def.maxBytes)
+                    throw new HttpError(413, 'payload_too_large', 'The file is too large.');
+                  controller.enqueue(chunk);
+                },
+              }),
+            ) ?? null;
+          let total = 0;
+          const response = await def.handler({
+            params: c.req.param(),
+            query: new URL(c.req.url).searchParams,
+            requestId,
+            session,
+            body,
+          });
+          response.headers.set('Cache-Control', 'no-store');
+          response.headers.set('X-Request-Id', requestId);
+          return response;
+        } catch (error) {
+          const mapped = toHttpError(error);
+          if (mapped.status >= 500)
+            deps.logger.error('request failed', {
+              requestId,
+              method: def.method,
+              path: def.path,
+              error: error instanceof Error ? error.name : 'unknown',
+            });
+          return fail(c, mapped);
+        }
       });
     },
   };

@@ -87,6 +87,16 @@ services:
     image: dpt-api:local
     environment:
       PORT: '3001'
+      DEPLOYMENT_ENV: development
+      OBJECT_STORE_DRIVER: '${OBJECT_STORE_DRIVER:-fs}'
+      STORAGE_DIRECTORY: /var/lib/dpt/files
+      STORAGE_ENDPOINT: '${STORAGE_ENDPOINT:-http://rustfs:9000}'
+      STORAGE_REGION: '${STORAGE_REGION:-auto}'
+      STORAGE_BUCKET: '${STORAGE_BUCKET:-deal-pipeline-tracker}'
+      STORAGE_KEY_PREFIX: '${STORAGE_KEY_PREFIX:-Dev/}'
+      STORAGE_FORCE_PATH_STYLE: '${STORAGE_FORCE_PATH_STYLE:-true}'
+      STORAGE_ACCESS_KEY_ID: '${STORAGE_ACCESS_KEY_ID:-}'
+      STORAGE_SECRET_ACCESS_KEY: '${STORAGE_SECRET_ACCESS_KEY:-}'
       # The BFF is the only client of Supabase (reached over the internal network only).
       SUPABASE_URL: http://supabase-gateway:8000
       JWT_SECRET: *jwt-secret
@@ -100,6 +110,8 @@ services:
       SMTP_PASS: '${SMTP_PASS:-}'
       MAIL_FROM: no-reply@dpt.local
     tmpfs: [/tmp]
+    volumes:
+      - file-data:/var/lib/dpt/files
     networks: [edge, internal]
     expose: ['3001']
     depends_on:
@@ -350,3 +362,4 @@ networks:
 volumes:
   db-data: {}
   db-config: {}
+  file-data: {}

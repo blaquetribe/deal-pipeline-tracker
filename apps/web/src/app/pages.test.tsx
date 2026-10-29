@@ -21,6 +21,7 @@ vi.mock('../features/auth', () => ({
   ),
   LoginForm: () => <p>Login form</p>,
   Onboarding: () => <p>Onboarding form</p>,
+  ProfileAvatar: () => null,
   ResendForm: () => <p>Resend form</p>,
   ResetPasswordForm: ({ token }: { token: string | null }) => (
     <p>Reset token: {token ?? 'missing'}</p>

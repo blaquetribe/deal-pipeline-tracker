@@ -15,6 +15,7 @@ import {
   readDealApprovalStatus,
   requestDealApproval,
 } from './api';
+import { DealFiles } from './deal-files';
 import { formatMinorAmount } from './money';
 
 async function loadDealData(dealId: string) {
@@ -367,6 +368,8 @@ export function DealDetail({ dealId }: DealDetailProps) {
           ) : null}
         </section>
       ) : null}
+
+      <DealFiles dealId={dealId} />
 
       <section aria-labelledby="activity-title">
         <div className="flex flex-wrap items-center justify-between gap-3">

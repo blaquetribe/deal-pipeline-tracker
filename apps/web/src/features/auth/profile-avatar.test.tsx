@@ -1,0 +1,48 @@
+import { fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
+
+const mocks = vi.hoisted(() => ({ read: vi.fn<() => Promise<unknown>>() }));
+vi.mock('./api', () => ({ sessionRead: mocks.read }));
+
+import { ProfileAvatar } from './profile-avatar';
+
+const session = {
+  user: {
+    id: 'aaaaaaaa-0000-4000-8000-000000000001',
+    email: 'person@example.test',
+    fullName: 'Tara Example',
+  },
+  tenantId: 'bbbbbbbb-0000-4000-8000-000000000001',
+  csrfToken: 'csrf-test',
+};
+
+describe('ProfileAvatar', () => {
+  beforeEach(() => {
+    mocks.read.mockReset();
+    mocks.read.mockResolvedValue(session);
+  });
+
+  it('uses initials and uploads an image with the session CSRF token', async () => {
+    const fetch = vi.fn<(input: RequestInfo | URL, init?: RequestInit) => Promise<Response>>(
+      async () =>
+        new Response(JSON.stringify({ fileId: 'cccccccc-0000-4000-8000-000000000001' }), {
+          status: 201,
+        }),
+    );
+    vi.stubGlobal('fetch', fetch);
+    render(<ProfileAvatar />);
+    expect(await screen.findByText('TE')).toBeVisible();
+    const image = new File(['image bytes'], 'avatar.png', { type: 'image/png' });
+    fireEvent.change(screen.getByLabelText('Update photo'), { target: { files: [image] } });
+    await waitFor(() =>
+      expect(fetch).toHaveBeenCalledWith(
+        '/api/files/avatar',
+        expect.objectContaining({
+          headers: { 'X-CSRF-Token': 'csrf-test', 'Content-Type': 'image/png' },
+          body: image,
+        }),
+      ),
+    );
+    expect(await screen.findByText('Profile photo updated.')).toBeVisible();
+  });
+});

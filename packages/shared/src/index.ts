@@ -7,6 +7,7 @@ export type { OnboardingFlow } from './onboarding';
 export { notificationListSchema, notificationSchema } from './notifications';
 export type { Notification } from './notifications';
 export { daysUntil, formatCloseCountdown } from './countdown';
+export { dealFilesResponseSchema, fileUploadResponseSchema } from './files';
 export {
   dashboardSummarySchema,
   approvalDecisionBodySchema,

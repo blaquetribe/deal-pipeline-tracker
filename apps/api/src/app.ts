@@ -4,15 +4,25 @@ import { secureHeaders } from 'hono/secure-headers';
 import { mountAuthRoutes, type AuthServiceOptions } from './auth/service';
 import { mountApprovalRoutes } from './features/approvals/routes';
 import { mountDealRoutes } from './features/deals/routes';
+import { createFileRoutes } from './features/files/routes';
 import { mountNotificationRoutes } from './features/notifications/routes';
 import { mountRealtimeRoutes, type RealtimeRoutesOptions } from './features/realtime/routes';
 import { createRateLimiter } from './http/rate-limit';
 import type { HttpDeps } from './http/route';
+import type { ObjectStore } from './storage/object-store';
 
 export interface AppOptions {
   readonly auth: AuthServiceOptions;
   readonly http: Omit<HttpDeps, 'limiter'> & { readonly limiter?: HttpDeps['limiter'] };
   readonly realtime?: RealtimeRoutesOptions;
+  readonly files?: {
+    readonly userRpc: {
+      call(name: string, args: Record<string, unknown>, bearer: string): Promise<unknown>;
+    };
+    readonly store: ObjectStore;
+    readonly keyPrefix: 'Dev/' | 'Prod/';
+    readonly tempDirectory: string;
+  };
 }
 
 export function createApp(options?: AppOptions): Hono {
@@ -44,6 +54,9 @@ export function createApp(options?: AppOptions): Hono {
     mountDealRoutes(app, httpDeps, { userRpc: options.auth.userRpc });
     mountApprovalRoutes(app, httpDeps, { userRpc: options.auth.userRpc });
     mountNotificationRoutes(app, httpDeps, { userRpc: options.auth.userRpc });
+    if (options.files) {
+      for (const route of createFileRoutes(options.files)) route.mount(app, httpDeps);
+    }
     if (options.realtime) mountRealtimeRoutes(app, httpDeps, options.realtime);
   }
 

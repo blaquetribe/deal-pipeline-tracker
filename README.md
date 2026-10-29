@@ -84,7 +84,7 @@ GitHub Actions runs the quality, database, image, security-scan, and Compose smo
 
 - Complete Feature 04 absence/reassignment and scoped delegation before claiming the approval workflow is complete. Until then, a deactivated or permission-revoked approver can leave a request pending, which intentionally blocks signing.
 - Add notification preference controls and absence/delegation-aware recipients. Decide how to handle the rare duplicate email after SMTP succeeds but outbox completion persistence fails. Presence remains deferred.
-- Add the Feature 08 Cloudflare R2 driver and avatar upload; the local file-backed store and generated initials remain the current path.
+- Run a real Cloudflare R2 smoke test with a dedicated bucket-scoped token; Feature 08's S3-compatible driver, local file store, BFF file routes, avatar upload, and initials fallback are implemented. Virus scanning and presigned URLs remain out of scope.
 - Add a custom role editor, SLA escalation notifications, and the optional document-extraction stretch feature if time allows.
 - Measure memory and disk use on Docker Desktop and verify the stack on both amd64 and arm64 hosts; local container verification to date has primarily used Podman on arm64.
 

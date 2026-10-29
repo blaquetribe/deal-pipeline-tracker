@@ -1,6 +1,6 @@
 # 08 Storage and avatars: progress
 
-Status: not started
+Status: in progress
 Owner/branch: feat/08-storage-avatars
 Depends on: 02, 03
 
@@ -15,14 +15,20 @@ Object storage behind one `ObjectStore` port (fs default, Cloudflare R2 via S3 A
 Config (ADR 0004 update): `OBJECT_STORE_DRIVER=fs|s3`, `STORAGE_ENDPOINT` (account endpoint, no bucket), `STORAGE_REGION` (`auto`, verify), `STORAGE_BUCKET=deal-pipeline-tracker`, `STORAGE_KEY_PREFIX=Dev/|Prod/`, `STORAGE_FORCE_PATH_STYLE`, `STORAGE_ACCESS_KEY_ID`, `STORAGE_SECRET_ACCESS_KEY`. Startup guard: prefix must match the environment. No public bucket URL. Needs a dedicated token (see HANDOFF).
 
 ## Tasks
-- [ ] Failing tests written (security/negative first)
-- [ ] Migration(s)
-- [ ] API
-- [ ] Web
-- [ ] Docs updated
+- [x] Failing tests written (security/negative first)
+- [x] Migration(s)
+- [x] API
+- [x] Web
+- [x] Docs updated
 
 ## Tests
 What is covered, where it lives, how to run it.
+
+- `supabase/tests/25_storage_files.test.sql`: RLS, tenant isolation, RPC grants, malformed paths, and stale-pending cleanup.
+- `apps/api/src/storage/*.test.ts`: filesystem safety/immutability, cleanup, and S3-compatible contract tests. The S3 test runs against RustFS when `STORAGE_TEST_*` is configured; CI now supplies a disposable RustFS service.
+- `apps/api/src/features/files/routes.test.ts`: upload validation, permission/session failures, response headers, and BFF download behavior.
+- `apps/web/src/features/auth/profile-avatar.test.tsx` and `apps/web/src/features/deals/deal-files.test.tsx`: avatar upload/fallback and attachment UI behavior.
+- Local checks on 2026-10-29: 588 Vitest tests pass (1 S3 integration test skipped without a local RustFS endpoint); coverage passes (85.72% global branches; 91.17% API branches), as do typecheck, lint, stylelint, format check, and production build. Isolated local pgTAP could not complete because the Podman API repeatedly returned unexpected EOF while starting the migration job; rerun in CI.
 
 ## Security checklist (from SECURITY_STANDARDS.md)
 - [ ] New tables have `tenant_id`, RLS enabled and forced, policies, tests for each role and cross-tenant.
@@ -35,6 +41,8 @@ What is covered, where it lives, how to run it.
 
 ## Log
 Dated notes: what changed, what was learned, problems.
+
+- 2026-10-29: Added the private tenant-scoped files table and narrow metadata RPCs, fs and S3 ObjectStore drivers, BFF streaming routes, image re-encoding, PDF attachments, stale/orphan cleanup, and profile/deal UI. Added RustFS-backed S3 contract coverage to CI. R2 credentials are not required for the S3-compatible implementation; a dedicated bucket token is still needed for a real Cloudflare R2 smoke test. Local pgTAP is blocked by repeat Podman API EOFs; all other local checks listed above pass. UI screenshot evidence is still pending because the app available in the browser is the prior build and Podman could not rebuild the stack.
 
 ## Deviations / debt
 Anything that differs from the plan or is deferred (also mirror in README "next steps").
