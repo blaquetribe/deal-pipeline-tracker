@@ -37,6 +37,15 @@ vi.mock('../features/deals', () => ({
   DealsDashboard: () => <p>Deals dashboard</p>,
 }));
 vi.mock('../features/roles', () => ({ RoleManagement: () => <p>Role management component</p> }));
+vi.mock('../features/shell', () => ({
+  AppHeader: () => (
+    <>
+      <nav aria-label="Primary navigation">Pipeline Roles</nav>
+      <button>Sign out</button>
+    </>
+  ),
+  PageHeading: ({ title }: { title: string }) => <h1>{title}</h1>,
+}));
 
 import AcceptInvitationPage from './accept-invitation/page';
 import CheckEmailPage from './check-email/page';
@@ -113,6 +122,6 @@ describe('Next page wrappers', () => {
     render(<RolesPage />);
     expect(screen.getByRole('heading', { name: 'Role management' })).toBeInTheDocument();
     expect(screen.getByText('Role management component')).toBeInTheDocument();
-    expect(screen.getByRole('link', { name: 'Back to pipeline' })).toHaveAttribute('href', '/');
+    expect(screen.getByRole('navigation', { name: 'Primary navigation' })).toBeInTheDocument();
   });
 });

@@ -12,6 +12,7 @@ import { useEffect, useId, useState } from 'react';
 import type { FormEvent } from 'react';
 
 import { StageBadge } from '../pipeline';
+import { PageHeading } from '../shell';
 import {
   configureDealApprovalPolicy,
   cancelApprovalAbsence,
@@ -291,7 +292,7 @@ export function DealDetail({ dealId }: DealDetailProps) {
   if (error) {
     return (
       <section aria-labelledby="deal-detail-title" className="mt-8">
-        <h1 className="text-2xl font-semibold" id="deal-detail-title">
+        <h1 className="text-3xl font-semibold tracking-tight" id="deal-detail-title">
           Deal details
         </h1>
         <p className="mt-4" role="alert">
@@ -317,21 +318,19 @@ export function DealDetail({ dealId }: DealDetailProps) {
   }
 
   return (
-    <div className="mt-8 space-y-8">
-      <header>
-        <Link className="text-sm text-fg-muted underline focus-visible:outline-2" href="/">
-          Back to deals
-        </Link>
-        <h1 className="mt-3 text-3xl font-semibold">{deal.name}</h1>
-        <div className="mt-3">
-          <StageBadge stage={deal.stage} />
-        </div>
-      </header>
+    <div className="space-y-8">
+      <PageHeading
+        className="mb-0"
+        eyebrow={
+          <Link className="text-sm text-fg-muted underline focus-visible:outline-2" href="/">
+            Back to deals
+          </Link>
+        }
+        title={deal.name}
+        action={<StageBadge stage={deal.stage} />}
+      />
 
-      <section
-        aria-labelledby="overview-title"
-        className="rounded-panel border border-line bg-surface-raised p-5"
-      >
+      <section aria-labelledby="overview-title" className="material-card p-5">
         <h2 className="text-xl font-semibold" id="overview-title">
           Overview
         </h2>
@@ -364,10 +363,7 @@ export function DealDetail({ dealId }: DealDetailProps) {
 
       {approval &&
       (deal.stage === 'ic_review' || approval.requestId !== null || approval.canManageAbsence) ? (
-        <section
-          aria-labelledby="approval-title"
-          className="rounded-panel border border-line bg-surface-raised p-5"
-        >
+        <section aria-labelledby="approval-title" className="material-card p-5">
           <h2 className="text-xl font-semibold" id="approval-title">
             IC approval
           </h2>
@@ -637,10 +633,7 @@ export function DealDetail({ dealId }: DealDetailProps) {
               : 'Activity integrity check failed'}
           </output>
         </div>
-        <form
-          className="mt-4 rounded-panel border border-line bg-surface-raised p-4"
-          onSubmit={(event) => void submitNote(event)}
-        >
+        <form className="material-card mt-4 p-4" onSubmit={(event) => void submitNote(event)}>
           <label className="mb-2 block text-sm font-medium" htmlFor={noteId}>
             Add a note
           </label>
@@ -672,7 +665,7 @@ export function DealDetail({ dealId }: DealDetailProps) {
         ) : (
           <ol className="mt-4 space-y-3">
             {activity.events.map((item) => (
-              <li className="rounded-panel border border-line bg-surface-raised p-4" key={item.id}>
+              <li className="material-card p-4" key={item.id}>
                 <p className="font-medium">
                   {item.kind === 'note' ? 'Note' : item.kind.replaceAll('_', ' ')}
                 </p>

@@ -333,7 +333,7 @@ export function DealsDashboard() {
         ) : summary ? (
           <div aria-busy={false} className="space-y-4">
             <div className="grid gap-3 sm:grid-cols-2">
-              <article className="rounded-panel border border-line bg-surface-raised p-4">
+              <article className="material-card p-4">
                 <h4 className="text-sm text-fg-muted">Open pipeline value</h4>
                 <ul className="mt-2 space-y-1 font-semibold tabular-nums">
                   {summary.totalsByCurrency.length ? (
@@ -347,7 +347,7 @@ export function DealsDashboard() {
                   )}
                 </ul>
               </article>
-              <article className="rounded-panel border border-line bg-surface-raised p-4">
+              <article className="material-card p-4">
                 <h4 className="text-sm text-fg-muted">Closing soon</h4>
                 <p className="mt-2 text-2xl font-semibold">{summary.closingSoonCount}</p>
                 <p className="text-sm text-fg-muted">
@@ -356,10 +356,7 @@ export function DealsDashboard() {
               </article>
             </div>
             <div className="grid gap-4 lg:grid-cols-2">
-              <section
-                aria-labelledby="stage-overview-title"
-                className="rounded-panel border border-line bg-surface-raised p-4"
-              >
+              <section aria-labelledby="stage-overview-title" className="material-card p-4">
                 <h4 className="font-semibold" id="stage-overview-title">
                   Deals by stage
                 </h4>
@@ -372,10 +369,7 @@ export function DealsDashboard() {
                   ))}
                 </ul>
               </section>
-              <section
-                aria-labelledby="closing-soon-title"
-                className="rounded-panel border border-line bg-surface-raised p-4"
-              >
+              <section aria-labelledby="closing-soon-title" className="material-card p-4">
                 <h4 className="font-semibold" id="closing-soon-title">
                   Closing soon
                 </h4>
@@ -439,7 +433,7 @@ export function DealsDashboard() {
         )}
       </section>
 
-      <div className="mt-6 flex flex-wrap items-end justify-between gap-4 rounded-panel border border-line bg-surface-raised p-4">
+      <div className="material-card mt-6 flex flex-wrap items-end justify-between gap-4 p-4">
         <form className="flex min-w-64 flex-1 flex-wrap items-end gap-3" onSubmit={applySearch}>
           <div className="min-w-52 flex-1">
             <label className="mb-1 block text-sm font-medium" htmlFor={searchId}>
@@ -483,10 +477,7 @@ export function DealsDashboard() {
         </div>
       </div>
 
-      <details
-        className="mt-4 rounded-panel border border-line bg-surface-raised p-4"
-        ref={createForm}
-      >
+      <details className="material-card mt-4 p-4" ref={createForm}>
         <summary className="cursor-pointer font-semibold outline-focus focus-visible:outline-2">
           New deal
         </summary>
@@ -595,7 +586,7 @@ export function DealsDashboard() {
       )}
 
       {!error && !loading && result?.items.length === 0 && (
-        <div className="mt-4 rounded-panel border border-line bg-surface-raised p-8 text-center">
+        <div className="material-card mt-4 p-8 text-center">
           <h3 className="font-semibold">No deals found</h3>
           <p className="mt-2 text-sm text-fg-muted">
             {appliedSearch || stage
@@ -606,10 +597,7 @@ export function DealsDashboard() {
       )}
 
       {result && result.items.length > 0 && (
-        <div
-          aria-busy={loading}
-          className="mt-4 overflow-x-auto rounded-panel border border-line bg-surface-raised"
-        >
+        <div aria-busy={loading} className="material-card mt-4 overflow-x-auto">
           <table className="w-full min-w-[68rem] border-collapse text-left text-sm">
             <caption className="sr-only">Deals in the active organisation</caption>
             <thead className="border-b border-line text-fg-muted">

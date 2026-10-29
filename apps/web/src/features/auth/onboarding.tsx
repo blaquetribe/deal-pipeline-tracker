@@ -250,7 +250,7 @@ export function Onboarding() {
       <header className="flex flex-wrap items-start justify-between gap-4">
         <div>
           <p className="text-sm font-medium text-brand-fg">Deal Pipeline Tracker</p>
-          <h1 className="mt-3 text-2xl font-semibold">Set up your account</h1>
+          <h1 className="mt-3 text-3xl font-semibold tracking-tight">Set up your account</h1>
         </div>
         <SignOutButton />
       </header>
