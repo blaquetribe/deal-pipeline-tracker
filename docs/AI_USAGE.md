@@ -10,6 +10,12 @@ Running log feeding the README reflection required by the brief. Add an entry pe
 - **What went wrong or was surprising:**
 
 ## Entries
+### 2026-10-29 / UI pass: onboarding and invitation buttons
+- **What Codex did:** migrated onboarding progression, skip, invitation creation, invitation acceptance/revocation, and email verification actions to the shared `Button` component. Primary progression and submit actions use the primary variant, while skip/cancel or revoke actions use secondary or danger variants.
+- **What the human decided or corrected:** continue the requested UI consistency pass before beginning the final walkthrough presentation.
+- **How it was verified:** web typecheck, lint, Stylelint, formatting, `git diff --check`, and production build pass. The pre-push hook and GitHub CI will run Vitest and database/container checks.
+- **What went wrong or was surprising:** after this migration, the remaining production native buttons are confined to the shared wrapper; other raw button tags are test fixtures.
+
 ### 2026-10-29 / UI pass: deal workflow buttons
 - **What Codex did:** migrated deal list search/create/move/edit/pagination, deal-detail approval/absence/reassignment/note actions, attachment toggling, and delegation schedule/revoke actions to the shared button variants. Approval rejection and delegation revocation use the danger intent; consequential workflow logic remains unchanged.
 - **What the human decided or corrected:** keep the project UI pass moving in reviewable slices and preserve the planned presentation as the final implementation task.

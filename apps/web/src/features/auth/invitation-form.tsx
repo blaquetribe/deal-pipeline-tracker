@@ -8,6 +8,7 @@ import {
 } from '@dpt/shared';
 import { useEffect, useId, useState, type FormEvent } from 'react';
 
+import { Button } from '../ui/button';
 import { ApiClientError, authRequest, sessionRequest } from './api';
 import { LoginForm } from './login-form';
 
@@ -165,13 +166,9 @@ export function InvitationForm({ token }: { readonly token: string | null }) {
               Use at least 12 characters. Password managers and paste are welcome.
             </p>
           </div>
-          <button
-            className="w-full rounded-control bg-brand px-4 py-2 font-medium text-fg-on-brand hover:bg-brand-hover focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus disabled:cursor-wait disabled:opacity-60"
-            disabled={pending}
-            type="submit"
-          >
+          <Button className="w-full" disabled={pending} type="submit" variant="primary">
             {pending ? 'Accepting invitation…' : 'Create account and accept'}
-          </button>
+          </Button>
         </form>
       )}
     </div>

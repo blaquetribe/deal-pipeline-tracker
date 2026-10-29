@@ -4,6 +4,7 @@ import { tokenSchema } from '@dpt/shared';
 import Link from 'next/link';
 import { useState } from 'react';
 
+import { Button } from '../ui/button';
 import { authRequest } from './api';
 
 export function VerifyEmail({ token }: { readonly token: string | null }) {
@@ -57,14 +58,9 @@ export function VerifyEmail({ token }: { readonly token: string | null }) {
               {error}
             </p>
           )}
-          <button
-            className="rounded-control bg-brand px-4 py-2 font-medium text-fg-on-brand hover:bg-brand-hover focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus disabled:cursor-wait disabled:opacity-60"
-            disabled={pending}
-            onClick={confirm}
-            type="button"
-          >
+          <Button disabled={pending} onClick={confirm} type="button" variant="primary">
             {pending ? 'Verifying…' : 'Verify email'}
-          </button>
+          </Button>
         </>
       )}
     </div>

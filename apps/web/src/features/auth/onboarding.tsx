@@ -16,6 +16,7 @@ import { usePathname, useRouter } from 'next/navigation';
 import { useEffect, useId, useRef, useState, type FormEvent } from 'react';
 
 import { PageHeading } from '../shell/page-heading';
+import { Button } from '../ui/button';
 import { sessionRead, sessionRequest } from './api';
 import { PendingInvitations } from './pending-invitations';
 import { SignOutButton } from './sign-out-button';
@@ -345,13 +346,9 @@ export function Onboarding() {
                   type="text"
                 />
               </div>
-              <button
-                className="rounded-control bg-brand px-4 py-2 font-medium text-fg-on-brand hover:bg-brand-hover disabled:opacity-60"
-                disabled={pending}
-                type="submit"
-              >
+              <Button disabled={pending} type="submit" variant="primary">
                 {pending ? 'Saving…' : 'Save and continue'}
-              </button>
+              </Button>
             </form>
           )}
           {step.current_step === 'organisation' && (
@@ -416,13 +413,9 @@ export function Onboarding() {
                   type="text"
                 />
               </div>
-              <button
-                className="rounded-control bg-brand px-4 py-2 font-medium text-fg-on-brand hover:bg-brand-hover disabled:opacity-60"
-                disabled={pending}
-                type="submit"
-              >
+              <Button disabled={pending} type="submit" variant="primary">
                 {pending ? 'Creating…' : 'Create organisation'}
-              </button>
+              </Button>
             </form>
           )}
           {step.current_step === 'defaults' && (
@@ -489,21 +482,17 @@ export function Onboarding() {
                 />
               </div>
               <div className="flex flex-wrap gap-3">
-                <button
-                  className="rounded-control bg-brand px-4 py-2 font-medium text-fg-on-brand hover:bg-brand-hover disabled:opacity-60"
-                  disabled={pending}
-                  type="submit"
-                >
+                <Button disabled={pending} type="submit" variant="primary">
                   {pending ? 'Saving…' : 'Save defaults'}
-                </button>
-                <button
-                  className="rounded-control border border-line px-4 py-2 hover:bg-surface-hover disabled:opacity-60"
+                </Button>
+                <Button
                   disabled={pending}
                   onClick={() => void action('/onboarding/skip/defaults', 'POST')}
                   type="button"
+                  variant="secondary"
                 >
                   Skip for now
-                </button>
+                </Button>
               </div>
             </form>
           )}
@@ -567,29 +556,25 @@ export function Onboarding() {
                   </select>
                 </div>
                 <div className="flex flex-wrap gap-3">
-                  <button
-                    className="rounded-control bg-brand px-4 py-2 font-medium text-fg-on-brand hover:bg-brand-hover disabled:opacity-60"
-                    disabled={pending}
-                    type="submit"
-                  >
+                  <Button disabled={pending} type="submit" variant="primary">
                     {pending ? 'Sending…' : 'Send invitation'}
-                  </button>
-                  <button
-                    className="rounded-control border border-line px-4 py-2 hover:bg-surface-hover disabled:opacity-60"
+                  </Button>
+                  <Button
                     disabled={pending}
                     onClick={() => void action('/onboarding/complete', 'POST')}
                     type="button"
+                    variant="primary"
                   >
                     Finish setup
-                  </button>
-                  <button
-                    className="rounded-control border border-line px-4 py-2 hover:bg-surface-hover disabled:opacity-60"
+                  </Button>
+                  <Button
                     disabled={pending}
                     onClick={() => void action('/onboarding/skip/invite', 'POST')}
                     type="button"
+                    variant="secondary"
                   >
                     Skip invitations
-                  </button>
+                  </Button>
                 </div>
               </form>
             </div>
