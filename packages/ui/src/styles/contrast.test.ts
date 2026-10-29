@@ -130,6 +130,12 @@ describe.each([
   ['dark', dark],
 ] as const)('%s theme contrast', (_name, vars) => {
   const canvas = resolve(vars, 'canvas');
+  it('control borders meet 3:1 against their surfaces', () => {
+    expect(
+      contrast(resolve(vars, 'control-border'), resolve(vars, 'control-surface')),
+    ).toBeGreaterThanOrEqual(3);
+  });
+
   // Hover and subtle fills sit on a card; everything else sits on the canvas.
   const ON_SURFACE = new Set(['surface-subtle', 'surface-hover']);
   it.each(pairs())('%s on %s meets 4.5:1', (text, surface) => {

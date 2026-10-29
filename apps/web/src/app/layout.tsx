@@ -24,7 +24,7 @@ export default async function RootLayout({ children }: { readonly children: Reac
         >
           Skip to content
         </a>
-        <main id="main" className="mx-auto max-w-5xl p-6">
+        <main id="main" className="mx-auto max-w-7xl p-4 sm:p-6">
           {children}
         </main>
       </body>

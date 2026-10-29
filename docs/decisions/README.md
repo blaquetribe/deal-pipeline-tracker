@@ -26,6 +26,7 @@ One line per ADR: what we decided and why. ADRs are never edited after acceptanc
 | [0020](0020-approval-delegation.md) | Tenant-opt-in, time-bounded approval delegation; proxy preserves the original slot and may cast only one vote per request | Adds coverage for temporary absence without self-approval, extra quorum weight, or mutable request snapshots |
 | [0021](0021-quorum-alerts.md) | Hourly idempotent in-app alerts when a pending request cannot reach its snapshotted quorum | Makes a stalled approval visible to its requester and tenant administrators without weakening fail-closed signing |
 | [0022](0022-custom-role-management.md) | Tenant-scoped custom roles saved through guarded database functions with SoD checks and append-only audit | Gives role managers flexibility while keeping system roles immutable and authorization enforced in Postgres |
+| [0023](0023-web-control-primitives.md) | Shared native web control styling on semantic tokens; no React UI dependency for basic primitives | Fixes cross-page control inconsistency while preserving native behavior and the existing design layer |
 
 ## How we record a decision (so every step has its reason)
 Context, decision, why, alternatives, what we verified locally versus only read, known gaps, and when to revisit. Anything unconfirmed is marked **verify**.

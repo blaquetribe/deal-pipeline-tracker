@@ -51,10 +51,7 @@ export function DealFiles({ dealId }: DealFilesProps) {
   }
 
   return (
-    <section
-      aria-labelledby="deal-files-title"
-      className="rounded-panel border border-line bg-surface-raised p-5"
-    >
+    <section aria-labelledby="deal-files-title" className="material-card p-5">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
           <h3 className="text-lg font-semibold" id="deal-files-title">

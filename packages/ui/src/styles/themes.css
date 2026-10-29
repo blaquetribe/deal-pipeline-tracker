@@ -37,6 +37,9 @@
   --fg-on-accent: var(--ink-0);
   --line: rgb(25, 28, 33, 0.12);
   --line-subtle: rgb(25, 28, 33, 0.07);
+  --control-surface: var(--ink-0);
+  --control-hover: var(--ink-50);
+  --control-border: var(--ink-500);
   --focus: var(--brand-500);
   --brand: var(--brand-600);
   --brand-hover: var(--brand-700);
@@ -94,6 +97,9 @@
   --fg-disabled: var(--ink-700);
   --line: rgb(255, 255, 255, 0.14);
   --line-subtle: rgb(255, 255, 255, 0.08);
+  --control-surface: var(--ink-850);
+  --control-hover: rgb(255, 255, 255, 0.08);
+  --control-border: var(--ink-600);
   --focus: var(--brand-400);
   --brand-fg: var(--brand-400);
   --brand-soft: rgb(92, 168, 255, 0.16);
