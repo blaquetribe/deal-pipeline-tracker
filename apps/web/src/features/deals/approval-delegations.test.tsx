@@ -177,4 +177,62 @@ describe('ApprovalDelegations', () => {
 
     expect(await screen.findByRole('alert')).toHaveTextContent('Delegation service unavailable.');
   });
+
+  it('shows a server rejection when a delegation cannot be changed', async () => {
+    const fetch = vi.fn<(input: RequestInfo | URL, init?: RequestInit) => Promise<Response>>(
+      async (input, init) => {
+        const url = input instanceof Request ? input.url : String(input);
+        if (url === '/api/auth/session') {
+          return new Response(
+            JSON.stringify({
+              csrfToken: 'csrf-test',
+              user: {
+                id: 'cccccccc-0000-4000-8000-000000000001',
+                email: 'user@example.test',
+                fullName: 'Current member',
+              },
+              tenantId: 'cccccccc-0000-4000-8000-000000000002',
+            }),
+            { status: 200, headers: { 'Content-Type': 'application/json' } },
+          );
+        }
+        if (url === '/api/approval-delegation-options') {
+          return new Response(
+            JSON.stringify([{ membershipId: delegateId, displayName: 'Delegate member' }]),
+            {
+              status: 200,
+              headers: { 'Content-Type': 'application/json' },
+            },
+          );
+        }
+        if (url === '/api/approval-delegations' && init?.method === 'POST') {
+          return new Response(
+            JSON.stringify({
+              error: {
+                code: 'approval_pending',
+                message: 'Delegation cannot change while approvals are pending.',
+              },
+            }),
+            { status: 422, headers: { 'Content-Type': 'application/json' } },
+          );
+        }
+        return new Response('[]', { status: 200, headers: { 'Content-Type': 'application/json' } });
+      },
+    );
+    vi.stubGlobal('fetch', fetch);
+    const user = userEvent.setup();
+
+    render(<ApprovalDelegations />);
+    fireEvent.change(await screen.findByLabelText('Starts'), {
+      target: { value: '2027-03-01T09:00' },
+    });
+    fireEvent.change(screen.getByLabelText('Ends'), {
+      target: { value: '2027-03-03T17:00' },
+    });
+    await user.click(screen.getByRole('button', { name: 'Schedule delegation' }));
+
+    expect(await screen.findByRole('alert')).toHaveTextContent(
+      'Delegation cannot change while approvals are pending.',
+    );
+  });
 });
