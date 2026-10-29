@@ -7,6 +7,7 @@ import {
 } from '@dpt/shared';
 import { useCallback, useEffect, useId, useState, type FormEvent } from 'react';
 
+import { Button } from '../ui/button';
 import { createCustomRole, readRoleCatalog, updateCustomRole } from './api';
 
 type RoleDraft = {
@@ -138,17 +139,17 @@ export function RoleManagement() {
           </p>
         </div>
         {catalog?.canManageRoles && !draft && (
-          <button
-            className="rounded-control bg-brand px-4 py-2 font-medium text-fg-on-brand hover:bg-brand-hover"
+          <Button
             onClick={() => {
               setDraft(emptyDraft());
               setError(null);
               setMessage(null);
             }}
             type="button"
+            variant="primary"
           >
             Create custom role
-          </button>
+          </Button>
         )}
       </div>
 
@@ -164,14 +165,16 @@ export function RoleManagement() {
                   </p>
                 </div>
                 {!role.isSystem && catalog.canManageRoles && (
-                  <button
+                  <Button
                     aria-label={`Edit ${role.name}`}
-                    className="rounded-control border border-line px-3 py-1.5 text-sm hover:bg-surface-hover"
+                    className="text-sm"
                     onClick={() => editRole(role)}
+                    size="small"
                     type="button"
+                    variant="secondary"
                   >
                     Edit
-                  </button>
+                  </Button>
                 )}
               </div>
               <ul className="flex flex-wrap gap-2" aria-label={`${role.name} permissions`}>
@@ -242,24 +245,20 @@ export function RoleManagement() {
             </ul>
           </fieldset>
           <div className="flex flex-wrap gap-3">
-            <button
-              className="rounded-control bg-brand px-4 py-2 font-medium text-fg-on-brand hover:bg-brand-hover disabled:opacity-60"
-              disabled={pending}
-              type="submit"
-            >
+            <Button disabled={pending} type="submit" variant="primary">
               {pending ? 'Saving…' : draft.id ? 'Save role' : 'Create role'}
-            </button>
-            <button
-              className="rounded-control border border-line px-4 py-2 hover:bg-surface-hover disabled:opacity-60"
+            </Button>
+            <Button
               disabled={pending}
               onClick={() => {
                 setDraft(null);
                 setError(null);
               }}
               type="button"
+              variant="secondary"
             >
               Cancel
-            </button>
+            </Button>
           </div>
         </form>
       )}

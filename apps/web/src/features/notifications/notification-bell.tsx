@@ -4,6 +4,7 @@ import { notificationSchema, type Notification } from '@dpt/shared';
 import Link from 'next/link';
 import { useCallback, useEffect, useRef, useState } from 'react';
 
+import { Button } from '../ui/button';
 import { markNotificationRead, readNotifications } from './api';
 
 const MAX_NOTIFICATIONS = 50;
@@ -148,16 +149,17 @@ export function NotificationBell() {
 
   return (
     <div className="relative">
-      <button
+      <Button
         type="button"
         aria-label={`Notifications${unreadCount > 0 ? `, ${unreadCount} unread` : ''}`}
         aria-expanded={open}
         aria-controls="notification-panel"
         onClick={() => setOpen((value) => !value)}
-        className="border-border rounded-control border bg-surface-raised px-3 py-2 text-sm text-fg hover:bg-surface-subtle focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent"
+        className="text-sm"
+        variant="secondary"
       >
         Notifications{unreadCount > 0 ? ` (${unreadCount})` : ''}
-      </button>
+      </Button>
       <span className="sr-only" aria-live="polite">
         {announcement}
       </span>
@@ -171,10 +173,11 @@ export function NotificationBell() {
               {toast.payload.dealName}
             </Link>
           </div>
-          <button
+          <Button
             type="button"
             aria-label="Dismiss notification alert"
-            className="text-fg-muted underline"
+            size="small"
+            variant="quiet"
             onClick={() => {
               setToast(null);
               if (toastTimer.current !== undefined) window.clearTimeout(toastTimer.current);
@@ -182,7 +185,7 @@ export function NotificationBell() {
             }}
           >
             Dismiss
-          </button>
+          </Button>
         </aside>
       ) : null}
       <span className="sr-only">
@@ -196,13 +199,15 @@ export function NotificationBell() {
         >
           <div className="flex items-center justify-between gap-3">
             <h2 className="text-lg font-semibold">Notifications</h2>
-            <button
+            <Button
               type="button"
-              className="text-sm text-fg-muted underline"
+              className="text-sm"
               onClick={() => void refresh()}
+              size="small"
+              variant="quiet"
             >
               Refresh
-            </button>
+            </Button>
           </div>
           {loading ? <p className="mt-4 text-sm text-fg-muted">Loading notifications…</p> : null}
           {error ? (
