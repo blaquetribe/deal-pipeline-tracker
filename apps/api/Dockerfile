@@ -26,8 +26,8 @@ FROM deps AS build
 COPY tsconfig.base.json ./
 COPY packages/shared packages/shared
 COPY apps/api apps/api
-RUN pnpm --filter @dpt/api build
-RUN pnpm --filter @dpt/api deploy --prod /repo/api-deploy
+RUN pnpm --filter @dpt/api build \
+    && pnpm --filter @dpt/api deploy --prod /repo/api-deploy
 
 # sharp has native platform bindings; deploy the API's production dependency tree for runtime.
 FROM node:26-alpine@sha256:40cd011b55415bc894e45b02fdd5a5dfde056921b7d23a64c74f80497af48797 AS runtime
