@@ -12,9 +12,15 @@ Running log feeding the README reflection required by the brief. Add an entry pe
 ## Entries
 ### 2026-10-29 / Cross-instance auth refresh coordination
 - **What Codex did:** added a short hashed refresh lease per session in Postgres, updated the API resolver to claim and complete rotation only under that lease, and made competing API instances wait for the committed tokens. Disabled the old uncoordinated token-write RPC for `api_service`.
-- **What the human decided or corrected:** asked to finish product work before the styling pass and final presentation.
-- **How it was verified:** the full Vitest suite passes (646 passed, 1 skipped); coverage thresholds pass (85.06% global branch coverage; API branch threshold also passes); pgTAP passes 596 assertions across 30 files; typecheck, lint, Stylelint, format check, and production build pass. PR #32's rerun is pending after CI initially found a coverage shortfall.
+- **What the human decided or corrected:** asked to finish product work before the styling pass and final presentation; required every PR check to pass before merging.
+- **How it was verified:** the full Vitest suite passes (646 passed, 1 skipped); coverage thresholds pass (85.06% global branch coverage; API branch threshold also passes); pgTAP passes 596 assertions across 30 files; typecheck, lint, Stylelint, format check, and production build pass. PR #32 passed quality/coverage, pgTAP, compose smoke, secret scan, and all image checks, then merged as `ae6ed94`.
 - **What went wrong or was surprising:** the first pgTAP run showed `api_service` needs test-transaction-only access to the `extensions` schema for pgTAP assertions; production privileges remain unchanged. A crash after GoTrue rotates but before Postgres stores the new token remains a cross-system gap and is documented.
+
+### 2026-10-29 / Feature 04 IC approval SLA escalation
+- **What Codex did:** added an hourly, database-owned scan that creates one in-app escalation per recipient once an IC approval has been pending for 24 hours. It alerts eligible pending approvers (including valid delegates), the requester, and active tenant Owners/Admins; it cannot alter approval state. Added the notification schema and distinct accessible UI labels.
+- **What the human decided or corrected:** approved keeping approvals on the existing IC gate and adding SLA escalation there only; approval gates at other pipeline stages are out of scope.
+- **How it was verified:** focused shared/UI tests pass (9); full Vitest and coverage pass (648 passed, 1 skipped; 85.04% global branches); pgTAP passes (605 assertions across 30 files), including the exact 24-hour boundary, recipients, deduplication, scheduler registration, tenant scope, and function grants. Typecheck, lint, stylelint, format check, build, and `make env-check` pass.
+- **What went wrong or was surprising:** the brief specifies notification-only escalation but no duration or recipient list. The first slice records a fixed 24-hour window, one-time delivery, and recipients in ADR 0024 so they can be revisited explicitly.
 
 ### 2026-10-29 / UI pass: onboarding and invitation buttons
 - **What Codex did:** migrated onboarding progression, skip, invitation creation, invitation acceptance/revocation, and email verification actions to the shared `Button` component. Primary progression and submit actions use the primary variant, while skip/cancel or revoke actions use secondary or danger variants.

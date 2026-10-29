@@ -105,7 +105,9 @@ export function NotificationBell() {
         setAnnouncement(
           notification.kind === 'closing_soon'
             ? `New closing soon alert: ${notification.payload.dealName}.`
-            : `Approval alert: ${notification.payload.dealName}. ${notification.payload.message}`,
+            : notification.kind === 'approval_sla_escalation'
+              ? `Overdue IC approval alert: ${notification.payload.dealName}. ${notification.payload.message}`
+              : `Approval alert: ${notification.payload.dealName}. ${notification.payload.message}`,
         );
         if (toastTimer.current !== undefined) window.clearTimeout(toastTimer.current);
         toastTimer.current = window.setTimeout(() => {
@@ -167,7 +169,11 @@ export function NotificationBell() {
         <aside className="material-glass-strong fixed inset-x-4 bottom-4 z-30 flex max-w-lg items-start justify-between gap-4 rounded-panel p-4 sm:inset-x-auto sm:end-4">
           <div>
             <p className="text-sm text-fg-muted">
-              {toast.kind === 'closing_soon' ? 'Closing soon alert' : 'Approval alert'}
+              {toast.kind === 'closing_soon'
+                ? 'Closing soon alert'
+                : toast.kind === 'approval_sla_escalation'
+                  ? 'Approval SLA alert'
+                  : 'Approval alert'}
             </p>
             <Link href={toast.payload.href} className="font-medium underline">
               {toast.payload.dealName}

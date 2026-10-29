@@ -1,7 +1,7 @@
 -- Feature 04: tenant-scoped, opt-in approval delegation preserves the original slot
 -- and records the acting delegate without granting a second vote.
 begin;
-select plan(34);
+select plan(43);
 
 select has_table('public', 'approval_delegations', 'approval delegations are stored per tenant');
 select is((select count(*) from pg_class where oid = to_regclass('public.approval_delegations')
@@ -21,6 +21,8 @@ select has_function('public', 'eligible_approval_delegates', array['uuid'],
   'members can read eligible delegation choices');
 select has_function('public', 'scan_approval_quorum_alerts', array['timestamp with time zone'],
   'scheduled scanner creates quorum reachability alerts');
+select has_function('public', 'scan_approval_sla_escalations', array['timestamp with time zone'],
+  'scheduled scanner creates overdue IC approval alerts');
 select has_function('public', 'get_approval_policy', array['uuid'],
   'tenant approval policy has an authenticated read function');
 select has_function('public', 'decide_approval', array['uuid', 'text', 'text', 'uuid'],
@@ -185,6 +187,38 @@ select is((select count(*) from public.notifications
   where tenant_id = '31313131-0000-4000-8000-00000000000a'
     and kind = 'approval_quorum_unreachable'), 2::bigint,
   'quorum notifications stay within the originating tenant');
+select ok(not has_function_privilege('public', 'public.scan_approval_sla_escalations(timestamptz)', 'EXECUTE')
+  and not has_function_privilege('anon', 'public.scan_approval_sla_escalations(timestamptz)', 'EXECUTE')
+  and not has_function_privilege('authenticated', 'public.scan_approval_sla_escalations(timestamptz)', 'EXECUTE')
+  and not has_function_privilege('service_role', 'public.scan_approval_sla_escalations(timestamptz)', 'EXECUTE'),
+  'SLA escalation scanner is not callable by application roles');
+select ok(exists (select 1 from cron.job where jobname = 'scan-approval-sla-hourly'),
+  'SLA escalation runs from the database scheduler');
+update public.memberships set deactivated_at = null
+where user_id = '31313131-0000-4000-8000-000000000004';
+update public.approval_requests set created_at = '2026-10-01 12:00:00+00'
+where id = (select id from approval_delegation_ids where key = 'request');
+select is(public.scan_approval_sla_escalations('2026-10-02 11:59:59.999999+00'), 0,
+  'approval is not escalated before its 24-hour SLA');
+select is(public.scan_approval_sla_escalations('2026-10-02 12:00:00+00'), 3,
+  'overdue request escalates to its pending approver, requester, and tenant owner');
+select is(public.scan_approval_sla_escalations('2026-10-03 12:00:00+00'), 0,
+  'repeated hourly scans do not duplicate an escalation');
+select is((select count(*) from public.notifications
+  where tenant_id = '31313131-0000-4000-8000-00000000000a'
+    and kind = 'approval_sla_escalation'), 3::bigint,
+  'SLA notifications stay within the originating tenant');
+select ok(exists (select 1 from public.notifications n
+  join public.memberships m on m.tenant_id = n.tenant_id and m.user_id = n.user_id
+  where n.tenant_id = '31313131-0000-4000-8000-00000000000a'
+    and n.kind = 'approval_sla_escalation'
+    and m.user_id = '31313131-0000-4000-8000-000000000004'),
+  'an active member with an undecided approval slot receives the SLA escalation');
+select is((select payload->>'message' from public.notifications
+  where tenant_id = '31313131-0000-4000-8000-00000000000a'
+    and kind = 'approval_sla_escalation' limit 1),
+  'IC approval has been waiting for more than 24 hours.',
+  'escalation explains the overdue state without changing the approval');
 
 select * from finish();
 rollback;
