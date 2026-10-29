@@ -4,6 +4,7 @@ import type { ApprovalDelegation } from '@dpt/shared';
 import { useEffect, useId, useState } from 'react';
 import type { FormEvent } from 'react';
 
+import { Button } from '../ui/button';
 import {
   cancelApprovalDelegation,
   readApprovalDelegations,
@@ -131,14 +132,15 @@ export function ApprovalDelegations() {
                 </span>
               </span>
               {record.canCancel ? (
-                <button
-                  className="rounded-control border border-line px-3 py-1.5 focus-visible:outline-2 disabled:opacity-60"
+                <Button
                   disabled={busy}
                   onClick={() => void cancel(record.id)}
+                  size="small"
                   type="button"
+                  variant="danger"
                 >
                   Revoke delegation
-                </button>
+                </Button>
               ) : null}
             </li>
           ))}
@@ -200,13 +202,9 @@ export function ApprovalDelegations() {
               value={endsAt}
             />
           </div>
-          <button
-            className="rounded-control border border-line px-4 py-2 focus-visible:outline-2 disabled:opacity-60"
-            disabled={busy}
-            type="submit"
-          >
+          <Button disabled={busy} type="submit" variant="primary">
             {busy ? 'Saving…' : 'Schedule delegation'}
-          </button>
+          </Button>
         </form>
       ) : null}
     </section>

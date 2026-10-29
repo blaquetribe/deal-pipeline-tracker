@@ -13,6 +13,7 @@ import type { FormEvent } from 'react';
 
 import { StageBadge } from '../pipeline';
 import { PageHeading } from '../shell/page-heading';
+import { Button } from '../ui/button';
 import {
   configureDealApprovalPolicy,
   cancelApprovalAbsence,
@@ -298,13 +299,9 @@ export function DealDetail({ dealId }: DealDetailProps) {
         <p className="mt-4" role="alert">
           {error}
         </p>
-        <button
-          className="mt-4 rounded-control border border-line px-4 py-2 focus-visible:outline-2"
-          onClick={() => void reload()}
-          type="button"
-        >
+        <Button className="mt-4" onClick={() => void reload()} type="button" variant="secondary">
           Try again
-        </button>
+        </Button>
       </section>
     );
   }
@@ -412,24 +409,21 @@ export function DealDetail({ dealId }: DealDetailProps) {
                 />
                 Allow temporary approval delegation
               </label>
-              <button
-                className="rounded-control border border-line px-4 py-2 focus-visible:outline-2 disabled:opacity-60"
-                disabled={approvalBusy}
-                type="submit"
-              >
+              <Button disabled={approvalBusy} type="submit" variant="primary">
                 Save approval policy
-              </button>
+              </Button>
             </form>
           ) : null}
           {approval.canRequest ? (
-            <button
-              className="mt-4 rounded-control bg-brand px-4 py-2 font-medium text-fg-on-brand hover:bg-brand-hover focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus disabled:opacity-60"
+            <Button
+              className="mt-4"
               disabled={approvalBusy}
               onClick={() => void submitApprovalRequest()}
               type="button"
+              variant="primary"
             >
               {approvalBusy ? 'Submitting…' : 'Submit for approval'}
-            </button>
+            </Button>
           ) : null}
           {approval.canDecide ? (
             <div className="mt-4 space-y-3">
@@ -444,22 +438,22 @@ export function DealDetail({ dealId }: DealDetailProps) {
                 value={rejectionReason}
               />
               <div className="flex flex-wrap gap-3">
-                <button
-                  className="rounded-control bg-brand px-4 py-2 font-medium text-fg-on-brand hover:bg-brand-hover focus-visible:outline-2 disabled:opacity-60"
+                <Button
                   disabled={approvalBusy}
                   onClick={() => void decideApproval('approve')}
                   type="button"
+                  variant="primary"
                 >
                   Approve
-                </button>
-                <button
-                  className="rounded-control border border-danger px-4 py-2 text-danger focus-visible:outline-2 disabled:opacity-60"
+                </Button>
+                <Button
                   disabled={approvalBusy}
                   onClick={() => void decideApproval('reject')}
                   type="button"
+                  variant="danger"
                 >
                   Reject
-                </button>
+                </Button>
               </div>
             </div>
           ) : null}
@@ -481,14 +475,15 @@ export function DealDetail({ dealId }: DealDetailProps) {
                         {formatDate(absence.startsAt)} – {formatDate(absence.endsAt)}
                         {absence.active ? ' · Active' : ' · Upcoming'}
                       </span>
-                      <button
-                        className="rounded-control border border-line px-3 py-1.5 focus-visible:outline-2 disabled:opacity-60"
+                      <Button
                         disabled={approvalBusy}
                         onClick={() => void cancelAbsence(absence.id)}
+                        size="small"
                         type="button"
+                        variant="secondary"
                       >
                         Cancel absence
-                      </button>
+                      </Button>
                     </li>
                   ))}
                 </ul>
@@ -524,13 +519,9 @@ export function DealDetail({ dealId }: DealDetailProps) {
                     value={absenceEnd}
                   />
                 </div>
-                <button
-                  className="rounded-control border border-line px-4 py-2 focus-visible:outline-2 disabled:opacity-60"
-                  disabled={approvalBusy}
-                  type="submit"
-                >
+                <Button disabled={approvalBusy} type="submit" variant="secondary">
                   Schedule absence
-                </button>
+                </Button>
               </form>
             </div>
           ) : null}
@@ -597,13 +588,9 @@ export function DealDetail({ dealId }: DealDetailProps) {
                               ))}
                             </select>
                           </div>
-                          <button
-                            className="rounded-control border border-line px-4 py-2 focus-visible:outline-2 disabled:opacity-60"
-                            disabled={approvalBusy}
-                            type="submit"
-                          >
+                          <Button disabled={approvalBusy} type="submit" variant="secondary">
                             Reassign approver
-                          </button>
+                          </Button>
                         </form>
                       </li>
                     );
@@ -649,13 +636,9 @@ export function DealDetail({ dealId }: DealDetailProps) {
               {noteError}
             </p>
           ) : null}
-          <button
-            className="mt-3 rounded-control bg-brand px-4 py-2 font-medium text-fg-on-brand hover:bg-brand-hover focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus disabled:opacity-60"
-            disabled={posting}
-            type="submit"
-          >
+          <Button className="mt-3" disabled={posting} type="submit" variant="primary">
             {posting ? 'Saving…' : 'Add note'}
-          </button>
+          </Button>
           <p className="mt-2 text-sm text-fg-muted">
             Notes are permanent audit records and cannot be edited or deleted.
           </p>
@@ -684,14 +667,15 @@ export function DealDetail({ dealId }: DealDetailProps) {
           </p>
         ) : null}
         {activity.hasMore ? (
-          <button
-            className="mt-4 rounded-control border border-line px-4 py-2 focus-visible:outline-2 disabled:opacity-60"
+          <Button
+            className="mt-4"
             disabled={loadingOlder}
             onClick={() => void loadOlderActivity()}
+            variant="secondary"
             type="button"
           >
             {loadingOlder ? 'Loading…' : 'Load older activity'}
-          </button>
+          </Button>
         ) : null}
       </section>
     </div>

@@ -10,6 +10,12 @@ Running log feeding the README reflection required by the brief. Add an entry pe
 - **What went wrong or was surprising:**
 
 ## Entries
+### 2026-10-29 / UI pass: deal workflow buttons
+- **What Codex did:** migrated deal list search/create/move/edit/pagination, deal-detail approval/absence/reassignment/note actions, attachment toggling, and delegation schedule/revoke actions to the shared button variants. Approval rejection and delegation revocation use the danger intent; consequential workflow logic remains unchanged.
+- **What the human decided or corrected:** keep the project UI pass moving in reviewable slices and preserve the planned presentation as the final implementation task.
+- **How it was verified:** web typecheck, lint, Stylelint, formatting, `git diff --check`, and production build pass. The pre-push hook and GitHub CI will run Vitest and the database/container gates.
+- **What went wrong or was surprising:** the button inventory across deal features contains multiple workflow actions with distinct consequences, so variants were chosen per action intent rather than giving every button the same color.
+
 ### 2026-10-29 / UI pass: workflow and notification buttons
 - **What Codex did:** migrated the notification panel trigger, refresh and dismiss actions plus role create/edit/save/cancel actions to the shared `Button` variants. Kept the notification trigger and role actions visibly distinct by semantic intent, while preserving their existing accessible names and native behavior.
 - **What the human decided or corrected:** continue the UI pass incrementally after PR #27 merged; keep the final feature walkthrough presentation as the last implementation task.
