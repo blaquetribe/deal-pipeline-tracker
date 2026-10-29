@@ -89,7 +89,7 @@ GitHub Actions runs the quality, database, image, security-scan, and Compose smo
 - Optional stretch: document extraction. IC approval SLA escalation is implemented as a one-time in-app alert after 24 hours; approval gates at other stages are outside the agreed workflow.
 - Measure memory and disk use on Docker Desktop and verify the stack on both amd64 and arm64 hosts; local container verification to date has primarily used Podman on arm64.
 
-Kanban boards and drag-and-drop are deferred. The current deal list retains keyboard-accessible stage movement. If drag-and-drop is added, keep those controls and target smooth 60 fps interactions.
+The deals page offers List and Board views. Board drag-and-drop uses the same allowed stage transitions and version checks as the keyboard-accessible List controls. Both views share server-side filters and pagination; the board displays the current page of results. Reduced-motion preferences disable its transition effects.
 
 ## AI use
 

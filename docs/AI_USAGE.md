@@ -208,3 +208,9 @@ Running log feeding the README reflection required by the brief. Add an entry pe
 - **What the human decided or corrected:** continue the project-wide UI pass, preserve existing work, capture current-build evidence, and leave the full walkthrough presentation until last.
 - **How it was verified:** web typecheck, stylelint, format check, `git diff --check`, and production build pass. Opened the current Next build and visually reviewed the sign-in controls; the screenshot is preserved as browser evidence.
 - **What went wrong or was surprising:** the previous stylesheet was unlayered, which outranked Tailwind's layered utilities and silently defeated intended per-control styling. Authenticated page review still depends on the seeded container stack.
+
+### 2026-10-29 / Deal Board view
+- **What Codex did:** added a seven-column board to the deal dashboard, wired drag-and-drop to the existing versioned stage API, constrained targets with the shared stage transition and required-field checks, and retained the keyboard-accessible List controls. Added ADR 0025 and updated feature, project, README, and handoff notes.
+- **What the human decided or corrected:** asked to continue the project after clarifying Feature 04 scope as the existing IC gate plus SLA escalation. Earlier instructions still require smooth drag feedback, preserving existing work, CI-green merges, a DoorSprint-informed UI pass and current-build screenshots before the final walkthrough presentation.
+- **How it was verified:** focused deals dashboard tests (11) and `@dpt/web` typecheck pass. Full repository checks, browser review, and screenshot evidence remain pending.
+- **What went wrong or was surprising:** the shared session response schema requires `tenantId`; the test fixture initially omitted it and was corrected. Board columns share the existing paginated result window, so the current page count is the board's scope.

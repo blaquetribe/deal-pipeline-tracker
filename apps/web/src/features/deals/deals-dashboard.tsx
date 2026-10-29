@@ -21,6 +21,7 @@ import type { FormEvent } from 'react';
 import { StageBadge } from '../pipeline';
 import { Button } from '../ui/button';
 import { createDeal, moveDealStage, readDashboardSummary, readDeals, updateDeal } from './api';
+import { DealsKanban } from './deals-kanban';
 import { formatMinorAmount, majorAmountForInput, parseMajorAmount } from './money';
 
 const PAGE_SIZE = 25;
@@ -46,6 +47,7 @@ export function DealsDashboard() {
   const [search, setSearch] = useState('');
   const [appliedSearch, setAppliedSearch] = useState('');
   const [offset, setOffset] = useState(0);
+  const [view, setView] = useState<'list' | 'board'>('list');
   const [result, setResult] = useState<DealListResponse | null>(null);
   const [summary, setSummary] = useState<DashboardSummary | null>(null);
   const [summaryError, setSummaryError] = useState<string | null>(null);
@@ -200,9 +202,9 @@ export function DealsDashboard() {
     }
   }
 
-  async function moveStage(dealId: string) {
+  async function moveStage(dealId: string, requestedTarget?: Stage) {
     const deal = result?.items.find((item) => item.id === dealId);
-    const toStage = moveTargets[dealId];
+    const toStage = requestedTarget ?? moveTargets[dealId];
     if (!deal || !toStage) return;
     setMoveNotice(null);
     setMovingDeal(dealId);
@@ -592,6 +594,43 @@ export function DealsDashboard() {
       )}
 
       {result && result.items.length > 0 && (
+        <fieldset className="mt-4 flex items-center gap-2">
+          <legend className="mr-2 text-sm font-medium">Deals view</legend>
+          <Button
+            aria-pressed={view === 'list'}
+            onClick={() => setView('list')}
+            size="small"
+            type="button"
+            variant={view === 'list' ? 'primary' : 'secondary'}
+          >
+            List
+          </Button>
+          <Button
+            aria-pressed={view === 'board'}
+            onClick={() => setView('board')}
+            size="small"
+            type="button"
+            variant={view === 'board' ? 'primary' : 'secondary'}
+          >
+            Board
+          </Button>
+          {view === 'board' && (
+            <span className="ml-auto text-xs text-fg-muted">
+              Drag cards between allowed stages. Use List for keyboard stage controls.
+            </span>
+          )}
+        </fieldset>
+      )}
+
+      {view === 'board' && result && result.items.length > 0 && (
+        <DealsKanban
+          deals={result.items}
+          disabled={loading || movingDeal !== null}
+          onMove={(dealId, destination) => void moveStage(dealId, destination)}
+        />
+      )}
+
+      {view === 'list' && result && result.items.length > 0 && (
         <div aria-busy={loading} className="material-card mt-4 overflow-x-auto">
           <table className="w-full min-w-[68rem] border-collapse text-left text-sm">
             <caption className="sr-only">Deals in the active organisation</caption>
