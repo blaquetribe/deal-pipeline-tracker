@@ -69,4 +69,26 @@ describe('notification schema', () => {
       }),
     ).toThrow(/href/);
   });
+
+  it('validates SLA escalation alerts with a same-origin deal link', () => {
+    const overdueAlert = {
+      id: 'bbbbbbbb-0000-4000-8000-000000000004',
+      kind: 'approval_sla_escalation',
+      payload: {
+        dealId: 'bbbbbbbb-0000-4000-8000-000000000002',
+        dealName: 'Example deal',
+        message: 'IC approval has been waiting for more than 24 hours.',
+        href: '/deals/bbbbbbbb-0000-4000-8000-000000000002',
+      },
+      created_at: '2026-10-28T10:00:00Z',
+      read_at: null,
+    };
+    expect(notificationSchema.parse(overdueAlert).kind).toBe('approval_sla_escalation');
+    expect(() =>
+      notificationSchema.parse({
+        ...overdueAlert,
+        payload: { ...overdueAlert.payload, message: 'Approval was automatically approved.' },
+      }),
+    ).toThrow(/message/);
+  });
 });

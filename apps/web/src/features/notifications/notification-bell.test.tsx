@@ -41,6 +41,19 @@ const approvalAlert = {
   read_at: null,
 } as const;
 
+const approvalSlaAlert = {
+  id: 'bbbbbbbb-0000-4000-8000-000000000004',
+  kind: 'approval_sla_escalation',
+  payload: {
+    dealId: 'bbbbbbbb-0000-4000-8000-000000000002',
+    dealName: 'Example deal',
+    message: 'IC approval has been waiting for more than 24 hours.',
+    href: '/deals/bbbbbbbb-0000-4000-8000-000000000002',
+  },
+  created_at: '2026-10-28T10:00:00Z',
+  read_at: null,
+} as const;
+
 class FakeWebSocket {
   static instances: FakeWebSocket[] = [];
   private readonly listeners = new Map<string, EventListener[]>();
@@ -148,6 +161,22 @@ describe('notification bell', () => {
     expect(
       await screen.findByText(
         'Approval alert: Example deal. Approval quorum can no longer be reached.',
+      ),
+    ).toBeInTheDocument();
+  });
+
+  it('labels overdue IC escalations distinctly in the list, toast, and live announcement', async () => {
+    vi.mocked(readNotifications).mockResolvedValue([approvalSlaAlert]);
+    render(<NotificationBell />);
+    fireEvent.click(screen.getByRole('button', { name: 'Notifications' }));
+    expect(
+      await screen.findByText('IC approval has been waiting for more than 24 hours.'),
+    ).toBeInTheDocument();
+    FakeWebSocket.instances[0]?.message({ type: 'notification', data: approvalSlaAlert });
+    expect(await screen.findByText('Approval SLA alert')).toBeInTheDocument();
+    expect(
+      await screen.findByText(
+        'Overdue IC approval alert: Example deal. IC approval has been waiting for more than 24 hours.',
       ),
     ).toBeInTheDocument();
   });
