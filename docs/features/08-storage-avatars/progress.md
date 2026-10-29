@@ -1,7 +1,7 @@
 # 08 Storage and avatars: progress
 
-Status: in progress
-Owner/branch: feat/08-storage-avatars
+Status: done (merged in PR #17; real R2 smoke and current-build UI screenshot remain follow-ups)
+Owner/branch: main
 Depends on: 02, 03
 
 ## Goal
@@ -43,8 +43,9 @@ What is covered, where it lives, how to run it.
 Dated notes: what changed, what was learned, problems.
 
 - 2026-10-29: Added the private tenant-scoped files table and narrow metadata RPCs, fs and S3 ObjectStore drivers, BFF streaming routes, image re-encoding, PDF attachments, stale/orphan cleanup, and profile/deal UI. Added RustFS-backed S3 contract coverage to CI. R2 credentials are not required for the S3-compatible implementation; a dedicated bucket token is still needed for a real Cloudflare R2 smoke test. Local pgTAP is blocked by repeat Podman API EOFs; all other local checks listed above pass. UI screenshot evidence is still pending because the app available in the browser is the prior build and Podman could not rebuild the stack.
-- CI commit `760d05b` passed pgTAP and the quality/image checks; Compose smoke caught `detect-libc` bundled into the API ESM output and calling unsupported dynamic `require("child_process")`. A local tsup adjustment excludes third-party packages from bundling; latest branch CI must verify this fix before merge.
-- Commit `5e020ca` keeps production dependencies external to the ESM bundle. On this commit, all CI checks passed: quality/coverage, gitleaks, pgTAP, RustFS-enabled S3 contract tests, Docker lint/build/Trivy for all images, and clean-clone Compose smoke. PR #17 remains open for review.
+- CI commit `760d05b` passed pgTAP and the quality/image checks; Compose smoke caught `detect-libc` bundled into the API ESM output and calling unsupported dynamic `require("child_process")`. A local tsup adjustment excludes third-party packages from bundling; final CI verified the fix before merge.
+- Commit `5e020ca` keeps production dependencies external to the ESM bundle. PR #17 merged as `b7d967b` after all required checks passed on `c6f7f24`: quality/coverage, gitleaks, pgTAP, RustFS-enabled S3 contract tests, Docker lint/build/Trivy for all images, and clean-clone Compose smoke.
 
 ## Deviations / debt
 Anything that differs from the plan or is deferred (also mirror in README "next steps").
+- The CI S3 contract test uses RustFS; a real Cloudflare R2 smoke still needs a dedicated bucket-scoped token. The user-requested evidence screenshot for the current storage/avatar UI has not yet been captured because the local Compose runtime was unavailable during Feature 08 work.
