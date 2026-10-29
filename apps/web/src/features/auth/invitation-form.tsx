@@ -9,6 +9,7 @@ import {
 import { useEffect, useId, useState, type FormEvent } from 'react';
 
 import { Button } from '../ui/button';
+import { Input } from '../ui/input';
 import { ApiClientError, authRequest, sessionRequest } from './api';
 import { LoginForm } from './login-form';
 
@@ -138,9 +139,9 @@ export function InvitationForm({ token }: { readonly token: string | null }) {
             <label className="mb-1 block text-sm font-medium" htmlFor={`${id}-name`}>
               Full name
             </label>
-            <input
+            <Input
               autoComplete="name"
-              className="w-full rounded-control border border-line bg-surface-raised px-3 py-2 text-fg outline-focus focus-visible:outline-2"
+              className="w-full"
               id={`${id}-name`}
               maxLength={100}
               name="fullName"
@@ -152,9 +153,9 @@ export function InvitationForm({ token }: { readonly token: string | null }) {
             <label className="mb-1 block text-sm font-medium" htmlFor={`${id}-password`}>
               Create a password
             </label>
-            <input
+            <Input
               autoComplete="new-password"
-              className="w-full rounded-control border border-line bg-surface-raised px-3 py-2 text-fg outline-focus focus-visible:outline-2"
+              className="w-full"
               id={`${id}-password`}
               maxLength={128}
               minLength={12}

@@ -5,6 +5,8 @@ import { useEffect, useId, useState } from 'react';
 import type { FormEvent } from 'react';
 
 import { Button } from '../ui/button';
+import { Input } from '../ui/input';
+import { SelectControl } from '../ui/select-control';
 import {
   cancelApprovalDelegation,
   readApprovalDelegations,
@@ -161,8 +163,8 @@ export function ApprovalDelegations() {
             <label className="mb-1 block text-sm font-medium" htmlFor={delegateId}>
               Delegate
             </label>
-            <select
-              className="min-w-48 rounded-control border border-line bg-surface p-2 outline-focus focus-visible:outline-2"
+            <SelectControl
+              className="min-w-48"
               id={delegateId}
               onChange={(event) => setDelegate(event.currentTarget.value)}
               required
@@ -173,14 +175,13 @@ export function ApprovalDelegations() {
                   {option.displayName ?? 'Unnamed member'}
                 </option>
               ))}
-            </select>
+            </SelectControl>
           </div>
           <div>
             <label className="mb-1 block text-sm font-medium" htmlFor={startsId}>
               Starts
             </label>
-            <input
-              className="rounded-control border border-line bg-surface p-2 outline-focus focus-visible:outline-2"
+            <Input
               id={startsId}
               onChange={(event) => setStartsAt(event.currentTarget.value)}
               required
@@ -192,8 +193,7 @@ export function ApprovalDelegations() {
             <label className="mb-1 block text-sm font-medium" htmlFor={endsId}>
               Ends
             </label>
-            <input
-              className="rounded-control border border-line bg-surface p-2 outline-focus focus-visible:outline-2"
+            <Input
               id={endsId}
               min={startsAt || undefined}
               onChange={(event) => setEndsAt(event.currentTarget.value)}

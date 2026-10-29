@@ -8,6 +8,7 @@ import {
 import { useCallback, useEffect, useId, useState, type FormEvent } from 'react';
 
 import { Button } from '../ui/button';
+import { Input } from '../ui/input';
 import { createCustomRole, readRoleCatalog, updateCustomRole } from './api';
 
 type RoleDraft = {
@@ -202,9 +203,9 @@ export function RoleManagement() {
             <label className="mb-1 block text-sm font-medium" htmlFor={`${id}-name`}>
               Role name
             </label>
-            <input
+            <Input
               autoComplete="off"
-              className="w-full rounded-control border border-line bg-surface-raised px-3 py-2 text-fg outline-focus focus-visible:outline-2 sm:max-w-lg"
+              className="w-full sm:max-w-lg"
               id={`${id}-name`}
               maxLength={100}
               onChange={(event) =>
