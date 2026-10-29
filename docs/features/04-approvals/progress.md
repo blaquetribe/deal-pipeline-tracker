@@ -1,18 +1,18 @@
 # 04 Approvals: progress
 
-Status: in progress (IC gate, absence/reassignment, scoped delegation, quorum alerts, and personal delegation controls implemented; custom roles remain)
-Owner/branch: codex/feature-04-delegation-ui
+Status: in progress (IC gate, absence/reassignment, scoped delegation, quorum alerts, personal delegation controls, and custom role editor implemented; SLA escalation and gates beyond IC remain deferred)
+Owner/branch: codex/feature-04-custom-roles
 Depends on: 03
 
 ## Goal
 Approval gates, quorum, decisions, absence, delegation, custom roles and SoD. Covers GOTCHAS row 16.
 
 ## Scope
-- In (delivered slices): Owner-configured IC k-of-N quorum; submit-time approver snapshot; request/decision/status RPCs; maker-checker enforcement; absence scheduling/cancellation; unavailable-slot reassignment; scoped approval delegation with actor attribution; 2xx API routes; deal-detail controls for quorum, absence, reassignment, and personal delegation; in-app notifications when a pending request can no longer reach quorum.
-- Out (follow-up): custom role editor, SLA escalation, and gates beyond IC review. See ADRs 0018–0021.
+- In (delivered slices): Owner-configured IC k-of-N quorum; submit-time approver snapshot; request/decision/status RPCs; maker-checker enforcement; absence scheduling/cancellation; unavailable-slot reassignment; scoped approval delegation with actor attribution; 2xx API routes; deal-detail controls for quorum, absence, reassignment, and personal delegation; in-app notifications when a pending request can no longer reach quorum; tenant role catalog and audited custom role create/edit UI.
+- Out (follow-up): SLA escalation and gates beyond IC review. See ADRs 0018–0022.
 
 ## Design notes
-ADRs 0018–0021. Configuration uses existing Owner-only `role.manage`; no mutation of immutable system roles. Only approve/reject; requests snapshot the quorum and eligible memberships; rejection fails when quorum is no longer reachable. Delegation is tenant opt-in, time-bound, and substitutes for the delegate's own vote; decisions record both the original slot and acting member. `decide_approval` signs the deal and writes ledger events under the deal lock.
+ADRs 0018–0022. Configuration uses existing Owner-only `role.manage`; system roles remain immutable. Custom role writes use a caller-authorized database function, validate permission catalog membership and SoD for both the role and current holders, and append a tenant audit event. Only approve/reject; requests snapshot the quorum and eligible memberships; rejection fails when quorum is no longer reachable. Delegation is tenant opt-in, time-bound, and substitutes for the delegate's own vote; decisions record both the original slot and acting member. `decide_approval` signs the deal and writes ledger events under the deal lock.
 
 ## Tasks
 - [x] Failing tests written (security/negative first)
@@ -24,10 +24,11 @@ ADRs 0018–0021. Configuration uses existing Owner-only `role.manage`; no mutat
 - [x] Delegation database/API follow-up
 - [x] Quorum-unreachable notification follow-up
 - [x] Delegation management UI and Owner policy toggle
-- [ ] Custom role editor and SLA escalation follow-up
+- [x] Custom role editor
+- [ ] SLA escalation and gates beyond IC review
 
 ## Tests
-`supabase/tests/21_approvals.test.sql` covers request and decision security, quorum, and stage locking; `22_approval_status.test.sql` covers status RPC access. API routes are covered by `apps/api/src/features/approvals/routes.test.ts`; deal-detail controls by `apps/web/src/features/deals/deal-detail.test.tsx`; schemas by `packages/shared/src/deals.test.ts`. Run `make test-db` and targeted Vitest files, then all CI gates.
+`supabase/tests/21_approvals.test.sql` covers request and decision security, quorum, and stage locking; `22_approval_status.test.sql` covers status RPC access; `28_custom_roles.test.sql` covers catalog access, role writes, tenant isolation, SoD, immutable system roles, and audit events. Approval routes are covered by `apps/api/src/features/approvals/routes.test.ts` and `apps/api/src/features/roles/routes.test.ts`; role UI by `apps/web/src/features/roles/role-management.test.tsx`; schemas by `packages/shared/src/roles.test.ts`. Run `make test-db` and targeted Vitest files, then all CI gates.
 
 ## Security checklist (from SECURITY_STANDARDS.md)
 - [x] New tables have `tenant_id`, RLS enabled and forced, policies, tests for key roles and cross-tenant.
@@ -47,7 +48,8 @@ Dated notes: what changed, what was learned, problems.
 - 2026-10-29: started scoped delegation on clean main after PR #19 merged. ADR 0020 and migration 27 add tenant opt-in, bounded self-scheduling and revocation, immutable original approver slots, acting-member attribution, one-vote enforcement, delegated status, and caller-JWT API operations. The management UI remains cut-list scope. `pnpm test:coverage` passes all 601 tests with 1 skipped and thresholds met; typecheck, lint, stylelint, format check, and build also pass. `make test-db` is blocked by Podman socket permissions. PR #20 head `329b9a6` passed all required GitHub checks on run `40870860435`, including pgTAP and clean-clone Compose smoke. Its first CI attempt found the duplicate-decision error order; commit `329b9a6` corrected it without changing the established error contract.
 - 2026-10-29: added ADR 0021 and migration 28 for an hourly, idempotent in-app alert when a pending request's snapshotted quorum is unreachable. Eligibility includes valid active delegates and excludes unavailable, conflicting, or already-voted actors. Alerts go to the requester and active tenant Owners/Admins; the existing approval function remains authoritative. Shared schema and notification UI handle both alert kinds. Targeted UI/shared tests, typecheck, lint, stylelint, formatting, full Vitest coverage (603 passed, 1 skipped), and build pass. Local `make test-db` is blocked by a Podman API EOF; GitHub CI must verify migration and pgTAP before merge.
 - 2026-10-29: PR #21 merged as `a659d8e` after all required checks passed, including migration 28 pgTAP, image scans/builds, and Compose smoke. The current personal delegation UI branch adds migration 29 for an Owner-authorized policy read, an Owner control to enable/disable delegation, and approver schedule/revoke controls. Targeted approval route, shared schema, deal detail, and delegation panel tests pass. Full typecheck, lint, stylelint, formatting, coverage (608 passed, 1 skipped; 85.14% branches), and production build pass. Local pgTAP startup is blocked by Podman EOF; GitHub CI is required before merge. Current-build screenshot is pending because available app tabs are stale or signed out.
+- 2026-10-29: PR #22 was merged by the owner and local `main` was updated to `aba1073`. On `codex/feature-04-custom-roles`, added ADR 0022, migration 30 and pgTAP test 28, shared role contracts, caller-JWT catalog/save routes, a protected `/roles` editor, and invitation role choices from the tenant catalog. Focused Vitest (39 tests across five files), full coverage (634 passed, 1 skipped; 85.1% branches), typecheck, lint, stylelint, and build pass. Local formatting is being rechecked. `make test-db` remains blocked by Podman API EOF, so CI must verify the migration and pgTAP before merge.
 
 ## Deviations / debt
 Anything that differs from the plan or is deferred (also mirror in README "next steps").
-- Open follow-up: custom role editing, SLA escalation, and gates beyond IC review. Current unavailable slots can be reassigned when an eligible member exists; otherwise requests remain pending and fail closed. Quorum alerts are hourly and in-app only; no email escalation or repeat reminders are implemented.
+- Open follow-up: SLA escalation and gates beyond IC review. Current unavailable slots can be reassigned when an eligible member exists; otherwise requests remain pending and fail closed. Quorum alerts are hourly and in-app only; no email escalation or repeat reminders are implemented.

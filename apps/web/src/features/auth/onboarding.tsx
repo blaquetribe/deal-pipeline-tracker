@@ -7,6 +7,8 @@ import {
   organisationBodySchema,
   onboardingStateResponseSchema,
   profileBodySchema,
+  tenantRolesCatalogResponseSchema,
+  type TenantRole,
   type OnboardingStateResponse,
 } from '@dpt/shared';
 import Link from 'next/link';
@@ -98,6 +100,10 @@ export function Onboarding() {
   const [validationProblems, setValidationProblems] = useState<ValidationProblem[]>([]);
   const [message, setMessage] = useState<string | null>(null);
   const [invitationRefreshKey, setInvitationRefreshKey] = useState(0);
+  const [roleOptions, setRoleOptions] = useState<TenantRole[]>([]);
+  const [roleLoadError, setRoleLoadError] = useState<string | null>(null);
+  const rolesLoading =
+    step?.current_step === 'invite' && roleOptions.length === 0 && roleLoadError === null;
 
   const stepKey = step ? `${step.flow}:${step.current_step}:${step.completed}` : '';
   useEffect(() => {
@@ -139,6 +145,27 @@ export function Onboarding() {
       active = false;
     };
   }, []);
+
+  useEffect(() => {
+    if (step?.current_step === 'invite') {
+      let active = true;
+      void sessionRead('/roles')
+        .then((value) => {
+          const result = tenantRolesCatalogResponseSchema.parse(value);
+          if (active) setRoleOptions(result.roles.filter((role) => role.key !== 'owner'));
+        })
+        .catch((cause: unknown) => {
+          if (active) {
+            setRoleOptions([]);
+            setRoleLoadError(cause instanceof Error ? cause.message : 'Roles could not be loaded.');
+          }
+        });
+      return () => {
+        active = false;
+      };
+    }
+    return undefined;
+  }, [step?.current_step]);
 
   async function save(
     event: FormEvent<HTMLFormElement>,
@@ -483,6 +510,19 @@ export function Onboarding() {
           {step.current_step === 'invite' && (
             <div className="mt-6 space-y-4">
               <p>Invite teammates now or finish setup and return to this later.</p>
+              <p className="text-sm text-fg-muted">
+                Need a tailored permission set?{' '}
+                <Link className="text-brand-fg underline" href="/roles">
+                  Manage organisation roles
+                </Link>
+                .
+              </p>
+              {rolesLoading && <output>Loading available roles…</output>}
+              {roleLoadError && (
+                <p className="text-sm text-danger-fg" role="alert">
+                  {roleLoadError}
+                </p>
+              )}
               <PendingInvitations key={invitationRefreshKey} />
               <form
                 className="space-y-4"
@@ -513,14 +553,17 @@ export function Onboarding() {
                   </label>
                   <select
                     className="w-full rounded-control border border-line bg-surface-raised px-3 py-2 text-fg outline-focus focus-visible:outline-2"
+                    disabled={rolesLoading || roleOptions.length === 0}
                     id={`${id}-invite-role`}
                     name="roleKey"
+                    required
                   >
-                    <option value="deal_member">Deal Team Member</option>
-                    <option value="deal_lead">Deal Lead</option>
-                    <option value="ic_member">IC Member</option>
-                    <option value="observer_compliance">Observer / Compliance</option>
-                    <option value="admin">Admin</option>
+                    <option value="">Choose a role</option>
+                    {roleOptions.map((role) => (
+                      <option key={role.id} value={role.key}>
+                        {role.name}
+                      </option>
+                    ))}
                   </select>
                 </div>
                 <div className="flex flex-wrap gap-3">

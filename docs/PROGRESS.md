@@ -9,7 +9,7 @@ Tier: **core** (must ship), **extended** (ship if time allows, else README note)
 | 01 | Schema and security: tenants, memberships, permissions, roles, deals, notes, RLS, immutability, SQL tests | `docs/features/01-schema-security` | core | 00 | done (PR #18's app-schema function privilege assertion passed pgTAP CI) |
 | 02 | Auth and onboarding: sign-up, verification, login, sessions, tenant switcher, invitations, Mailer | `docs/features/02-auth-onboarding` | core | 01 | in progress (core implementation verified locally; follow-up scope documented) |
 | 03 | Deals core: CRUD, stage machine, notes, pipeline overview, closing soon | `docs/features/03-deals-core` | core | 01, 02 | done (core deal flows, dashboard, alerts, and delivery implemented; Kanban remains extended/deferred) |
-| 04 | Approvals: gates, quorum, decisions, absence, delegation, custom roles + SoD | `docs/features/04-approvals` | extended | 03 | in progress (IC gate, absence/reassignment, delegation database/API, and quorum alerts implemented; personal delegation UI underway; custom roles remain) |
+| 04 | Approvals: gates, quorum, decisions, absence, delegation, custom roles + SoD | `docs/features/04-approvals` | extended | 03 | in progress (approval, absence, delegation, quorum alerts, and custom role editor implemented; SLA escalation and gates beyond IC remain deferred) |
 | 05 | Realtime: WebSocket relay, live cache updates, presence | `docs/features/05-realtime` | core (user requirement) | 03 | done (PR #15 merged after all required CI checks passed; presence remains cut-list scope) |
 | 06 | Seed and polish: two tenants, all roles, sample deals, README | `docs/features/06-seed-polish` | core | 03-05 | done (PR #16 merged to main after all required checks passed) |
 | 07 | Stretch: document extraction | `docs/features/07-stretch-extraction` | stretch | 03, 08 | not started |
@@ -22,9 +22,7 @@ CSP and security headers are **core** security work, scheduled in 00 (gateway, H
 2. R2 driver (08) - keep the `fs` driver and the port
 3. Avatar upload (08) - keep generated initials
 4. SLA escalation notification (04)
-5. Delegation UI (04) - keep schema/API
-6. Custom role editor (04) - system roles only
-7. Stretch (07)
+5. Stretch (07)
 
 Not planned (mockup review, ADR 0009): Calendar and Reports pages, Next-steps checklist, Financials tab, SSO, Magic link.
 
@@ -55,5 +53,6 @@ Anything cut must be written in the README "what I'd do next" section.
 - 2026-10-29: Final Feature 01 review caught that the function privilege assertion covered `public` but not `app`; the follow-up adds the missing assertion. Documentation review also confirmed the closing-soon scan, realtime notifications, and digest email were already delivered by Feature 05, so Feature 03 is now marked complete. A two-session concurrency test for `move_stage` remains documented follow-up.
 - 2026-10-29: PR #18 merged to `main` as `68e0718` after all required CI checks passed, including the new Feature 01 `app`-schema function privilege assertion. Feature 01 is complete; a two-session concurrency test for `move_stage` remains documented follow-up.
 - 2026-10-29: PR #19 merged as `5f124da`; PR #20's delegation slice merged as `e6c9eec`; PR #21's hourly quorum alert merged as `a659d8e`, each after all required checks passed. The current branch adds personal delegation management controls and an Owner-only policy read/toggle. Custom roles remain, followed by the requested DoorSprint-informed UI pass and final presentation.
+- 2026-10-29: PR #22 merged by the owner; local `main` is updated to `aba1073`. Feature 04 custom role work is underway on `codex/feature-04-custom-roles`: database catalog/save functions, pgTAP coverage, shared schemas, API, `/roles` editor, and tenant-driven invitation choices. Focused Vitest, full coverage (634 passed, 1 skipped; 85.1% branches), typecheck, lint, stylelint, and build pass; Podman API EOF prevents local pgTAP. Open a PR after docs and format verification, then wait for green CI before merging. The DoorSprint-informed UI pass and final presentation remain later in that order.
 - 2026-10-29: began Feature 04 absence/reassignment follow-up on `codex/feature-04-absence-reassignment`. Migration 26, pgTAP 26, shared contracts, caller-JWT API routes, and deal-detail controls were completed in PR #19. Local pgTAP was blocked by the Podman API; GitHub CI passed. Delegation, custom roles, quorum alerts, the planned project UI pass, and the final feature walkthrough presentation remained after that slice.
 - 2026-10-29: CI for PR #19 isolated a test-fixture RLS issue: test 26 queried other members' IDs after switching to the authenticated role, producing null reassignment arguments. The pgTAP fixture now captures those IDs before the role switch. PR #19 head `5d13633` passed all required checks on run `40864349477`; it was merged after verification.

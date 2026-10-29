@@ -36,6 +36,7 @@ vi.mock('../features/deals', () => ({
   DealDetail: ({ dealId }: { dealId: string }) => <p>Deal id: {dealId}</p>,
   DealsDashboard: () => <p>Deals dashboard</p>,
 }));
+vi.mock('../features/roles', () => ({ RoleManagement: () => <p>Role management component</p> }));
 
 import AcceptInvitationPage from './accept-invitation/page';
 import CheckEmailPage from './check-email/page';
@@ -46,6 +47,7 @@ import OnboardingStepPage from './onboarding/[step]/page';
 import OnboardingPage from './onboarding/page';
 import HomePage from './page';
 import ResetPasswordPage from './reset-password/page';
+import RolesPage from './roles/page';
 import SignupPage from './signup/page';
 import VerifyEmailPage from './verify-email/page';
 
@@ -105,5 +107,12 @@ describe('Next page wrappers', () => {
     render(await DealPage({ params: Promise.resolve({ dealId: 'deal-42' }) }));
     expect(screen.getByText('Deal id: deal-42')).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Sign out' })).toBeInTheDocument();
+  });
+
+  it('renders the role management page', () => {
+    render(<RolesPage />);
+    expect(screen.getByRole('heading', { name: 'Role management' })).toBeInTheDocument();
+    expect(screen.getByText('Role management component')).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: 'Back to pipeline' })).toHaveAttribute('href', '/');
   });
 });

@@ -4,6 +4,7 @@ const mocks = vi.hoisted(() => ({
   mountAuthRoutes: vi.fn<(...args: unknown[]) => void>(),
   mountDealRoutes: vi.fn<(...args: unknown[]) => void>(),
   mountNotificationRoutes: vi.fn<(...args: unknown[]) => void>(),
+  mountRoleRoutes: vi.fn<(...args: unknown[]) => void>(),
   createRateLimiter: vi.fn<() => unknown>(() => ({ hit: vi.fn<() => unknown>() })),
 }));
 
@@ -12,6 +13,7 @@ vi.mock('./features/deals/routes', () => ({ mountDealRoutes: mocks.mountDealRout
 vi.mock('./features/notifications/routes', () => ({
   mountNotificationRoutes: mocks.mountNotificationRoutes,
 }));
+vi.mock('./features/roles/routes', () => ({ mountRoleRoutes: mocks.mountRoleRoutes }));
 vi.mock('./http/rate-limit', () => ({ createRateLimiter: mocks.createRateLimiter }));
 
 import { createApp } from './app';
@@ -98,6 +100,9 @@ describe('api app', () => {
       userRpc: auth.userRpc,
     });
     expect(mocks.mountNotificationRoutes).toHaveBeenCalledWith(configuredApp, expect.any(Object), {
+      userRpc: auth.userRpc,
+    });
+    expect(mocks.mountRoleRoutes).toHaveBeenCalledWith(configuredApp, expect.any(Object), {
       userRpc: auth.userRpc,
     });
   });
