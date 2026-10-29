@@ -10,6 +10,12 @@ Running log feeding the README reflection required by the brief. Add an entry pe
 - **What went wrong or was surprising:**
 
 ## Entries
+### 2026-10-29 / UI pass: workflow and notification buttons
+- **What Codex did:** migrated the notification panel trigger, refresh and dismiss actions plus role create/edit/save/cancel actions to the shared `Button` variants. Kept the notification trigger and role actions visibly distinct by semantic intent, while preserving their existing accessible names and native behavior.
+- **What the human decided or corrected:** continue the UI pass incrementally after PR #27 merged; keep the final feature walkthrough presentation as the last implementation task.
+- **How it was verified:** web typecheck, lint, Stylelint, format check, `git diff --check`, and the production build pass. Current authenticated UI could not be reviewed because the local seeded stack is unavailable; GitHub CI will run the test and container/database gates.
+- **What went wrong or was surprising:** the notification and role areas were not available in the signed-out browser session, so visual inspection was limited to shared styles and source review.
+
 ### 2026-10-29 / UI pass: shared button variants
 - **What Codex did:** added a typed native-button wrapper with primary, secondary, quiet, and danger intents plus compact sizing, styled from the existing DoorSprint-derived light/dark tokens, and migrated sign-in, registration, password recovery, verification resend, and sign-out actions. Captured the current sign-in screen as UI evidence and updated ADR 0023.
 - **What the human decided or corrected:** continued the project-wide DoorSprint-informed UI pass before the final walkthrough presentation; preserve the existing app architecture and accessible native behavior.
