@@ -19,6 +19,7 @@ import { useEffect, useId, useRef, useState } from 'react';
 import type { FormEvent } from 'react';
 
 import { StageBadge } from '../pipeline';
+import { Button } from '../ui/button';
 import { createDeal, moveDealStage, readDashboardSummary, readDeals, updateDeal } from './api';
 import { formatMinorAmount, majorAmountForInput, parseMajorAmount } from './money';
 
@@ -322,13 +323,14 @@ export function DealsDashboard() {
             role="alert"
           >
             <p>{summaryError}</p>
-            <button
-              className="mt-2 underline focus-visible:outline-2"
+            <Button
+              className="mt-2"
               onClick={() => void refreshSummary()}
               type="button"
+              variant="quiet"
             >
               Retry summary
-            </button>
+            </Button>
           </div>
         ) : summary ? (
           <div aria-busy={false} className="space-y-4">
@@ -450,12 +452,9 @@ export function DealsDashboard() {
               value={search}
             />
           </div>
-          <button
-            className="rounded-control bg-brand px-4 py-2 font-medium text-fg-on-brand hover:bg-brand-hover focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus"
-            type="submit"
-          >
+          <Button type="submit" variant="secondary">
             Search
-          </button>
+          </Button>
         </form>
         <div className="min-w-48">
           <label className="mb-1 block text-sm font-medium" htmlFor={stageId}>
@@ -560,13 +559,9 @@ export function DealsDashboard() {
             </p>
           )}
           <div className="flex items-center gap-3 sm:col-span-2">
-            <button
-              className="rounded-control bg-brand px-4 py-2 font-medium text-fg-on-brand hover:bg-brand-hover focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus disabled:opacity-60"
-              disabled={creating}
-              type="submit"
-            >
+            <Button disabled={creating} type="submit" variant="primary">
               {creating ? 'Creating…' : 'Create deal'}
-            </button>
+            </Button>
             {createMessage && (
               <p aria-live="polite" className="text-sm text-success-fg">
                 {createMessage}
@@ -684,16 +679,18 @@ export function DealsDashboard() {
                               </option>
                             ))}
                           </select>
-                          <button
-                            className="rounded-control border border-line px-2 py-2 text-sm hover:bg-surface focus-visible:outline-2 focus-visible:outline-focus disabled:opacity-50"
+                          <Button
+                            className="text-sm"
                             disabled={
                               !selected || check?.ok === false || movingDeal === deal.id || loading
                             }
                             onClick={() => void moveStage(deal.id)}
+                            size="small"
                             type="button"
+                            variant="secondary"
                           >
                             {movingDeal === deal.id ? 'Moving…' : 'Move'}
-                          </button>
+                          </Button>
                           {check && !check.ok && check.code === 'missing_fields' && (
                             <span className="sr-only">
                               Required fields missing: {check.fields.join(', ')}.
@@ -774,13 +771,15 @@ export function DealsDashboard() {
                             type="time"
                           />
                         </label>
-                        <button
-                          className="rounded-control bg-brand px-3 py-2 text-sm font-medium text-fg-on-brand hover:bg-brand-hover focus-visible:outline-2 disabled:opacity-50"
+                        <Button
+                          className="text-sm"
                           disabled={updatingDeal === deal.id}
+                          size="small"
                           type="submit"
+                          variant="primary"
                         >
                           {updatingDeal === deal.id ? 'Saving…' : 'Save changes'}
-                        </button>
+                        </Button>
                       </form>
                     </details>
                   </td>
@@ -809,30 +808,34 @@ export function DealsDashboard() {
             : ' '}
         </p>
         <div className="flex gap-2">
-          <button
-            className="rounded-control border border-line px-3 py-2 text-sm hover:bg-surface-raised focus-visible:outline-2 focus-visible:outline-focus disabled:opacity-50"
+          <Button
+            className="text-sm"
             disabled={offset === 0 || loading}
             onClick={() => {
               setLoading(true);
               setError(null);
               setOffset((current) => Math.max(0, current - PAGE_SIZE));
             }}
+            size="small"
             type="button"
+            variant="secondary"
           >
             Previous
-          </button>
-          <button
-            className="rounded-control border border-line px-3 py-2 text-sm hover:bg-surface-raised focus-visible:outline-2 focus-visible:outline-focus disabled:opacity-50"
+          </Button>
+          <Button
+            className="text-sm"
             disabled={!result || offset + PAGE_SIZE >= result.total || loading}
             onClick={() => {
               setLoading(true);
               setError(null);
               setOffset((current) => current + PAGE_SIZE);
             }}
+            size="small"
             type="button"
+            variant="secondary"
           >
             Next
-          </button>
+          </Button>
         </div>
       </div>
     </section>

@@ -2,6 +2,7 @@
 
 import { useId, useState } from 'react';
 
+import { Button } from '../ui/button';
 import { readDealFiles, uploadDealFile } from './files-api';
 
 interface DealFilesProps {
@@ -61,15 +62,16 @@ export function DealFiles({ dealId }: DealFilesProps) {
             PDF files are private and available to this deal’s team.
           </p>
         </div>
-        <button
+        <Button
           aria-controls={`${inputId}-content`}
           aria-expanded={open}
-          className="rounded-control border border-line px-3 py-2 text-sm font-medium hover:bg-surface"
+          className="text-sm"
           onClick={() => void toggle()}
           type="button"
+          variant="secondary"
         >
           {open ? 'Hide attachments' : 'View attachments'}
-        </button>
+        </Button>
       </div>
       {open ? (
         <div id={`${inputId}-content`}>
