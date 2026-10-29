@@ -17,6 +17,7 @@ export {
   approvalDelegationBodySchema,
   approvalDelegationsResponseSchema,
   approvalPolicyBodySchema,
+  approvalPolicyResponseSchema,
   approvalReassignmentBodySchema,
   approvalReassignmentOptionsSchema,
   approvalRequestBodySchema,

@@ -4,9 +4,13 @@ import {
   dealActivityResponseSchema,
   approvalAbsenceBodySchema,
   approvalAbsencesResponseSchema,
+  approvalDelegateOptionsSchema,
+  approvalDelegationBodySchema,
+  approvalDelegationsResponseSchema,
   createNoteBodySchema,
   approvalDecisionBodySchema,
   approvalPolicyBodySchema,
+  approvalPolicyResponseSchema,
   approvalReassignmentBodySchema,
   approvalReassignmentOptionsSchema,
   approvalRequestBodySchema,
@@ -14,6 +18,7 @@ import {
   dashboardSummarySchema,
   type CreateDealBody,
   type ApprovalAbsence,
+  type ApprovalDelegation,
   type ApprovalReassignmentOptions,
   type Stage,
   type UpdateDealBody,
@@ -57,11 +62,18 @@ export async function decideDealApproval(
   );
 }
 
-export async function configureDealApprovalPolicy(requiredApprovals: number): Promise<void> {
+export async function readDealApprovalPolicy() {
+  return approvalPolicyResponseSchema.parse(await sessionRead('/approval-policy'));
+}
+
+export async function configureDealApprovalPolicy(
+  requiredApprovals: number,
+  delegationEnabled: boolean,
+): Promise<void> {
   await sessionRequest(
     '/approval-policy',
     'PUT',
-    approvalPolicyBodySchema.parse({ requiredApprovals }),
+    approvalPolicyBodySchema.parse({ requiredApprovals, delegationEnabled }),
   );
 }
 
@@ -79,6 +91,30 @@ export async function setApprovalAbsence(startsAt: string, endsAt: string): Prom
 
 export async function cancelApprovalAbsence(absenceId: string): Promise<void> {
   await sessionRequest(`/approval-absences/${absenceId}`, 'DELETE');
+}
+
+export async function readApprovalDelegations(): Promise<ApprovalDelegation[]> {
+  return approvalDelegationsResponseSchema.parse(await sessionRead('/approval-delegations'));
+}
+
+export async function readEligibleApprovalDelegates() {
+  return approvalDelegateOptionsSchema.parse(await sessionRead('/approval-delegation-options'));
+}
+
+export async function setApprovalDelegation(
+  delegateMembershipId: string,
+  startsAt: string,
+  endsAt: string,
+): Promise<void> {
+  await sessionRequest(
+    '/approval-delegations',
+    'POST',
+    approvalDelegationBodySchema.parse({ delegateMembershipId, startsAt, endsAt }),
+  );
+}
+
+export async function cancelApprovalDelegation(delegationId: string): Promise<void> {
+  await sessionRequest(`/approval-delegations/${delegationId}`, 'DELETE');
 }
 
 export async function readApprovalReassignmentOptions(

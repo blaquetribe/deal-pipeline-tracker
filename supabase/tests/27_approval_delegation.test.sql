@@ -1,7 +1,7 @@
 -- Feature 04: tenant-scoped, opt-in approval delegation preserves the original slot
 -- and records the acting delegate without granting a second vote.
 begin;
-select plan(30);
+select plan(34);
 
 select has_table('public', 'approval_delegations', 'approval delegations are stored per tenant');
 select is((select count(*) from pg_class where oid = to_regclass('public.approval_delegations')
@@ -21,6 +21,8 @@ select has_function('public', 'eligible_approval_delegates', array['uuid'],
   'members can read eligible delegation choices');
 select has_function('public', 'scan_approval_quorum_alerts', array['timestamp with time zone'],
   'scheduled scanner creates quorum reachability alerts');
+select has_function('public', 'get_approval_policy', array['uuid'],
+  'tenant approval policy has an authenticated read function');
 select has_function('public', 'decide_approval', array['uuid', 'text', 'text', 'uuid'],
   'a delegate selects the original approver slot explicitly');
 select ok(
@@ -95,7 +97,12 @@ select throws_ok(format($$select public.set_approval_delegation('31313131-0000-4
 select set_config('request.jwt.claims', '{"sub":"31313131-0000-4000-8000-000000000001"}', true);
 select lives_ok($$select public.configure_approval_policy('31313131-0000-4000-8000-00000000000a', 2, true)$$,
   'Owner explicitly enables delegation');
+select is(public.get_approval_policy('31313131-0000-4000-8000-00000000000a'),
+  '{"requiredApprovals": 2, "delegationEnabled": true}'::jsonb,
+  'Owner can read the configured quorum and delegation setting');
 select set_config('request.jwt.claims', '{"sub":"31313131-0000-4000-8000-000000000003"}', true);
+select throws_ok($$select public.get_approval_policy('31313131-0000-4000-8000-00000000000a')$$,
+  '42501', 'permission denied', 'approval policy read is restricted to role managers');
 insert into approval_delegation_ids values ('delegation', public.set_approval_delegation(
   '31313131-0000-4000-8000-00000000000a',
   (select id from approval_delegation_ids where key = 'ic-four'), now() - interval '1 minute', now() + interval '1 day'));
@@ -171,6 +178,9 @@ select is(public.scan_approval_quorum_alerts(now()), 0,
 select ok(not has_function_privilege('authenticated', 'public.scan_approval_quorum_alerts(timestamptz)', 'EXECUTE')
   and not has_function_privilege('anon', 'public.scan_approval_quorum_alerts(timestamptz)', 'EXECUTE'),
   'quorum scanner is not callable by application roles');
+select ok(has_function_privilege('authenticated', 'public.get_approval_policy(uuid)', 'EXECUTE')
+  and not has_function_privilege('anon', 'public.get_approval_policy(uuid)', 'EXECUTE'),
+  'approval policy read is authenticated-only');
 select is((select count(*) from public.notifications
   where tenant_id = '31313131-0000-4000-8000-00000000000a'
     and kind = 'approval_quorum_unreachable'), 2::bigint,

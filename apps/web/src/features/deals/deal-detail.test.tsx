@@ -281,11 +281,13 @@ describe('DealDetail', () => {
           ? activity
           : url.endsWith('/approval')
             ? status
-            : url === '/api/approval-absences'
-              ? absence
-                ? [absence]
-                : []
-              : deal;
+            : url === '/api/approval-delegations' || url === '/api/approval-delegation-options'
+              ? []
+              : url === '/api/approval-absences'
+                ? absence
+                  ? [absence]
+                  : []
+                : deal;
         return new Response(JSON.stringify(body), {
           status: 200,
           headers: { 'Content-Type': 'application/json' },
@@ -441,7 +443,9 @@ describe('DealDetail', () => {
           ? activity
           : url.endsWith('/approval')
             ? status
-            : icDeal;
+            : url === '/api/approval-policy'
+              ? { requiredApprovals: 2, delegationEnabled: false }
+              : icDeal;
         return new Response(JSON.stringify(body), {
           status: 200,
           headers: { 'Content-Type': 'application/json' },
@@ -455,11 +459,15 @@ describe('DealDetail', () => {
     expect(await screen.findByText(/1 approved · 1 pending · 0 rejected/)).toBeVisible();
     await user.clear(screen.getByRole('spinbutton', { name: 'Required approvals' }));
     await user.type(screen.getByRole('spinbutton', { name: 'Required approvals' }), '3');
-    await user.click(screen.getByRole('button', { name: 'Save quorum' }));
+    await user.click(screen.getByRole('checkbox', { name: 'Allow temporary approval delegation' }));
+    await user.click(screen.getByRole('button', { name: 'Save approval policy' }));
     await waitFor(() =>
       expect(fetch).toHaveBeenCalledWith(
         '/api/approval-policy',
-        expect.objectContaining({ method: 'PUT', body: JSON.stringify({ requiredApprovals: 3 }) }),
+        expect.objectContaining({
+          method: 'PUT',
+          body: JSON.stringify({ requiredApprovals: 3, delegationEnabled: true }),
+        }),
       ),
     );
 
@@ -494,7 +502,9 @@ describe('DealDetail', () => {
           ? activity
           : url.endsWith('/approval')
             ? configurableStatus
-            : icDeal;
+            : url === '/api/approval-policy'
+              ? { requiredApprovals: null, delegationEnabled: false }
+              : icDeal;
         return new Response(JSON.stringify(body), {
           status: 200,
           headers: { 'Content-Type': 'application/json' },

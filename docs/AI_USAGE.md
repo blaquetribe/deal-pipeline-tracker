@@ -10,6 +10,12 @@ Running log feeding the README reflection required by the brief. Add an entry pe
 - **What went wrong or was surprising:**
 
 ## Entries
+### 2026-10-29 / Feature 04 delegation management UI
+- **What Codex did:** added the personal delegation schedule/revoke panel, connected it to the existing BFF endpoints, and added an Owner-authorized approval-policy read plus a UI toggle for tenant opt-in. Added a PostgreSQL migration and pgTAP coverage for that read contract; updated route/schema/component tests and current handoff/progress notes.
+- **What the human decided or corrected:** continued on clean main after PR #21 merged; the Doorsprint-inspired styling pass and the final walkthrough presentation remain later project steps.
+- **How it was verified:** focused approvals API (22 tests), web deal/delegation components (15 tests), shared schema (16 tests), typecheck, lint, stylelint, format, 608 Vitest tests (1 skipped, 85.14% branch coverage), and production build pass. Local pgTAP could not start because Podman returned EOF; GitHub CI must verify migration 29 before merge.
+- **What went wrong or was surprising:** the delegation API was already present, but no Owner-facing setting could enable the tenant opt-in; the UI needed a separately authorized policy read to make the existing write operation usable.
+
 ### 2026-10-29 / Feature 04 quorum reachability alerts
 - **What Codex did:** added ADR 0021, migration 28, and an hourly database scanner for unreachable approval quorum; it notifies the request creator and active tenant Owners/Admins with deduplicated in-app alerts. Extended notification validation and UI handling and updated project handoff/progress docs.
 - **What the human decided or corrected:** continued the existing implementation, with the standing requirement to verify green CI before merging and leave the requested UI pass and walkthrough presentation until after feature work.

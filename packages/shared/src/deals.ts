@@ -209,6 +209,11 @@ export const approvalPolicyBodySchema = z.strictObject({
   delegationEnabled: z.boolean().optional(),
 });
 
+export const approvalPolicyResponseSchema = z.strictObject({
+  requiredApprovals: z.number().int().min(1).max(50).nullable(),
+  delegationEnabled: z.boolean(),
+});
+
 export const approvalAbsenceBodySchema = z
   .strictObject({
     startsAt: z.iso.datetime({ offset: true }),
