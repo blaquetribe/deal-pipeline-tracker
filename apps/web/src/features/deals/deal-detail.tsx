@@ -1,6 +1,12 @@
 'use client';
 
-import type { Deal, DealActivityResponse, DealApprovalStatus } from '@dpt/shared';
+import type {
+  ApprovalAbsence,
+  ApprovalReassignmentOptions,
+  Deal,
+  DealActivityResponse,
+  DealApprovalStatus,
+} from '@dpt/shared';
 import Link from 'next/link';
 import { useEffect, useId, useState } from 'react';
 import type { FormEvent } from 'react';
@@ -8,18 +14,34 @@ import type { FormEvent } from 'react';
 import { StageBadge } from '../pipeline';
 import {
   configureDealApprovalPolicy,
+  cancelApprovalAbsence,
   decideDealApproval,
+  readApprovalAbsences,
+  readApprovalReassignmentOptions,
   postDealNote,
   readDeal,
   readDealActivity,
   readDealApprovalStatus,
   requestDealApproval,
+  reassignApprovalApprover,
+  setApprovalAbsence,
 } from './api';
 import { DealFiles } from './deal-files';
 import { formatMinorAmount } from './money';
 
 async function loadDealData(dealId: string) {
-  return Promise.all([readDeal(dealId), readDealActivity(dealId), readDealApprovalStatus(dealId)]);
+  const [deal, activity, approval] = await Promise.all([
+    readDeal(dealId),
+    readDealActivity(dealId),
+    readDealApprovalStatus(dealId),
+  ]);
+  const [absences, reassignmentOptions] = await Promise.all([
+    approval.canManageAbsence ? readApprovalAbsences() : Promise.resolve([]),
+    approval.canReassign && approval.requestId
+      ? readApprovalReassignmentOptions(approval.requestId)
+      : Promise.resolve(null),
+  ]);
+  return [deal, activity, approval, absences, reassignmentOptions] as const;
 }
 
 interface DealDetailProps {
@@ -36,9 +58,16 @@ export function DealDetail({ dealId }: DealDetailProps) {
   const noteId = useId();
   const quorumId = useId();
   const rejectionReasonId = useId();
+  const absenceStartId = useId();
+  const absenceEndId = useId();
   const [deal, setDeal] = useState<Deal | null>(null);
   const [activity, setActivity] = useState<DealActivityResponse | null>(null);
   const [approval, setApproval] = useState<DealApprovalStatus | null>(null);
+  const [absences, setAbsences] = useState<ApprovalAbsence[]>([]);
+  const [reassignmentOptions, setReassignmentOptions] =
+    useState<ApprovalReassignmentOptions | null>(null);
+  const [absenceStart, setAbsenceStart] = useState('');
+  const [absenceEnd, setAbsenceEnd] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [noteError, setNoteError] = useState<string | null>(null);
   const [activityError, setActivityError] = useState<string | null>(null);
@@ -52,11 +81,13 @@ export function DealDetail({ dealId }: DealDetailProps) {
   useEffect(() => {
     let active = true;
     void loadDealData(dealId)
-      .then(([detail, events, approvalStatus]) => {
+      .then(([detail, events, approvalStatus, ownAbsences, options]) => {
         if (!active) return;
         setDeal(detail);
         setActivity(events);
         setApproval(approvalStatus);
+        setAbsences(ownAbsences);
+        setReassignmentOptions(options);
         setQuorum(String(approvalStatus.configuredApprovals ?? 1));
       })
       .catch((cause: unknown) => {
@@ -74,10 +105,12 @@ export function DealDetail({ dealId }: DealDetailProps) {
     setActivity(null);
     setApproval(null);
     try {
-      const [detail, events, approvalStatus] = await loadDealData(dealId);
+      const [detail, events, approvalStatus, ownAbsences, options] = await loadDealData(dealId);
       setDeal(detail);
       setActivity(events);
       setApproval(approvalStatus);
+      setAbsences(ownAbsences);
+      setReassignmentOptions(options);
       setQuorum(String(approvalStatus.configuredApprovals ?? 1));
     } catch (cause) {
       setError(cause instanceof Error ? cause.message : 'Deal details could not be loaded.');
@@ -85,10 +118,12 @@ export function DealDetail({ dealId }: DealDetailProps) {
   }
 
   async function refreshApprovalData() {
-    const [detail, events, approvalStatus] = await loadDealData(dealId);
+    const [detail, events, approvalStatus, ownAbsences, options] = await loadDealData(dealId);
     setDeal(detail);
     setActivity(events);
     setApproval(approvalStatus);
+    setAbsences(ownAbsences);
+    setReassignmentOptions(options);
     setQuorum(String(approvalStatus.configuredApprovals ?? 1));
   }
 
@@ -139,6 +174,56 @@ export function DealDetail({ dealId }: DealDetailProps) {
     } catch (cause) {
       setApprovalError(
         cause instanceof Error ? cause.message : 'The approval policy could not be saved.',
+      );
+    } finally {
+      setApprovalBusy(false);
+    }
+  }
+
+  async function scheduleAbsence(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    setApprovalError(null);
+    setApprovalBusy(true);
+    try {
+      await setApprovalAbsence(
+        new Date(absenceStart).toISOString(),
+        new Date(absenceEnd).toISOString(),
+      );
+      setAbsenceStart('');
+      setAbsenceEnd('');
+      await refreshApprovalData();
+    } catch (cause) {
+      setApprovalError(cause instanceof Error ? cause.message : 'The absence could not be saved.');
+    } finally {
+      setApprovalBusy(false);
+    }
+  }
+
+  async function cancelAbsence(absenceId: string) {
+    setApprovalError(null);
+    setApprovalBusy(true);
+    try {
+      await cancelApprovalAbsence(absenceId);
+      await refreshApprovalData();
+    } catch (cause) {
+      setApprovalError(
+        cause instanceof Error ? cause.message : 'The absence could not be cancelled.',
+      );
+    } finally {
+      setApprovalBusy(false);
+    }
+  }
+
+  async function reassignApprover(fromMembershipId: string, toMembershipId: string) {
+    if (!approval?.requestId) return;
+    setApprovalError(null);
+    setApprovalBusy(true);
+    try {
+      await reassignApprovalApprover(approval.requestId, fromMembershipId, toMembershipId);
+      await refreshApprovalData();
+    } catch (cause) {
+      setApprovalError(
+        cause instanceof Error ? cause.message : 'The approver could not be reassigned.',
       );
     } finally {
       setApprovalBusy(false);
@@ -266,7 +351,8 @@ export function DealDetail({ dealId }: DealDetailProps) {
         </dl>
       </section>
 
-      {approval && (deal.stage === 'ic_review' || approval.requestId !== null) ? (
+      {approval &&
+      (deal.stage === 'ic_review' || approval.requestId !== null || approval.canManageAbsence) ? (
         <section
           aria-labelledby="approval-title"
           className="rounded-panel border border-line bg-surface-raised p-5"
@@ -359,6 +445,154 @@ export function DealDetail({ dealId }: DealDetailProps) {
                   Reject
                 </button>
               </div>
+            </div>
+          ) : null}
+          {approval.canManageAbsence ? (
+            <div className="mt-5 border-t border-line pt-4">
+              <h3 className="font-semibold">Your approval availability</h3>
+              <p className="mt-1 text-sm text-fg-muted">
+                While an absence is active, you are removed from pending approval quorum
+                calculations.
+              </p>
+              {absences.length ? (
+                <ul className="mt-3 space-y-2">
+                  {absences.map((absence) => (
+                    <li
+                      className="flex flex-wrap items-center justify-between gap-3 rounded-control border border-line p-3 text-sm"
+                      key={absence.id}
+                    >
+                      <span>
+                        {formatDate(absence.startsAt)} – {formatDate(absence.endsAt)}
+                        {absence.active ? ' · Active' : ' · Upcoming'}
+                      </span>
+                      <button
+                        className="rounded-control border border-line px-3 py-1.5 focus-visible:outline-2 disabled:opacity-60"
+                        disabled={approvalBusy}
+                        onClick={() => void cancelAbsence(absence.id)}
+                        type="button"
+                      >
+                        Cancel absence
+                      </button>
+                    </li>
+                  ))}
+                </ul>
+              ) : null}
+              <form
+                className="mt-3 flex flex-wrap items-end gap-3"
+                onSubmit={(event) => void scheduleAbsence(event)}
+              >
+                <div>
+                  <label className="mb-1 block text-sm font-medium" htmlFor={absenceStartId}>
+                    Starts
+                  </label>
+                  <input
+                    className="rounded-control border border-line bg-surface p-2 outline-focus focus-visible:outline-2"
+                    id={absenceStartId}
+                    onChange={(event) => setAbsenceStart(event.currentTarget.value)}
+                    required
+                    type="datetime-local"
+                    value={absenceStart}
+                  />
+                </div>
+                <div>
+                  <label className="mb-1 block text-sm font-medium" htmlFor={absenceEndId}>
+                    Ends
+                  </label>
+                  <input
+                    className="rounded-control border border-line bg-surface p-2 outline-focus focus-visible:outline-2"
+                    id={absenceEndId}
+                    min={absenceStart || undefined}
+                    onChange={(event) => setAbsenceEnd(event.currentTarget.value)}
+                    required
+                    type="datetime-local"
+                    value={absenceEnd}
+                  />
+                </div>
+                <button
+                  className="rounded-control border border-line px-4 py-2 focus-visible:outline-2 disabled:opacity-60"
+                  disabled={approvalBusy}
+                  type="submit"
+                >
+                  Schedule absence
+                </button>
+              </form>
+            </div>
+          ) : null}
+          {approval.canReassign && reassignmentOptions ? (
+            <div className="mt-5 border-t border-line pt-4">
+              <h3 className="font-semibold">Unavailable approvers</h3>
+              {reassignmentOptions.unavailableApprovers.length === 0 ? (
+                <p className="mt-2 text-sm text-fg-muted">
+                  No pending approvers need reassignment.
+                </p>
+              ) : reassignmentOptions.eligibleReplacements.length === 0 ? (
+                <p className="mt-2 text-sm text-fg-muted">
+                  No eligible replacement is available. The request remains pending until the quorum
+                  can be met.
+                </p>
+              ) : (
+                <ul className="mt-3 space-y-3">
+                  {reassignmentOptions.unavailableApprovers.map((approver) => {
+                    const replacementSelectId = `replacement-${approver.membershipId}`;
+                    return (
+                      <li
+                        className="rounded-control border border-line p-3"
+                        key={approver.membershipId}
+                      >
+                        <p className="text-sm">
+                          {approver.displayName ?? 'Unnamed member'} is unavailable for this
+                          request.
+                        </p>
+                        <form
+                          className="mt-2 flex flex-wrap items-end gap-3"
+                          onSubmit={(event) => {
+                            event.preventDefault();
+                            const replacementId = new FormData(event.currentTarget).get(
+                              'replacement',
+                            );
+                            if (typeof replacementId === 'string') {
+                              void reassignApprover(approver.membershipId, replacementId);
+                            }
+                          }}
+                        >
+                          <div>
+                            <label
+                              className="mb-1 block text-sm font-medium"
+                              htmlFor={replacementSelectId}
+                            >
+                              Replacement approver
+                            </label>
+                            <select
+                              className="min-w-56 rounded-control border border-line bg-surface p-2 outline-focus focus-visible:outline-2"
+                              defaultValue={
+                                reassignmentOptions.eligibleReplacements[0]?.membershipId
+                              }
+                              id={replacementSelectId}
+                              name="replacement"
+                            >
+                              {reassignmentOptions.eligibleReplacements.map((replacement) => (
+                                <option
+                                  key={replacement.membershipId}
+                                  value={replacement.membershipId}
+                                >
+                                  {replacement.displayName ?? 'Unnamed member'}
+                                </option>
+                              ))}
+                            </select>
+                          </div>
+                          <button
+                            className="rounded-control border border-line px-4 py-2 focus-visible:outline-2 disabled:opacity-60"
+                            disabled={approvalBusy}
+                            type="submit"
+                          >
+                            Reassign approver
+                          </button>
+                        </form>
+                      </li>
+                    );
+                  })}
+                </ul>
+              )}
             </div>
           ) : null}
           {approvalError ? (

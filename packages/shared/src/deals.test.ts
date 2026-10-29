@@ -3,9 +3,13 @@ import { describe, expect, it } from 'vitest';
 import {
   createDealBodySchema,
   createNoteBodySchema,
+  approvalAbsenceBodySchema,
+  approvalAbsencesResponseSchema,
   approvalDecisionBodySchema,
   approvalPolicyBodySchema,
   approvalRequestBodySchema,
+  approvalReassignmentBodySchema,
+  approvalReassignmentOptionsSchema,
   dealApprovalStatusSchema,
   dashboardSummarySchema,
   dealActivityQuerySchema,
@@ -129,6 +133,46 @@ describe('setDealAssigneesBodySchema', () => {
         })),
       }),
     ).toThrow(/Too big|at most 50/);
+  });
+});
+
+describe('approval absence and reassignment schemas', () => {
+  it('accepts bounded timestamp windows and rejects reversed intervals', () => {
+    expect(
+      approvalAbsenceBodySchema.parse({
+        startsAt: '2027-03-01T09:00:00+02:00',
+        endsAt: '2027-03-03T17:00:00+02:00',
+      }).startsAt,
+    ).toBe('2027-03-01T09:00:00+02:00');
+    expect(() =>
+      approvalAbsenceBodySchema.parse({
+        startsAt: '2027-03-03T17:00:00+02:00',
+        endsAt: '2027-03-01T09:00:00+02:00',
+      }),
+    ).toThrow(/end time/);
+    expect(() =>
+      approvalAbsenceBodySchema.parse({
+        startsAt: '2027-03-01T09:00:00',
+        endsAt: '2027-03-03T17:00:00',
+      }),
+    ).toThrow(/startsAt/);
+  });
+
+  it('keeps response contracts strict and membership ids server-authored', () => {
+    expect(approvalAbsencesResponseSchema.parse([])).toEqual([]);
+    expect(() =>
+      approvalReassignmentBodySchema.parse({
+        fromMembershipId: userA,
+        toMembershipId: userB,
+        tenantId: 'untrusted',
+      }),
+    ).toThrow(/tenantId/);
+    expect(
+      approvalReassignmentOptionsSchema.parse({
+        unavailableApprovers: [{ membershipId: userA, displayName: 'Approver' }],
+        eligibleReplacements: [{ membershipId: userB, displayName: null }],
+      }).eligibleReplacements,
+    ).toHaveLength(1);
   });
 });
 
@@ -262,6 +306,8 @@ describe('approval schemas', () => {
       canRequest: false,
       canDecide: false,
       canConfigure: true,
+      canManageAbsence: false,
+      canReassign: false,
     };
     expect(dealApprovalStatusSchema.parse(status)).toEqual(status);
     expect(() => dealApprovalStatusSchema.parse({ ...status, tenantId: userA })).toThrow(

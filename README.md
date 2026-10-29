@@ -56,7 +56,7 @@ Only the gateway publishes a host port. Set `GATEWAY_PORT` if port 8080 is alrea
 - Postgres is authoritative for tenant authorization, role permissions, stage transitions, approval quorum and separation of duties. TypeScript validation mirrors database rules for clear UI feedback, with parity tests where applicable.
 - Notes, approval decisions, and audit events are append-only. Money is stored as integer minor units, not floating-point values.
 - The local Compose stack is optimized for a reproducible review path, not production hosting. It uses development defaults, local Mailpit, and a file-backed object store. There is no hosted deployment pipeline.
-- The schema uses system roles only. A custom role editor, approval absence/delegation workflow, and presence are not included in the core review path.
+- The schema uses system roles only. Approval absences and reassignment are implemented through database-enforced, audited workflows; delegation and a custom role editor remain extended follow-up. Presence is outside the core review path.
 
 More detail and the rationale behind locked choices live in [`docs/decisions/`](docs/decisions/), [`docs/standards/`](docs/standards/), and [`docs/HANDOFF.md`](docs/HANDOFF.md).
 

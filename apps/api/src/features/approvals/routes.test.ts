@@ -7,6 +7,9 @@ import { createApprovalRoutes } from './routes';
 
 const DEAL = 'bbbbbbbb-0000-4000-8000-000000000001';
 const REQUEST = 'bbbbbbbb-0000-4000-8000-000000000002';
+const ABSENCE = 'bbbbbbbb-0000-4000-8000-000000000003';
+const IC_MEMBER = 'dddddddd-0000-4000-8000-000000000001';
+const REPLACEMENT = 'dddddddd-0000-4000-8000-000000000002';
 const TENANT = 'cccccccc-0000-4000-8000-000000000001';
 const COOKIE = `dpt_session=${'A'.repeat(43)}`;
 
@@ -27,10 +30,17 @@ function harness(tenantId: string | null = TENANT) {
             canRequest: true,
             canDecide: false,
             canConfigure: true,
+            canManageAbsence: true,
+            canReassign: false,
           };
         }
         if (name === 'request_approval') return REQUEST;
         if (name === 'decide_approval') return 'pending';
+        if (name === 'set_approval_absence') return ABSENCE;
+        if (name === 'my_approval_absences') return [];
+        if (name === 'approval_reassignment_options') {
+          return { unavailableApprovers: [], eligibleReplacements: [] };
+        }
         return null;
       },
     ),
@@ -72,12 +82,26 @@ describe('approval routes', () => {
       { method: 'POST', path: '/deals/:dealId/approval-requests', access: 'session' },
       { method: 'POST', path: '/approval-requests/:requestId/decisions', access: 'session' },
       { method: 'PUT', path: '/approval-policy', access: 'session' },
+      { method: 'GET', path: '/approval-absences', access: 'session' },
+      { method: 'POST', path: '/approval-absences', access: 'session' },
+      { method: 'DELETE', path: '/approval-absences/:absenceId', access: 'session' },
+      {
+        method: 'GET',
+        path: '/approval-requests/:requestId/reassignment-options',
+        access: 'session',
+      },
+      { method: 'POST', path: '/approval-requests/:requestId/reassignments', access: 'session' },
     ]);
     expect(routes.map(({ permission }) => permission)).toEqual([
       'deal.view',
       'deal.request_approval',
       'approval.decide',
       'role.manage',
+      'approval.decide',
+      'approval.decide',
+      'approval.decide',
+      'member.manage',
+      'member.manage',
     ]);
   });
 
@@ -218,5 +242,113 @@ describe('approval routes', () => {
     });
     expect(response.status).toBe(409);
     expect(userRpc.call).not.toHaveBeenCalled();
+  });
+
+  it('reads absence windows for the selected tenant using the caller JWT', async () => {
+    const { app, userRpc } = harness();
+    const response = await app.request('/approval-absences', { headers: { Cookie: COOKIE } });
+    expect(response.status).toBe(200);
+    expect(await response.json()).toEqual([]);
+    expect(userRpc.call).toHaveBeenCalledWith(
+      'my_approval_absences',
+      { p_tenant: TENANT },
+      'caller-jwt',
+    );
+  });
+
+  it('schedules an absence without accepting a client tenant or membership', async () => {
+    const { app, userRpc } = harness();
+    const response = await app.request('/approval-absences', {
+      method: 'POST',
+      headers: jsonHeaders,
+      body: JSON.stringify({
+        startsAt: '2027-03-01T09:00:00Z',
+        endsAt: '2027-03-03T17:00:00Z',
+        tenantId: 'client-controlled',
+      }),
+    });
+    expect(response.status).toBe(400);
+    expect(userRpc.call).not.toHaveBeenCalled();
+  });
+
+  it('schedules a valid absence in the selected tenant', async () => {
+    const { app, userRpc } = harness();
+    const response = await app.request('/approval-absences', {
+      method: 'POST',
+      headers: jsonHeaders,
+      body: JSON.stringify({ startsAt: '2027-03-01T09:00:00Z', endsAt: '2027-03-03T17:00:00Z' }),
+    });
+    expect(response.status).toBe(201);
+    expect(await response.json()).toEqual({ absenceId: ABSENCE });
+    expect(userRpc.call).toHaveBeenCalledWith(
+      'set_approval_absence',
+      {
+        p_tenant: TENANT,
+        p_starts_at: '2027-03-01T09:00:00Z',
+        p_ends_at: '2027-03-03T17:00:00Z',
+      },
+      'caller-jwt',
+    );
+  });
+
+  it('cancels only a well-formed absence id through the user RPC', async () => {
+    const { app, userRpc } = harness();
+    const invalid = await app.request('/approval-absences/not-a-uuid', {
+      method: 'DELETE',
+      headers: jsonHeaders,
+    });
+    expect(invalid.status).toBe(400);
+    expect(userRpc.call).not.toHaveBeenCalled();
+    const response = await app.request(`/approval-absences/${ABSENCE}`, {
+      method: 'DELETE',
+      headers: jsonHeaders,
+    });
+    expect(response.status).toBe(204);
+    expect(userRpc.call).toHaveBeenCalledWith(
+      'cancel_approval_absence',
+      { p_absence: ABSENCE },
+      'caller-jwt',
+    );
+  });
+
+  it('reads replacement choices and performs reassignment without trusting a request id in the body', async () => {
+    const { app, userRpc } = harness();
+    const options = await app.request(`/approval-requests/${REQUEST}/reassignment-options`, {
+      headers: { Cookie: COOKIE },
+    });
+    expect(options.status).toBe(200);
+    expect(await options.json()).toEqual({ unavailableApprovers: [], eligibleReplacements: [] });
+    expect(userRpc.call).toHaveBeenCalledWith(
+      'approval_reassignment_options',
+      { p_request: REQUEST },
+      'caller-jwt',
+    );
+
+    const response = await app.request(`/approval-requests/${REQUEST}/reassignments`, {
+      method: 'POST',
+      headers: jsonHeaders,
+      body: JSON.stringify({
+        fromMembershipId: IC_MEMBER,
+        toMembershipId: REPLACEMENT,
+        requestId: 'client-controlled',
+      }),
+    });
+    expect(response.status).toBe(400);
+    expect(userRpc.call).toHaveBeenCalledTimes(1);
+    const valid = await app.request(`/approval-requests/${REQUEST}/reassignments`, {
+      method: 'POST',
+      headers: jsonHeaders,
+      body: JSON.stringify({ fromMembershipId: IC_MEMBER, toMembershipId: REPLACEMENT }),
+    });
+    expect(valid.status).toBe(204);
+    expect(userRpc.call).toHaveBeenLastCalledWith(
+      'reassign_approval_approver',
+      {
+        p_request: REQUEST,
+        p_from: IC_MEMBER,
+        p_to: REPLACEMENT,
+      },
+      'caller-jwt',
+    );
   });
 });
