@@ -1,4 +1,5 @@
 import { render, screen } from '@testing-library/react';
+import type { ReactNode } from 'react';
 import { describe, expect, it, vi } from 'vitest';
 
 vi.mock('../features/auth', () => ({
@@ -7,7 +8,7 @@ vi.mock('../features/auth', () => ({
   TenantSwitcher: () => null,
 }));
 vi.mock('../features/shell', () => ({
-  AppHeader: () => <nav aria-label="Primary navigation">Pipeline Roles</nav>,
+  AppShell: ({ children }: { children: ReactNode }) => <div>{children}</div>,
   PageHeading: ({ title }: { title: string }) => <h1>{title}</h1>,
 }));
 vi.mock('../features/deals', () => ({

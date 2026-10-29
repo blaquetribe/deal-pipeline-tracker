@@ -1,7 +1,7 @@
 import type { Metadata } from 'next';
 
 import { DealDetail } from '../../../features/deals';
-import { AppHeader } from '../../../features/shell';
+import { AppShell } from '../../../features/shell';
 
 export const metadata: Metadata = { title: 'Deal details | Deal Pipeline Tracker' };
 
@@ -12,9 +12,8 @@ export default async function DealPage({
 }) {
   const { dealId } = await params;
   return (
-    <>
-      <AppHeader currentPage="pipeline" />
+    <AppShell currentPage="pipeline">
       <DealDetail dealId={dealId} />
-    </>
+    </AppShell>
   );
 }

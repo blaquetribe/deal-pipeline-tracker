@@ -38,11 +38,8 @@ vi.mock('../features/deals', () => ({
 }));
 vi.mock('../features/roles', () => ({ RoleManagement: () => <p>Role management component</p> }));
 vi.mock('../features/shell', () => ({
-  AppHeader: () => (
-    <>
-      <nav aria-label="Primary navigation">Pipeline Roles</nav>
-      <button>Sign out</button>
-    </>
+  AppShell: ({ children, currentPage }: { children: ReactNode; currentPage: string }) => (
+    <div data-current-page={currentPage}>{children}</div>
   ),
   PageHeading: ({ title }: { title: string }) => <h1>{title}</h1>,
 }));
@@ -113,15 +110,17 @@ describe('Next page wrappers', () => {
   });
 
   it('renders the deal header and binds its awaited route id', async () => {
-    render(await DealPage({ params: Promise.resolve({ dealId: 'deal-42' }) }));
+    const { container } = render(
+      await DealPage({ params: Promise.resolve({ dealId: 'deal-42' }) }),
+    );
     expect(screen.getByText('Deal id: deal-42')).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'Sign out' })).toBeInTheDocument();
+    expect(container.querySelector('[data-current-page="pipeline"]')).toBeInTheDocument();
   });
 
   it('renders the role management page', () => {
-    render(<RolesPage />);
+    const { container } = render(<RolesPage />);
     expect(screen.getByRole('heading', { name: 'Role management' })).toBeInTheDocument();
     expect(screen.getByText('Role management component')).toBeInTheDocument();
-    expect(screen.getByRole('navigation', { name: 'Primary navigation' })).toBeInTheDocument();
+    expect(container.querySelector('[data-current-page="roles"]')).toBeInTheDocument();
   });
 });
