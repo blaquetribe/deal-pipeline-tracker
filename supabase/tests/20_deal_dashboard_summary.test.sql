@@ -23,6 +23,7 @@ insert into public.memberships (tenant_id, user_id) values
 insert into public.membership_roles (tenant_id, membership_id, role_id)
 select m.tenant_id, m.id, r.id
 from public.memberships m join public.roles r on r.tenant_id = m.tenant_id and r.key = 'owner'
+where m.tenant_id in ('20202020-0000-4000-8000-00000000000a', '20202020-0000-4000-8000-00000000000b')
 on conflict (membership_id, role_id) do nothing;
 create temporary table summary_ids (deal_id uuid);
 grant all on summary_ids to public;

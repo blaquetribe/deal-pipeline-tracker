@@ -39,6 +39,13 @@ export interface GoTrue {
     password: string;
     fullName: string;
   }): Promise<{ userId: string } | 'exists'>;
+  /** Creates or repairs only the fixed, development-only accounts used by the compose seed job. */
+  ensureDemoUser(input: {
+    userId: string;
+    email: string;
+    password: string;
+    fullName: string;
+  }): Promise<void>;
   setPassword(userId: string, password: string): Promise<void>;
 }
 
@@ -122,6 +129,58 @@ export function createGoTrue({
     return { status: response.status, json };
   }
 
+  async function ensureDemoUser(input: {
+    userId: string;
+    email: string;
+    password: string;
+    fullName: string;
+  }): Promise<void> {
+    const userId = z.uuid().safeParse(input.userId);
+    const email = z.email().safeParse(input.email);
+    if (!userId.success || !email.success) {
+      throw new GoTrueError('rejected', 'the development account is invalid');
+    }
+    const body = {
+      id: userId.data,
+      email: email.data,
+      password: input.password,
+      email_confirm: true,
+      user_metadata: { full_name: input.fullName },
+    };
+    const created = await send('POST', '/admin/users', adminToken(), body);
+    if (created.status >= 200 && created.status < 300) {
+      const parsed = createdSchema.safeParse(created.json);
+      if (!parsed.success || parsed.data.id !== userId.data) {
+        throw new GoTrueError('unavailable', 'the sign-in service returned an invalid account');
+      }
+      return;
+    }
+    if (!ALREADY_REGISTERED.has(codeOf(created.json) ?? '')) {
+      throw new GoTrueError('unavailable', 'the development account could not be created');
+    }
+
+    const existing = await send('GET', `/admin/users/${userId.data}`, adminToken());
+    const existingSchema = createdSchema.extend({ email: z.email() });
+    const parsed = existingSchema.safeParse(existing.json);
+    if (
+      existing.status !== 200 ||
+      !parsed.success ||
+      parsed.data.id !== userId.data ||
+      parsed.data.email.toLowerCase() !== email.data.toLowerCase()
+    ) {
+      throw new GoTrueError('rejected', 'the development account identity does not match');
+    }
+
+    const updated = await send('PUT', `/admin/users/${userId.data}`, adminToken(), {
+      password: input.password,
+      email_confirm: true,
+      user_metadata: { full_name: input.fullName },
+    });
+    if (updated.status < 200 || updated.status >= 300) {
+      throw new GoTrueError('unavailable', 'the development account could not be updated');
+    }
+  }
+
   function authenticated(json: unknown): Authenticated {
     const parsed = tokenResponseSchema.safeParse(json);
     if (!parsed.success) {
@@ -199,6 +258,8 @@ export function createGoTrue({
       }
       throw new GoTrueError('unavailable', 'the sign-in service failed');
     },
+
+    ensureDemoUser,
 
     async setPassword(userId, password) {
       if (!z.uuid().safeParse(userId).success) {

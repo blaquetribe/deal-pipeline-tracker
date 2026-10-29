@@ -24,6 +24,7 @@ fi
 
 PORT="${GATEWAY_PORT:-8080}"
 BASE="http://127.0.0.1:${PORT}"
+APP_BASE="${PUBLIC_BASE_URL:-http://localhost:${PORT}}"
 GW=http://supabase-gateway:8000 # the internal Supabase gateway, reachable only on the internal network
 failures=0
 tmp_dirs=()
@@ -105,6 +106,9 @@ done
 migrate_id=$(container_of migrate)
 [ "$($CONTAINER_ENGINE inspect --format '{{.State.Status}} {{.State.ExitCode}}' "$migrate_id" 2>/dev/null)" = "exited 0" ] \
   && pass "migrate ran to completion (exit 0)" || fail "migrate ran to completion (exit 0)"
+seed_id=$(container_of demo-seed)
+[ "$($CONTAINER_ENGINE inspect --format '{{.State.Status}} {{.State.ExitCode}}' "$seed_id" 2>/dev/null)" = "exited 0" ] \
+  && pass "development seed ran to completion (exit 0)" || fail "development seed ran to completion (exit 0)"
 grep -q -F "$DEFAULT_JWT_SECRET" docker-compose.yml \
   && pass "this script's dev JWT default matches docker-compose.yml" \
   || fail "this script's dev JWT default matches docker-compose.yml"
@@ -115,6 +119,47 @@ check "web page served through the gateway" bash -c "curl -fsSL '${BASE}/' | gre
 check "api health reachable at /api/health" bash -c "curl -fsS '${BASE}/api/health' | grep -q '\"status\":\"ok\"'"
 check "unknown api route returns 404" bash -c "[ \"\$(curl -s -o /dev/null -w '%{http_code}' '${BASE}/api/does-not-exist')\" = 404 ]"
 check "Mailpit inbox is served at /mail/ (development gateway)" bash -c "curl -fsS '${BASE}/mail/' | grep -qi mailpit"
+
+echo "== seeded reviewer path =="
+DEMO_PASSWORD="${SEED_DEMO_PASSWORD:-}"
+if [ -z "$DEMO_PASSWORD" ] && [ -f .env ]; then
+  DEMO_PASSWORD=$(sed -n 's/^SEED_DEMO_PASSWORD=//p' .env | head -n 1)
+fi
+DEMO_PASSWORD="${DEMO_PASSWORD:-Dev-only-demo-password-change-me}"
+review_dir=$(mktemp -d "${TMPDIR:-/tmp}/smoke-reviewer.XXXXXX")
+tmp_dirs+=("$review_dir")
+login_code=$(curl -sS -o "$review_dir/login.json" -w '%{http_code}' -c "$review_dir/cookies" \
+  -H "Origin: ${APP_BASE}" -H 'Content-Type: application/json' \
+  -d "$(jq -cn --arg email 'owner@asteron.example.test' --arg password "$DEMO_PASSWORD" '{email:$email,password:$password}')" \
+  "${BASE}/api/auth/login")
+if [ "$login_code" = 200 ]; then
+  pass "seeded reviewer can sign in through the gateway"
+  csrf=$(jq -r '.csrfToken // empty' "$review_dir/login.json")
+  tenant_json=$(curl -sS -b "$review_dir/cookies" "${BASE}/api/auth/tenants")
+  tenant_id=$(printf '%s' "$tenant_json" | jq -r '.tenants[]? | select(.tenantName == "Asteron Capital") | .tenantId' | head -n 1)
+  if [ -n "$tenant_id" ]; then
+    pass "seeded reviewer can see the Asteron tenant"
+    tenant_code=$(curl -sS -o "$review_dir/tenant.json" -w '%{http_code}' -b "$review_dir/cookies" -c "$review_dir/cookies" \
+      -H 'Content-Type: application/json' -H "X-CSRF-Token: ${csrf}" \
+      -H "Origin: ${APP_BASE}" \
+      -d "{\"tenantId\":\"${tenant_id}\"}" "${BASE}/api/auth/tenant")
+    [ "$tenant_code" = 200 ] && pass "seeded reviewer can select the tenant" || fail "seeded reviewer can select the tenant"
+    dashboard=$(curl -sS -b "$review_dir/cookies" "${BASE}/api/deals/dashboard-summary")
+    printf '%s' "$dashboard" | jq -e '.. | objects | select(.name? == "Asterion Renewable Storage")' >/dev/null 2>&1 \
+      && pass "seeded deal is visible through the authenticated dashboard" \
+      || fail "seeded deal is visible through the authenticated dashboard"
+    "${COMPOSE[@]}" run --rm -T demo-seed >/dev/null \
+      && pass "re-running the seed job succeeds" || fail "re-running the seed job succeeds"
+    dashboard_again=$(curl -sS -b "$review_dir/cookies" "${BASE}/api/deals/dashboard-summary")
+    [ "$(printf '%s' "$dashboard_again" | jq -r '[.. | objects | select(.name? == "Asterion Renewable Storage")] | length')" = 1 ] \
+      && pass "re-running the seed preserves one copy of each sample deal" \
+      || fail "re-running the seed preserves one copy of each sample deal"
+  else
+    fail "seeded reviewer can see the Asteron tenant"
+  fi
+else
+  fail "seeded reviewer can sign in through the gateway (HTTP ${login_code})"
+fi
 
 echo "== headers =="
 for url in "${BASE}/" "${BASE}/api/health"; do
@@ -278,7 +323,14 @@ dc_exec db psql -U supabase_admin -tA -c "delete from public.api_sessions; delet
 echo "== database =="
 recorded=$(dc_exec db psql -U postgres -tA -c "select count(*) from supabase_migrations.schema_migrations" 2>/dev/null | tr -d '[:space:]')
 [ "${recorded:-0}" -ge 1 ] && pass "migrations are recorded (${recorded})" || fail "migrations are recorded"
-check "pgTAP suite passes" dc_exec db sh /tests/run.sh
+pgtap_log=$(mktemp "${TMPDIR:-/tmp}/smoke-pgtap.XXXXXX")
+tmp_dirs+=("$pgtap_log")
+if dc_exec db sh /tests/run.sh >"$pgtap_log" 2>&1; then
+  pass "pgTAP suite passes"
+else
+  cat "$pgtap_log" >&2
+  fail "pgTAP suite passes"
+fi
 # The same checks must be able to FAIL: a deliberately failing test and a tampered migration.
 failing_sql=$'begin;\nselect plan(1);\nselect ok(false, \'deliberate failure\');\nselect * from finish();\nrollback;\n'
 expect_failure "pgTAP detects a failing assertion (negative test)" \

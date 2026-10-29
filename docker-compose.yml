@@ -67,7 +67,7 @@ services:
     environment:
       PORT: '3000'
       HOSTNAME: 0.0.0.0
-      APP_ORIGIN: '${PUBLIC_BASE_URL:-http://localhost:8080}'
+      APP_ORIGIN: '${PUBLIC_BASE_URL:-http://localhost:${GATEWAY_PORT:-8080}}'
     # Next writes its runtime cache here; everything else stays read-only.
     tmpfs: [/tmp, /app/apps/web/.next/cache]
     networks: [edge]
@@ -91,7 +91,7 @@ services:
       SUPABASE_URL: http://supabase-gateway:8000
       JWT_SECRET: *jwt-secret
       SESSION_SECRET: *session-secret
-      APP_ORIGIN: '${PUBLIC_BASE_URL:-http://localhost:8080}'
+      APP_ORIGIN: '${PUBLIC_BASE_URL:-http://localhost:${GATEWAY_PORT:-8080}}'
       SMTP_HOST: mailpit
       SMTP_PORT: '1025'
       SMTP_SECURE: '${SMTP_SECURE:-false}'
@@ -104,13 +104,30 @@ services:
     expose: ['3001']
     depends_on:
       supabase-gateway: { condition: service_healthy }
-      migrate: { condition: service_completed_successfully }
+      demo-seed: { condition: service_completed_successfully }
     healthcheck:
       test: ['CMD', 'wget', '-q', '--spider', 'http://127.0.0.1:3001/health']
       interval: 10s
       timeout: 3s
       retries: 5
       start_period: 5s
+
+  # One-shot: creates fixed fictional users through GoTrue, then calls the restricted seed RPC.
+  demo-seed:
+    <<: *hardening
+    image: dpt-api:local
+    command: ['node', 'dist/seed-main.js']
+    restart: 'no'
+    tmpfs: [/tmp]
+    networks: [internal]
+    environment:
+      SUPABASE_URL: http://supabase-gateway:8000
+      JWT_SECRET: *jwt-secret
+      SEED_DEV_DATA: '${SEED_DEV_DATA:-true}'
+      SEED_DEMO_PASSWORD: '${SEED_DEMO_PASSWORD:-Dev-only-demo-password-change-me}'
+    depends_on:
+      supabase-gateway: { condition: service_healthy }
+      migrate: { condition: service_completed_successfully }
 
   # ---- Supabase (ADR 0013): five services, versions pinned by digest ------------------------
 

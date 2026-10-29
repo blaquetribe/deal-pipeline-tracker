@@ -13,6 +13,8 @@ export default defineConfig({
         '**/*.d.ts',
         // Starts the HTTP server (side effects at import); proven by the compose smoke test.
         'apps/api/src/index.ts',
+        // Runs the one-shot development seed (process side effects at import); proven by compose smoke.
+        'apps/api/src/seed-main.ts',
         // Async Server Component that reads cookies(); Vitest cannot render it. Its logic lives
         // in features/theme (tested); the page itself is proven by the smoke test.
         'apps/web/src/app/layout.tsx',

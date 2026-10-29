@@ -94,6 +94,7 @@ function harness(
     })),
     refresh: typedMock(async () => ({ userId: '22222222-2222-4222-8222-222222222222', tokens })),
     logout: typedMock(async () => undefined),
+    ensureDemoUser: typedMock(async () => undefined),
     setPassword: typedMock(async () => undefined),
   } satisfies GoTrue;
   const sessions = {
@@ -756,6 +757,7 @@ describe('session resolver', () => {
         passwordLogin: typedMock(async () => null),
         logout: typedMock(async () => undefined),
         createUser: typedMock(async (): Promise<'exists'> => 'exists'),
+        ensureDemoUser: typedMock(async () => undefined),
         setPassword: typedMock(async () => undefined),
       },
       sessionSecret: secret,
