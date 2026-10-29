@@ -18,8 +18,9 @@ select set_eq(
   $$values ('session_create'), ('session_lookup'), ('session_update_tokens'), ('session_set_tenant'),
            ('session_revoke'), ('session_revoke_user'), ('token_issue'), ('token_consume'),
            ('invitation_preview'), ('invitation_accept'), ('account_lookup'),
-           ('claim_closing_soon_emails'), ('complete_closing_soon_emails'), ('seed_demo_data')$$,
-  'api_service can execute only its session, token, invitation, email-delivery and private seed functions'
+           ('claim_closing_soon_emails'), ('complete_closing_soon_emails'), ('seed_demo_data'),
+           ('file_cleanup_stale_pending'), ('file_list_object_keys')$$,
+  'api_service can execute only its session, token, invitation, email, seed and file cleanup functions'
 );
 select is(
   (select count(*) from pg_proc p join pg_namespace n on n.oid = p.pronamespace

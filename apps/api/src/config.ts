@@ -29,6 +29,19 @@ const configSchema = z
     SMTP_USER: z.string().default(''),
     SMTP_PASS: z.string().default(''),
     MAIL_FROM: z.email().default('no-reply@dpt.local'),
+    OBJECT_STORE_DRIVER: z.enum(['fs', 's3']).default('fs'),
+    DEPLOYMENT_ENV: z.enum(['development', 'production']).default('development'),
+    STORAGE_DIRECTORY: z.string().min(1).default('/var/lib/dpt/files'),
+    STORAGE_ENDPOINT: z.url().default('http://rustfs:9000'),
+    STORAGE_REGION: z.string().min(1).default('auto'),
+    STORAGE_BUCKET: z.string().min(1).default('deal-pipeline-tracker'),
+    STORAGE_KEY_PREFIX: z.enum(['Dev/', 'Prod/']).default('Dev/'),
+    STORAGE_FORCE_PATH_STYLE: z
+      .enum(['true', 'false'])
+      .default('true')
+      .transform((v) => v === 'true'),
+    STORAGE_ACCESS_KEY_ID: z.string().default(''),
+    STORAGE_SECRET_ACCESS_KEY: z.string().default(''),
   })
   .superRefine((config, context) => {
     if (Boolean(config.SMTP_USER) !== Boolean(config.SMTP_PASS)) {
@@ -43,6 +56,27 @@ const configSchema = z
         code: 'custom',
         path: ['SMTP_USER'],
         message: 'SMTP authentication requires TLS',
+      });
+    }
+    const production = config.DEPLOYMENT_ENV === 'production';
+    if (
+      (production && config.STORAGE_KEY_PREFIX !== 'Prod/') ||
+      (!production && config.STORAGE_KEY_PREFIX !== 'Dev/')
+    ) {
+      context.addIssue({
+        code: 'custom',
+        path: ['STORAGE_KEY_PREFIX'],
+        message: 'must match NODE_ENV',
+      });
+    }
+    if (
+      config.OBJECT_STORE_DRIVER === 's3' &&
+      (!config.STORAGE_ACCESS_KEY_ID || !config.STORAGE_SECRET_ACCESS_KEY)
+    ) {
+      context.addIssue({
+        code: 'custom',
+        path: ['STORAGE_ACCESS_KEY_ID'],
+        message: 'S3 credentials are required when OBJECT_STORE_DRIVER=s3',
       });
     }
   });

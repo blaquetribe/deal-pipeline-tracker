@@ -9,4 +9,5 @@ export { ResetRequestForm } from './reset-request-form';
 export { SignOutButton } from './sign-out-button';
 export { SignupForm } from './signup-form';
 export { TenantSwitcher } from './tenant-switcher';
+export { ProfileAvatar } from './profile-avatar';
 export { VerifyEmail } from './verify-email';

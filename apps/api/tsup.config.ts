@@ -7,9 +7,8 @@ export default defineConfig({
   platform: 'node',
   clean: true,
   sourcemap: true,
-  // Bundle everything: workspace packages ship TypeScript source, and a single
-  // self-contained file lets the runtime image carry no node_modules. Switch to
-  // `pnpm deploy` when a native module (sharp) arrives, since those cannot be bundled.
-  noExternal: [/^(?!ws$).*/],
-  external: ['ws'],
+  // Bundle the API and workspace contract; deploy production dependencies separately so
+  // native packages and their CommonJS runtime dependencies retain their native module format.
+  noExternal: ['@dpt/shared'],
+  external: ['ws', 'sharp'],
 });

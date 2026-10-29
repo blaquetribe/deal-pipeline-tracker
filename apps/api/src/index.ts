@@ -1,3 +1,5 @@
+import { tmpdir } from 'node:os';
+
 import { serve } from '@hono/node-server';
 import { WebSocketServer } from 'ws';
 
@@ -11,6 +13,8 @@ import { createRpc } from './db/rpc';
 import { createClosingSoonEmailWorker } from './email/closing-soon-worker';
 import { createSmtpMailer } from './email/smtp';
 import { createRateLimiter } from './http/rate-limit';
+import { createFileCleanupWorker } from './storage/cleanup-worker';
+import { createObjectStore } from './storage/object-store';
 
 const config = loadConfig(process.env);
 const publicKey = anonKey(config.JWT_SECRET);
@@ -43,6 +47,30 @@ const mailer = createSmtpMailer({
 });
 const limiter = createRateLimiter();
 const resolver = createSessionResolver({ sessions, gotrue, sessionSecret: config.SESSION_SECRET });
+const logger = {
+  info: (message: string, fields?: Record<string, unknown>) => console.info(message, fields),
+  error: (message: string, fields?: Record<string, unknown>) => console.error(message, fields),
+};
+const objectStore = createObjectStore({
+  driver: config.OBJECT_STORE_DRIVER,
+  directory: config.STORAGE_DIRECTORY,
+  endpoint: config.STORAGE_ENDPOINT,
+  region: config.STORAGE_REGION,
+  bucket: config.STORAGE_BUCKET,
+  prefix: config.STORAGE_KEY_PREFIX,
+  forcePathStyle: config.STORAGE_FORCE_PATH_STYLE,
+  accessKeyId: config.STORAGE_ACCESS_KEY_ID,
+  secretAccessKey: config.STORAGE_SECRET_ACCESS_KEY,
+});
+const fileCleanupWorker = createFileCleanupWorker({
+  rpc: authRpc,
+  store: objectStore,
+  keyPrefix: config.STORAGE_KEY_PREFIX,
+  logger,
+});
+void fileCleanupWorker.run();
+const fileCleanupTimer = setInterval(() => void fileCleanupWorker.run(), 6 * 60 * 60 * 1000);
+fileCleanupTimer.unref();
 const auth = {
   rpc: authRpc,
   userRpc,
@@ -52,11 +80,6 @@ const auth = {
   sessionSecret: config.SESSION_SECRET,
   appOrigin: config.APP_ORIGIN,
 };
-const logger = {
-  info: (message: string, fields?: Record<string, unknown>) => console.info(message, fields),
-  error: (message: string, fields?: Record<string, unknown>) => console.error(message, fields),
-};
-
 type WebSocketAdapter = NonNullable<Parameters<typeof serve>[0]['websocket']>['server'];
 
 const http = {
@@ -70,6 +93,12 @@ const app = createApp({
   auth,
   http,
   realtime: { supabaseUrl: config.SUPABASE_URL, anonKey: publicKey, http },
+  files: {
+    userRpc,
+    store: objectStore,
+    keyPrefix: config.STORAGE_KEY_PREFIX,
+    tempDirectory: tmpdir(),
+  },
 });
 const closingSoonEmailWorker = createClosingSoonEmailWorker({
   rpc: authRpc,

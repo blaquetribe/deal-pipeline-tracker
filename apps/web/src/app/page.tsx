@@ -1,4 +1,4 @@
-import { SignOutButton, TenantSwitcher } from '../features/auth';
+import { ProfileAvatar, SignOutButton, TenantSwitcher } from '../features/auth';
 import { DealsDashboard } from '../features/deals';
 import { NotificationBell } from '../features/notifications';
 
@@ -11,6 +11,7 @@ export default function HomePage() {
           <p className="mt-2 text-fg-muted">Your organisation’s deal pipeline.</p>
         </div>
         <div className="flex flex-wrap items-center gap-4">
+          <ProfileAvatar />
           <TenantSwitcher />
           <NotificationBell />
           <SignOutButton />

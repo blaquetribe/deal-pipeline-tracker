@@ -64,4 +64,25 @@ describe('loadConfig', () => {
       }).SMTP_REQUIRE_TLS,
     ).toBe(true);
   });
+
+  it('keeps fs storage zero-config and fails closed on an environment prefix or credential mismatch', () => {
+    expect(loadConfig(base)).toMatchObject({
+      OBJECT_STORE_DRIVER: 'fs',
+      STORAGE_KEY_PREFIX: 'Dev/',
+    });
+    expect(() => loadConfig({ ...base, DEPLOYMENT_ENV: 'production' })).toThrow(
+      /STORAGE_KEY_PREFIX/,
+    );
+    expect(() => loadConfig({ ...base, OBJECT_STORE_DRIVER: 's3' })).toThrow(
+      /credentials are required/,
+    );
+    expect(
+      loadConfig({
+        ...base,
+        OBJECT_STORE_DRIVER: 's3',
+        STORAGE_ACCESS_KEY_ID: 'key',
+        STORAGE_SECRET_ACCESS_KEY: 'secret',
+      }),
+    ).toMatchObject({ OBJECT_STORE_DRIVER: 's3' });
+  });
 });
