@@ -6,7 +6,7 @@ import { createRateLimiter } from '../http/rate-limit';
 import { describeRoutes, type SessionResolver } from '../http/route';
 import type { Authenticated, GoTrue } from './gotrue';
 import type { AuthMailer, AuthServiceOptions } from './service';
-import { createAuthRoutes, createSessionResolver } from './service';
+import { createAuthRoutes, createSessionResolver, mountAuthRoutes } from './service';
 import type { SessionRecord, SessionStore, StoredTokens } from './session-store';
 
 const ORIGIN = 'http://localhost:8080';
@@ -136,7 +136,21 @@ function harness(
     logger: { info: typedMock(() => undefined), error: typedMock(() => undefined) },
   };
   for (const route of routes) route.mount(app, deps);
-  return { app, routes, calls, userCalls, mails, rpc, userRpc, gotrue, sessions, mailer, resolver };
+  return {
+    app,
+    routes,
+    calls,
+    userCalls,
+    mails,
+    rpc,
+    userRpc,
+    gotrue,
+    sessions,
+    mailer,
+    resolver,
+    options,
+    deps,
+  };
 }
 
 const post = (body: unknown, cookie?: string, csrf?: string): RequestInit => ({
@@ -151,6 +165,14 @@ const post = (body: unknown, cookie?: string, csrf?: string): RequestInit => ({
 });
 
 describe('auth routes', () => {
+  it('mounts the complete auth route set through the exported route adapter', () => {
+    const setup = harness();
+    const mounted = mountAuthRoutes(new Hono(), setup.deps, setup.options);
+
+    expect(mounted).toHaveLength(setup.routes.length);
+    expect(mounted.map(({ path }) => path)).toEqual(setup.routes.map(({ path }) => path));
+  });
+
   it('covers failed credentials, live and missing sessions, forbidden tenant switches, and logout after revocation', async () => {
     const resolver = {
       resolve: typedMock(async () => ({
@@ -688,6 +710,19 @@ describe('auth routes', () => {
       'A'.repeat(43),
       '00000000-0000-4000-8000-000000000001',
     );
+
+    sessions.setTenant.mockResolvedValueOnce(false);
+    const cannotSelectOrganisation = await app.request('/onboarding/organisation', {
+      method: 'POST',
+      headers: {
+        Origin: ORIGIN,
+        'Content-Type': 'application/json',
+        Cookie: cookie,
+        'X-CSRF-Token': 'csrf',
+      },
+      body: JSON.stringify({ name: 'CVC Capital' }),
+    });
+    expect(cannotSelectOrganisation.status).toBe(500);
   });
 
   it('declares only the intended auth routes public', () => {
@@ -720,6 +755,47 @@ describe('auth routes', () => {
 });
 
 describe('session resolver', () => {
+  it('fails closed when a competing refresh lease disappears before rotation is stored', async () => {
+    const userId = '22222222-2222-4222-8222-222222222222';
+    let lookups = 0;
+    const lookup = typedMock(async () => {
+      lookups += 1;
+      return lookups === 1
+        ? { userId, tokens: { ...tokens, expiresAt: 1 }, activeTenantId: null }
+        : null;
+    });
+    const sessions: SessionStore = {
+      create: typedMock(async () => ({ sessionId: 'A'.repeat(43) })),
+      lookup,
+      claimRefresh: typedMock(async () => ({
+        claimed: false as const,
+        claimId: null,
+        tokens: { ...tokens, expiresAt: 1 },
+      })),
+      completeRefresh: typedMock(async () => false),
+      releaseRefresh: typedMock(async () => undefined),
+      setTenant: typedMock(async () => true),
+      revoke: typedMock(async () => undefined),
+      revokeUser: typedMock(async () => 1),
+    };
+    const resolver = createSessionResolver({
+      sessions,
+      gotrue: {
+        refresh: typedMock(async () => null),
+        passwordLogin: typedMock(async () => null),
+        logout: typedMock(async () => undefined),
+        createUser: typedMock(async (): Promise<'exists'> => 'exists'),
+        ensureDemoUser: typedMock(async () => undefined),
+        setPassword: typedMock(async () => undefined),
+      },
+      sessionSecret: secret,
+      now: () => 1_800_000_000_000,
+    });
+
+    await expect(resolver.resolve('A'.repeat(43))).resolves.toBeNull();
+    expect(lookup).toHaveBeenCalledTimes(2);
+  });
+
   it('shares refresh-token rotation across independent resolver instances', async () => {
     const userId = '22222222-2222-4222-8222-222222222222';
     let currentTokens: StoredTokens = { ...tokens, expiresAt: 1 };

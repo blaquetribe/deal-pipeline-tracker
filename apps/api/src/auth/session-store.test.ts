@@ -136,6 +136,9 @@ describe('session store', () => {
       false,
     );
     await expect(
+      failing('unavailable', 'database unavailable').setTenant('A'.repeat(43), 't'),
+    ).rejects.toBeInstanceOf(RpcError);
+    await expect(
       failing('unavailable', 'database unavailable').revoke('A'.repeat(43)),
     ).rejects.toBeInstanceOf(RpcError);
   });
@@ -165,6 +168,15 @@ describe('session store', () => {
     expect(calls.at(-1)?.args.p_lease_ms).toBe(20_000);
     expect(JSON.stringify(calls.at(-1)?.args)).not.toContain(claim?.claimId);
     expect(JSON.stringify(calls.at(-1)?.args)).not.toContain('refresh-me');
+  });
+
+  it('fails closed when claimed tokens cannot be decrypted or parsed', async () => {
+    const store = createSessionStore({
+      rpc: fakeRpc(() => [{ claimed: true, tokens_enc: `\\x01${'00'.repeat(40)}` }]).rpc,
+      ...secrets,
+    });
+
+    await expect(store.claimRefresh('A'.repeat(43), 20_000)).resolves.toBeNull();
   });
 
   it('completes or releases only the matching refresh claim', async () => {
