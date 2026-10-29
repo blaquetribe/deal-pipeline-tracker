@@ -82,7 +82,7 @@ GitHub Actions runs the quality, database, image, security-scan, and Compose smo
 
 ## What I would do next
 
-- Complete the Feature 04 delegation management UI, custom role editor, and quorum-unreachable notifications before claiming the extended approval workflow is complete. Database/API delegation is tenant opt-in, time-bounded, and preserves the original approver slot; unavailable slots without an eligible replacement intentionally block signing.
+- Complete the Feature 04 delegation management UI and custom role editor before claiming the extended approval workflow is complete. Database/API delegation is tenant opt-in, time-bounded, and preserves the original approver slot; unavailable slots without an eligible replacement intentionally block signing. Unreachable quorum now produces an hourly in-app alert to the request creator and active Owner/Admin members.
 - Add notification preference controls and absence/delegation-aware recipients. Decide how to handle the rare duplicate email after SMTP succeeds but outbox completion persistence fails. Presence remains deferred.
 - Run a real Cloudflare R2 smoke test with a dedicated bucket-scoped token; Feature 08's S3-compatible driver, local file store, BFF file routes, avatar upload, and initials fallback are implemented. Virus scanning and presigned URLs remain out of scope.
 - After planned feature work is complete, do a project-wide UI pass using Doorsprint as a visual reference and evaluate shadcn primitives. Prepare the full feature walkthrough presentation, including the rationale for key decisions, as the final project task.

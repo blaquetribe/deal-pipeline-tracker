@@ -1,15 +1,15 @@
 # 04 Approvals: progress
 
-Status: in progress (IC gate, absence/reassignment, and scoped delegation implemented; custom roles and notifications remain)
-Owner/branch: codex/feature-04-approval-delegation
+Status: in progress (IC gate, absence/reassignment, scoped delegation, and quorum alerts implemented; management UI and custom roles remain)
+Owner/branch: codex/feature-04-quorum-alerts
 Depends on: 03
 
 ## Goal
 Approval gates, quorum, decisions, absence, delegation, custom roles and SoD. Covers GOTCHAS row 16.
 
 ## Scope
-- In (delivered slices): Owner-configured IC k-of-N quorum; submit-time approver snapshot; request/decision/status RPCs; maker-checker enforcement; absence scheduling/cancellation; unavailable-slot reassignment; scoped approval delegation with actor attribution; 2xx API routes; deal-detail controls for quorum, absence, and reassignment.
-- Out (follow-up): delegation management UI, custom role editor, alerts when the eligible pool falls below quorum, SLA escalation, and gates beyond IC review. See ADRs 0018–0020.
+- In (delivered slices): Owner-configured IC k-of-N quorum; submit-time approver snapshot; request/decision/status RPCs; maker-checker enforcement; absence scheduling/cancellation; unavailable-slot reassignment; scoped approval delegation with actor attribution; 2xx API routes; deal-detail controls for quorum, absence, and reassignment; in-app notifications when a pending request can no longer reach quorum.
+- Out (follow-up): delegation management UI, custom role editor, SLA escalation, and gates beyond IC review. See ADRs 0018–0021.
 
 ## Design notes
 ADRs 0018–0020. Configuration uses existing Owner-only `role.manage`; no mutation of immutable system roles. Only approve/reject; requests snapshot the quorum and eligible memberships; rejection fails when quorum is no longer reachable. Delegation is tenant opt-in, time-bound, and substitutes for the delegate's own vote; decisions record both the original slot and acting member. `decide_approval` signs the deal and writes ledger events under the deal lock.
@@ -22,6 +22,7 @@ ADRs 0018–0020. Configuration uses existing Owner-only `role.manage`; no mutat
 - [x] Docs updated
 - [x] Absence/reassignment follow-up
 - [x] Delegation database/API follow-up
+- [x] Quorum-unreachable notification follow-up
 - [ ] Delegation management UI
 - [ ] Custom role editor and notification follow-up
 
@@ -44,7 +45,8 @@ Dated notes: what changed, what was learned, problems.
 - 2026-10-29: first CI run exposed a fixture bug in test 26: authenticated owner queries for other members' membership IDs were hidden by RLS, so the reassignment call received null IDs. The test now captures fixture IDs before switching roles. PR #19 head `5d13633` passed every required CI check on run `40864349477`, including pgTAP and clean-clone Compose smoke.
 - 2026-10-28: captured the running dashboard/detail UI in the browser after rebuilding the local web/API containers. The approval controls are covered in component tests; no persistent deal was moved just to create an IC-review screenshot because stage changes are audited and append-only.
 - 2026-10-29: started scoped delegation on clean main after PR #19 merged. ADR 0020 and migration 27 add tenant opt-in, bounded self-scheduling and revocation, immutable original approver slots, acting-member attribution, one-vote enforcement, delegated status, and caller-JWT API operations. The management UI remains cut-list scope. `pnpm test:coverage` passes all 601 tests with 1 skipped and thresholds met; typecheck, lint, stylelint, format check, and build also pass. `make test-db` is blocked by Podman socket permissions. PR #20 head `329b9a6` passed all required GitHub checks on run `40870860435`, including pgTAP and clean-clone Compose smoke. Its first CI attempt found the duplicate-decision error order; commit `329b9a6` corrected it without changing the established error contract.
+- 2026-10-29: added ADR 0021 and migration 28 for an hourly, idempotent in-app alert when a pending request's snapshotted quorum is unreachable. Eligibility includes valid active delegates and excludes unavailable, conflicting, or already-voted actors. Alerts go to the requester and active tenant Owners/Admins; the existing approval function remains authoritative. Shared schema and notification UI handle both alert kinds. Targeted UI/shared tests, typecheck, lint, stylelint, formatting, full Vitest coverage (603 passed, 1 skipped), and build pass. Local `make test-db` is blocked by a Podman API EOF; GitHub CI must verify migration and pgTAP before merge.
 
 ## Deviations / debt
 Anything that differs from the plan or is deferred (also mirror in README "next steps").
-- Open follow-up: delegation management UI, custom role editing, notification when quorum is unreachable, and gates beyond IC review. Current unavailable slots can be reassigned when an eligible member exists; otherwise requests remain pending and fail closed.
+- Open follow-up: delegation management UI, custom role editing, SLA escalation, and gates beyond IC review. Current unavailable slots can be reassigned when an eligible member exists; otherwise requests remain pending and fail closed. Quorum alerts are hourly and in-app only; no email escalation or repeat reminders are implemented.

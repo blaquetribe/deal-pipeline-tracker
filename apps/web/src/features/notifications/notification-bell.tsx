@@ -101,7 +101,11 @@ export function NotificationBell() {
         if (!notification) return;
         setNotifications((current) => mergeNotification(current, notification));
         setToast(notification);
-        setAnnouncement(`New closing soon alert: ${notification.payload.dealName}.`);
+        setAnnouncement(
+          notification.kind === 'closing_soon'
+            ? `New closing soon alert: ${notification.payload.dealName}.`
+            : `Approval alert: ${notification.payload.dealName}. ${notification.payload.message}`,
+        );
         if (toastTimer.current !== undefined) window.clearTimeout(toastTimer.current);
         toastTimer.current = window.setTimeout(() => {
           setToast(null);
@@ -160,7 +164,9 @@ export function NotificationBell() {
       {toast ? (
         <aside className="border-border fixed inset-x-4 bottom-4 z-30 flex max-w-lg items-start justify-between gap-4 rounded-panel border bg-surface-raised p-4 shadow-lg sm:inset-x-auto sm:end-4">
           <div>
-            <p className="text-sm text-fg-muted">Closing soon alert</p>
+            <p className="text-sm text-fg-muted">
+              {toast.kind === 'closing_soon' ? 'Closing soon alert' : 'Approval alert'}
+            </p>
             <Link href={toast.payload.href} className="font-medium underline">
               {toast.payload.dealName}
             </Link>
@@ -217,11 +223,9 @@ export function NotificationBell() {
                 >
                   <span className="block font-medium">{notification.payload.dealName}</span>
                   <span className="block text-sm text-fg-muted">
-                    {notification.payload.overdue
-                      ? 'Closing date passed'
-                      : `Closing in ${notification.payload.thresholdDays} days`}
-                    {' · '}
-                    {notification.payload.closeDate}
+                    {notification.kind === 'closing_soon'
+                      ? `${notification.payload.overdue ? 'Closing date passed' : `Closing in ${notification.payload.thresholdDays} days`} · ${notification.payload.closeDate}`
+                      : notification.payload.message}
                   </span>
                 </Link>
               </li>

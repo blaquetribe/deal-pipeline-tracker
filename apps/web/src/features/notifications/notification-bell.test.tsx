@@ -28,6 +28,19 @@ const row = {
   read_at: null,
 };
 
+const approvalAlert = {
+  id: 'bbbbbbbb-0000-4000-8000-000000000003',
+  kind: 'approval_quorum_unreachable',
+  payload: {
+    dealId: 'bbbbbbbb-0000-4000-8000-000000000002',
+    dealName: 'Example deal',
+    message: 'Approval quorum can no longer be reached.',
+    href: '/deals/bbbbbbbb-0000-4000-8000-000000000002',
+  },
+  created_at: '2026-10-28T10:00:00Z',
+  read_at: null,
+} as const;
+
 class FakeWebSocket {
   static instances: FakeWebSocket[] = [];
   private readonly listeners = new Map<string, EventListener[]>();
@@ -118,6 +131,22 @@ describe('notification bell', () => {
     expect(screen.queryByText('database details must not render')).not.toBeInTheDocument();
     FakeWebSocket.instances[0]?.message({ type: 'notification', data: { dealName: 'bad' } });
     expect(screen.queryByText('bad')).not.toBeInTheDocument();
+  });
+
+  it('renders approval quorum alerts in the list and live toast', async () => {
+    vi.mocked(readNotifications).mockResolvedValue([approvalAlert]);
+    render(<NotificationBell />);
+    fireEvent.click(screen.getByRole('button', { name: 'Notifications' }));
+    expect(
+      await screen.findByText('Approval quorum can no longer be reached.'),
+    ).toBeInTheDocument();
+    FakeWebSocket.instances[0]?.message({ type: 'notification', data: approvalAlert });
+    expect(await screen.findByText('Approval alert')).toBeInTheDocument();
+    expect(
+      await screen.findByText(
+        'Approval alert: Example deal. Approval quorum can no longer be reached.',
+      ),
+    ).toBeInTheDocument();
   });
 
   it('clears the live toast timer when the bell unmounts', async () => {

@@ -1,7 +1,7 @@
 -- Feature 04: tenant-scoped, opt-in approval delegation preserves the original slot
 -- and records the acting delegate without granting a second vote.
 begin;
-select plan(25);
+select plan(30);
 
 select has_table('public', 'approval_delegations', 'approval delegations are stored per tenant');
 select is((select count(*) from pg_class where oid = to_regclass('public.approval_delegations')
@@ -19,6 +19,8 @@ select has_function('public', 'my_approval_delegations', array['uuid'],
   'members can list their own approval delegations');
 select has_function('public', 'eligible_approval_delegates', array['uuid'],
   'members can read eligible delegation choices');
+select has_function('public', 'scan_approval_quorum_alerts', array['timestamp with time zone'],
+  'scheduled scanner creates quorum reachability alerts');
 select has_function('public', 'decide_approval', array['uuid', 'text', 'text', 'uuid'],
   'a delegate selects the original approver slot explicitly');
 select ok(
@@ -159,6 +161,20 @@ select ok(exists (select 1 from public.tenant_events e
     and e.kind = 'approval_delegation_cancelled'
     and e.subject_user_id = '31313131-0000-4000-8000-000000000006'),
   'delegation revocation is recorded in the tenant audit trail');
+
+update public.memberships set deactivated_at = now()
+where user_id in ('31313131-0000-4000-8000-000000000004', '31313131-0000-4000-8000-000000000005');
+select is(public.scan_approval_quorum_alerts(now()), 2,
+  'unreachable approval quorum alerts the request creator and tenant owner');
+select is(public.scan_approval_quorum_alerts(now()), 0,
+  'repeated quorum scans do not duplicate recipient alerts');
+select ok(not has_function_privilege('authenticated', 'public.scan_approval_quorum_alerts(timestamptz)', 'EXECUTE')
+  and not has_function_privilege('anon', 'public.scan_approval_quorum_alerts(timestamptz)', 'EXECUTE'),
+  'quorum scanner is not callable by application roles');
+select is((select count(*) from public.notifications
+  where tenant_id = '31313131-0000-4000-8000-00000000000a'
+    and kind = 'approval_quorum_unreachable'), 2::bigint,
+  'quorum notifications stay within the originating tenant');
 
 select * from finish();
 rollback;
