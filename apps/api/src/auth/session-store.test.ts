@@ -111,22 +111,17 @@ describe('session store', () => {
     await expect(reader.lookup(sessionId)).resolves.toBeNull();
   });
 
-  it('forwards token updates, tenant changes and revocation by hash', async () => {
+  it('forwards tenant changes and revocation by session hash', async () => {
     const { rpc, calls } = fakeRpc(() => undefined);
     const store = createSessionStore({ rpc, ...secrets });
     const id = 'A'.repeat(43);
-    await store.updateTokens(id, tokens);
     await store.setTenant(id, 'tenant-9');
     await store.revoke(id);
-    expect(calls.map((c) => c.name)).toEqual([
-      'session_update_tokens',
-      'session_set_tenant',
-      'session_revoke',
-    ]);
+    expect(calls.map((c) => c.name)).toEqual(['session_set_tenant', 'session_revoke']);
     for (const call of calls) {
       expect(call.args.p_session_hash).toBe(sha256Hex(id));
     }
-    expect(calls[1]?.args.p_tenant).toBe('tenant-9');
+    expect(calls[0]?.args.p_tenant).toBe('tenant-9');
   });
 
   it('revokes every session of a user and reports how many', async () => {
@@ -136,15 +131,58 @@ describe('session store', () => {
     expect(calls[0]).toMatchObject({ name: 'session_revoke_user', args: { p_user: 'user-1' } });
   });
 
-  it('turns "no active session" and "not a member" into typed outcomes, and passes other errors on', async () => {
-    await expect(
-      failing('42501', 'no active session').updateTokens('A'.repeat(43), tokens),
-    ).resolves.toBe(false);
+  it('turns "not a member" into a typed outcome and passes other errors on', async () => {
     await expect(failing('42501', 'not a member').setTenant('A'.repeat(43), 't')).resolves.toBe(
       false,
     );
     await expect(
       failing('unavailable', 'database unavailable').revoke('A'.repeat(43)),
     ).rejects.toBeInstanceOf(RpcError);
+  });
+
+  it('claims refresh rotation in the database and returns the current encrypted session tokens', async () => {
+    let stored = '';
+    const { rpc, calls } = fakeRpc(({ name, args }) => {
+      if (name === 'session_create') {
+        stored = String(args.p_tokens_enc);
+        return 'id';
+      }
+      if (name === 'session_refresh_claim') {
+        return [{ claimed: true, tokens_enc: stored }];
+      }
+      return undefined;
+    });
+    const store = createSessionStore({ rpc, ...secrets });
+    const { sessionId } = await store.create('user-1', tokens);
+
+    const claim = await store.claimRefresh(sessionId, 20_000);
+
+    expect(claim).toMatchObject({ claimed: true, tokens });
+    expect(claim?.claimId).toMatch(/^[A-Za-z0-9_-]{43}$/);
+    expect(calls.at(-1)?.name).toBe('session_refresh_claim');
+    expect(calls.at(-1)?.args.p_session_hash).toBe(sha256Hex(sessionId));
+    expect(calls.at(-1)?.args.p_claim_hash).toBe(sha256Hex(claim?.claimId ?? ''));
+    expect(calls.at(-1)?.args.p_lease_ms).toBe(20_000);
+    expect(JSON.stringify(calls.at(-1)?.args)).not.toContain(claim?.claimId);
+    expect(JSON.stringify(calls.at(-1)?.args)).not.toContain('refresh-me');
+  });
+
+  it('completes or releases only the matching refresh claim', async () => {
+    const { rpc, calls } = fakeRpc(() => true);
+    const store = createSessionStore({ rpc, ...secrets });
+    const id = 'A'.repeat(43);
+    const claimId = 'B'.repeat(43);
+
+    await expect(store.completeRefresh(id, claimId, tokens)).resolves.toBe(true);
+    await store.releaseRefresh(id, claimId);
+
+    expect(calls.map((call) => call.name)).toEqual([
+      'session_refresh_complete',
+      'session_refresh_release',
+    ]);
+    for (const call of calls) {
+      expect(call.args.p_session_hash).toBe(sha256Hex(id));
+      expect(call.args.p_claim_hash).toBe(sha256Hex(claimId));
+    }
   });
 });

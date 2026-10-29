@@ -108,23 +108,46 @@ export function createSessionResolver({
 }: Pick<AuthServiceOptions, 'sessions' | 'gotrue' | 'sessionSecret' | 'now'>): SessionResolver {
   const csrfKey = deriveKey(sessionSecret, 'csrf');
   const refreshes = new Map<string, Promise<StoredTokens | null>>();
+  const refreshLeaseMs = 20_000;
 
-  async function refreshOnce(
+  const isFresh = (tokens: StoredTokens): boolean => tokens.expiresAt > now() + 30_000;
+
+  async function waitForConcurrentRefresh(
     sessionId: string,
-    current: StoredTokens,
+    attemptsRemaining = 50,
   ): Promise<StoredTokens | null> {
+    if (attemptsRemaining <= 0) return null;
+    await new Promise((resolve) => setTimeout(resolve, 100));
+    const latest = await sessions.lookup(sessionId);
+    if (!latest) return null;
+    if (isFresh(latest.tokens)) return latest.tokens;
+    return waitForConcurrentRefresh(sessionId, attemptsRemaining - 1);
+  }
+
+  async function refreshOnce(sessionId: string): Promise<StoredTokens | null> {
     const running = refreshes.get(sessionId);
     if (running) {
       return running;
     }
     const pending = (async () => {
-      const refreshed = await gotrue.refresh(current.refreshToken);
-      if (!refreshed) {
-        await sessions.revoke(sessionId);
-        return null;
+      const claim = await sessions.claimRefresh(sessionId, refreshLeaseMs);
+      if (!claim) return null;
+      if (!claim.claimed) {
+        return isFresh(claim.tokens) ? claim.tokens : waitForConcurrentRefresh(sessionId);
       }
-      const updated = await sessions.updateTokens(sessionId, refreshed.tokens);
-      return updated ? refreshed.tokens : null;
+
+      try {
+        if (isFresh(claim.tokens)) return claim.tokens;
+        const refreshed = await gotrue.refresh(claim.tokens.refreshToken);
+        if (!refreshed) {
+          await sessions.revoke(sessionId);
+          return null;
+        }
+        const updated = await sessions.completeRefresh(sessionId, claim.claimId, refreshed.tokens);
+        return updated ? refreshed.tokens : waitForConcurrentRefresh(sessionId);
+      } finally {
+        await sessions.releaseRefresh(sessionId, claim.claimId);
+      }
     })();
     refreshes.set(sessionId, pending);
     try {
@@ -141,7 +164,7 @@ export function createSessionResolver({
         return null;
       }
       if (record.tokens.expiresAt <= now() + 30_000) {
-        const tokens = await refreshOnce(sessionId, record.tokens);
+        const tokens = await refreshOnce(sessionId);
         if (!tokens) {
           return null;
         }
