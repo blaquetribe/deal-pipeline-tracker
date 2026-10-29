@@ -8,6 +8,7 @@ import {
   approvalDecisionBodySchema,
   approvalDelegationBodySchema,
   approvalPolicyBodySchema,
+  approvalPolicyResponseSchema,
   approvalRequestBodySchema,
   approvalReassignmentBodySchema,
   approvalReassignmentOptionsSchema,
@@ -272,6 +273,9 @@ describe('deal list schemas', () => {
 
 describe('approval schemas', () => {
   it('validates strict request, decision and bounded policy inputs', () => {
+    expect(
+      approvalPolicyResponseSchema.parse({ requiredApprovals: null, delegationEnabled: false }),
+    ).toEqual({ requiredApprovals: null, delegationEnabled: false });
     expect(approvalRequestBodySchema.parse({ expectedVersion: 2 })).toEqual({ expectedVersion: 2 });
     expect(
       approvalDecisionBodySchema.parse({ decision: 'reject', reason: 'Needs review' }),

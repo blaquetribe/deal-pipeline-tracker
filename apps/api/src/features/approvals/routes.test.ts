@@ -38,6 +38,8 @@ function harness(tenantId: string | null = TENANT) {
         if (name === 'request_approval') return REQUEST;
         if (name === 'decide_approval') return 'pending';
         if (name === 'set_approval_absence') return ABSENCE;
+        if (name === 'get_approval_policy')
+          return { requiredApprovals: 2, delegationEnabled: true };
         if (name === 'my_approval_absences') return [];
         if (name === 'my_approval_delegations' || name === 'eligible_approval_delegates') return [];
         if (name === 'set_approval_delegation') return ABSENCE;
@@ -85,6 +87,7 @@ describe('approval routes', () => {
       { method: 'POST', path: '/deals/:dealId/approval-requests', access: 'session' },
       { method: 'POST', path: '/approval-requests/:requestId/decisions', access: 'session' },
       { method: 'PUT', path: '/approval-policy', access: 'session' },
+      { method: 'GET', path: '/approval-policy', access: 'session' },
       { method: 'GET', path: '/approval-absences', access: 'session' },
       { method: 'POST', path: '/approval-absences', access: 'session' },
       { method: 'DELETE', path: '/approval-absences/:absenceId', access: 'session' },
@@ -103,6 +106,7 @@ describe('approval routes', () => {
       'deal.view',
       'deal.request_approval',
       'approval.decide',
+      'role.manage',
       'role.manage',
       'approval.decide',
       'approval.decide',
@@ -245,6 +249,18 @@ describe('approval routes', () => {
     expect(userRpc.call).toHaveBeenCalledWith(
       'configure_approval_policy',
       { p_tenant: TENANT, p_required_approvals: 2 },
+      'caller-jwt',
+    );
+  });
+
+  it('reads the active tenant approval policy with the caller JWT', async () => {
+    const { app, userRpc } = harness();
+    const response = await app.request('/approval-policy', { headers: { Cookie: COOKIE } });
+    expect(response.status).toBe(200);
+    expect(await response.json()).toEqual({ requiredApprovals: 2, delegationEnabled: true });
+    expect(userRpc.call).toHaveBeenCalledWith(
+      'get_approval_policy',
+      { p_tenant: TENANT },
       'caller-jwt',
     );
   });

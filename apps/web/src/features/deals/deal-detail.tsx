@@ -18,6 +18,7 @@ import {
   decideDealApproval,
   readApprovalAbsences,
   readApprovalReassignmentOptions,
+  readDealApprovalPolicy,
   postDealNote,
   readDeal,
   readDealActivity,
@@ -26,6 +27,7 @@ import {
   reassignApprovalApprover,
   setApprovalAbsence,
 } from './api';
+import { ApprovalDelegations } from './approval-delegations';
 import { DealFiles } from './deal-files';
 import { formatMinorAmount } from './money';
 
@@ -35,13 +37,16 @@ async function loadDealData(dealId: string) {
     readDealActivity(dealId),
     readDealApprovalStatus(dealId),
   ]);
-  const [absences, reassignmentOptions] = await Promise.all([
+  const [absences, reassignmentOptions, policy] = await Promise.all([
     approval.canManageAbsence ? readApprovalAbsences() : Promise.resolve([]),
     approval.canReassign && approval.requestId
       ? readApprovalReassignmentOptions(approval.requestId)
       : Promise.resolve(null),
+    approval.canConfigure
+      ? readDealApprovalPolicy()
+      : Promise.resolve({ requiredApprovals: null, delegationEnabled: false }),
   ]);
-  return [deal, activity, approval, absences, reassignmentOptions] as const;
+  return [deal, activity, approval, absences, reassignmentOptions, policy] as const;
 }
 
 interface DealDetailProps {
@@ -74,6 +79,7 @@ export function DealDetail({ dealId }: DealDetailProps) {
   const [approvalError, setApprovalError] = useState<string | null>(null);
   const [approvalBusy, setApprovalBusy] = useState(false);
   const [quorum, setQuorum] = useState('1');
+  const [delegationEnabled, setDelegationEnabled] = useState(false);
   const [rejectionReason, setRejectionReason] = useState('');
   const [posting, setPosting] = useState(false);
   const [loadingOlder, setLoadingOlder] = useState(false);
@@ -81,7 +87,7 @@ export function DealDetail({ dealId }: DealDetailProps) {
   useEffect(() => {
     let active = true;
     void loadDealData(dealId)
-      .then(([detail, events, approvalStatus, ownAbsences, options]) => {
+      .then(([detail, events, approvalStatus, ownAbsences, options, policy]) => {
         if (!active) return;
         setDeal(detail);
         setActivity(events);
@@ -89,6 +95,7 @@ export function DealDetail({ dealId }: DealDetailProps) {
         setAbsences(ownAbsences);
         setReassignmentOptions(options);
         setQuorum(String(approvalStatus.configuredApprovals ?? 1));
+        setDelegationEnabled(policy.delegationEnabled);
       })
       .catch((cause: unknown) => {
         if (active)
@@ -105,26 +112,30 @@ export function DealDetail({ dealId }: DealDetailProps) {
     setActivity(null);
     setApproval(null);
     try {
-      const [detail, events, approvalStatus, ownAbsences, options] = await loadDealData(dealId);
+      const [detail, events, approvalStatus, ownAbsences, options, policy] =
+        await loadDealData(dealId);
       setDeal(detail);
       setActivity(events);
       setApproval(approvalStatus);
       setAbsences(ownAbsences);
       setReassignmentOptions(options);
       setQuorum(String(approvalStatus.configuredApprovals ?? 1));
+      setDelegationEnabled(policy.delegationEnabled);
     } catch (cause) {
       setError(cause instanceof Error ? cause.message : 'Deal details could not be loaded.');
     }
   }
 
   async function refreshApprovalData() {
-    const [detail, events, approvalStatus, ownAbsences, options] = await loadDealData(dealId);
+    const [detail, events, approvalStatus, ownAbsences, options, policy] =
+      await loadDealData(dealId);
     setDeal(detail);
     setActivity(events);
     setApproval(approvalStatus);
     setAbsences(ownAbsences);
     setReassignmentOptions(options);
     setQuorum(String(approvalStatus.configuredApprovals ?? 1));
+    setDelegationEnabled(policy.delegationEnabled);
   }
 
   async function submitApprovalRequest() {
@@ -169,7 +180,7 @@ export function DealDetail({ dealId }: DealDetailProps) {
     setApprovalError(null);
     setApprovalBusy(true);
     try {
-      await configureDealApprovalPolicy(Number(quorum));
+      await configureDealApprovalPolicy(Number(quorum), delegationEnabled);
       await refreshApprovalData();
     } catch (cause) {
       setApprovalError(
@@ -396,12 +407,21 @@ export function DealDetail({ dealId }: DealDetailProps) {
                   value={quorum}
                 />
               </div>
+              <label className="flex items-center gap-2 pb-2 text-sm">
+                <input
+                  checked={delegationEnabled}
+                  disabled={approvalBusy}
+                  onChange={(event) => setDelegationEnabled(event.currentTarget.checked)}
+                  type="checkbox"
+                />
+                Allow temporary approval delegation
+              </label>
               <button
                 className="rounded-control border border-line px-4 py-2 focus-visible:outline-2 disabled:opacity-60"
                 disabled={approvalBusy}
                 type="submit"
               >
-                Save quorum
+                Save approval policy
               </button>
             </form>
           ) : null}
@@ -518,6 +538,7 @@ export function DealDetail({ dealId }: DealDetailProps) {
               </form>
             </div>
           ) : null}
+          {approval.canManageAbsence ? <ApprovalDelegations /> : null}
           {approval.canReassign && reassignmentOptions ? (
             <div className="mt-5 border-t border-line pt-4">
               <h3 className="font-semibold">Unavailable approvers</h3>

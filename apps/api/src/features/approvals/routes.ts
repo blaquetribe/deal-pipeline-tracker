@@ -6,6 +6,7 @@ import {
   approvalDelegationBodySchema,
   approvalDelegationsResponseSchema,
   approvalPolicyBodySchema,
+  approvalPolicyResponseSchema,
   approvalReassignmentBodySchema,
   approvalReassignmentOptionsSchema,
   approvalRequestBodySchema,
@@ -110,6 +111,31 @@ export function createApprovalRoutes({ userRpc }: ApprovalRoutesOptions): Route[
       if (body.delegationEnabled !== undefined) args.p_delegation_enabled = body.delegationEnabled;
       await userRpc.call('configure_approval_policy', args, session.accessToken);
       return { status: 204 };
+    },
+  });
+
+  const readPolicy = sessionRoute({
+    method: 'GET',
+    path: '/approval-policy',
+    body: noBody,
+    permission: 'role.manage',
+    handler: async ({ session }) => {
+      if (!session.tenantId) {
+        throw new HttpError(
+          409,
+          'tenant_required',
+          'Choose an organisation to read approval policy.',
+        );
+      }
+      return {
+        body: approvalPolicyResponseSchema.parse(
+          await userRpc.call(
+            'get_approval_policy',
+            { p_tenant: session.tenantId },
+            session.accessToken,
+          ),
+        ),
+      };
     },
   });
 
@@ -328,6 +354,7 @@ export function createApprovalRoutes({ userRpc }: ApprovalRoutesOptions): Route[
     request,
     decide,
     configure,
+    readPolicy,
     readAbsences,
     setAbsence,
     cancelAbsence,
