@@ -60,6 +60,7 @@ function describeAssignees(assignees: Assignee[]): string {
 }
 
 export function formatActivityBody(kind: string, body: string): string {
+  if (kind === 'closing_soon_alert') return formatClosingSoonAlert(body);
   if (kind !== 'field_change' || !body.startsWith(assignmentPrefix)) return body;
 
   const change = body.slice(assignmentPrefix.length);
@@ -71,4 +72,34 @@ export function formatActivityBody(kind: string, body: string): string {
   if (before === null || after === null) return 'Deal team assignments changed.';
 
   return `Assigned team changed from ${describeAssignees(before)} to ${describeAssignees(after)}.`;
+}
+
+function formatClosingSoonAlert(body: string): string {
+  try {
+    const payload: unknown = JSON.parse(body);
+    if (
+      typeof payload !== 'object' ||
+      payload === null ||
+      !('thresholdDays' in payload) ||
+      typeof payload.thresholdDays !== 'number' ||
+      !Number.isInteger(payload.thresholdDays) ||
+      !('closeDate' in payload) ||
+      typeof payload.closeDate !== 'string' ||
+      !/^\d{4}-\d{2}-\d{2}$/.test(payload.closeDate)
+    ) {
+      return 'A closing soon alert was sent.';
+    }
+
+    const date = new Date(`${payload.closeDate}T00:00:00.000Z`);
+    if (Number.isNaN(date.getTime())) return 'A closing soon alert was sent.';
+    const closeDate = new Intl.DateTimeFormat('en-ZA', {
+      dateStyle: 'medium',
+      timeZone: 'UTC',
+    }).format(date);
+    const timing = payload.thresholdDays <= 0 ? 'overdue' : `${payload.thresholdDays}-day reminder`;
+
+    return `Closing alert: ${timing} for an expected close on ${closeDate}.`;
+  } catch {
+    return 'A closing soon alert was sent.';
+  }
 }

@@ -45,7 +45,7 @@ export function DealsKanban({
   }
 
   return (
-    <div aria-label="Deals by pipeline stage" className="mt-4 overflow-x-auto pb-3">
+    <section aria-label="Deals by pipeline stage" className="mt-4 overflow-x-auto pb-3">
       <div className="grid min-w-[70rem] grid-cols-7 gap-3">
         {STAGES.map((stage) => {
           const stageDeals = deals.filter((deal) => deal.stage === stage);
@@ -115,7 +115,7 @@ export function DealsKanban({
                       }}
                     >
                       <Link
-                        className="font-semibold underline focus-visible:outline-2"
+                        className="text-sm leading-snug font-semibold decoration-brand/40 underline-offset-4 transition-colors hover:text-brand hover:underline focus-visible:rounded-sm focus-visible:outline-2"
                         href={`/deals/${deal.id}`}
                       >
                         {deal.name}
@@ -142,6 +142,6 @@ export function DealsKanban({
           );
         })}
       </div>
-    </div>
+    </section>
   );
 }

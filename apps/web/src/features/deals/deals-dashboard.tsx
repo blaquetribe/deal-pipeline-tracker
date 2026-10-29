@@ -594,28 +594,30 @@ export function DealsDashboard() {
       )}
 
       {result && result.items.length > 0 && (
-        <fieldset className="mt-4 flex items-center gap-2">
-          <legend className="mr-2 text-sm font-medium">Deals view</legend>
-          <Button
-            aria-pressed={view === 'list'}
-            onClick={() => setView('list')}
-            size="small"
-            type="button"
-            variant={view === 'list' ? 'primary' : 'secondary'}
-          >
-            List
-          </Button>
-          <Button
-            aria-pressed={view === 'board'}
-            onClick={() => setView('board')}
-            size="small"
-            type="button"
-            variant={view === 'board' ? 'primary' : 'secondary'}
-          >
-            Board
-          </Button>
+        <fieldset className="mt-4 flex flex-wrap items-center justify-between gap-3">
+          <legend className="sr-only">Deals view</legend>
+          <div className="inline-flex items-center gap-1 rounded-lg border border-line-subtle bg-surface-subtle p-1">
+            <Button
+              aria-pressed={view === 'list'}
+              onClick={() => setView('list')}
+              size="small"
+              type="button"
+              variant={view === 'list' ? 'primary' : 'quiet'}
+            >
+              List
+            </Button>
+            <Button
+              aria-pressed={view === 'board'}
+              onClick={() => setView('board')}
+              size="small"
+              type="button"
+              variant={view === 'board' ? 'primary' : 'quiet'}
+            >
+              Board
+            </Button>
+          </div>
           {view === 'board' && (
-            <span className="ml-auto text-xs text-fg-muted">
+            <span className="text-xs text-fg-muted">
               Drag cards between allowed stages. Use List for keyboard stage controls.
             </span>
           )}

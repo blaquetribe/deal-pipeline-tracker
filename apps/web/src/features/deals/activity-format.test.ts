@@ -34,4 +34,21 @@ describe('formatActivityBody', () => {
     );
     expect(formatActivityBody('note', 'A useful note.')).toBe('A useful note.');
   });
+
+  it('summarizes system closing alerts without exposing JSON recipients', () => {
+    const body = '{"closeDate":"2026-11-02","thresholdDays":5,"recipients":["internal-user-id"]}';
+
+    expect(formatActivityBody('closing_soon_alert', body)).toBe(
+      'Closing alert: 5-day reminder for an expected close on 02 Nov 2026.',
+    );
+    expect(formatActivityBody('closing_soon_alert', body)).not.toMatch(
+      /recipients|internal-user-id/,
+    );
+  });
+
+  it('keeps malformed system alert payloads readable', () => {
+    expect(formatActivityBody('closing_soon_alert', '{bad json}')).toBe(
+      'A closing soon alert was sent.',
+    );
+  });
 });

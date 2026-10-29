@@ -225,6 +225,25 @@ describe('deal activity schemas', () => {
       dealActivityResponseSchema.parse({ events: [], hasMore: false, integrityOk: 'yes' }),
     ).toThrow(/integrityOk/);
   });
+
+  it('accepts system-authored activity events without user attribution', () => {
+    const event = {
+      seq: '2',
+      id: userA,
+      kind: 'closing_soon_alert',
+      body: '{"closeDate":"2026-11-02","thresholdDays":5,"recipients":[]}',
+      actorId: null,
+      actorName: 'System',
+      actorEmail: 'system',
+      createdAt: '2026-10-29T19:00:00+00:00',
+      amendsEventId: null,
+    };
+
+    expect(
+      dealActivityResponseSchema.parse({ events: [event], hasMore: false, integrityOk: true })
+        .events[0],
+    ).toEqual(event);
+  });
 });
 
 describe('deal list schemas', () => {
