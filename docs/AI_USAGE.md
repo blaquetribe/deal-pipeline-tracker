@@ -10,6 +10,12 @@ Running log feeding the README reflection required by the brief. Add an entry pe
 - **What went wrong or was surprising:**
 
 ## Entries
+### 2026-10-29 / Cross-instance auth refresh coordination
+- **What Codex did:** added a short hashed refresh lease per session in Postgres, updated the API resolver to claim and complete rotation only under that lease, and made competing API instances wait for the committed tokens. Disabled the old uncoordinated token-write RPC for `api_service`.
+- **What the human decided or corrected:** asked to finish product work before the styling pass and final presentation.
+- **How it was verified:** the full Vitest suite passes (646 passed, 1 skipped); coverage thresholds pass (85.06% global branch coverage; API branch threshold also passes); pgTAP passes 596 assertions across 30 files; typecheck, lint, Stylelint, format check, and production build pass. PR #32's rerun is pending after CI initially found a coverage shortfall.
+- **What went wrong or was surprising:** the first pgTAP run showed `api_service` needs test-transaction-only access to the `extensions` schema for pgTAP assertions; production privileges remain unchanged. A crash after GoTrue rotates but before Postgres stores the new token remains a cross-system gap and is documented.
+
 ### 2026-10-29 / UI pass: onboarding and invitation buttons
 - **What Codex did:** migrated onboarding progression, skip, invitation creation, invitation acceptance/revocation, and email verification actions to the shared `Button` component. Primary progression and submit actions use the primary variant, while skip/cancel or revoke actions use secondary or danger variants.
 - **What the human decided or corrected:** continue the requested UI consistency pass before beginning the final walkthrough presentation.

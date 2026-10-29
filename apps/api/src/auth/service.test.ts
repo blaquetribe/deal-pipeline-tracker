@@ -6,7 +6,7 @@ import { createRateLimiter } from '../http/rate-limit';
 import { describeRoutes, type SessionResolver } from '../http/route';
 import type { Authenticated, GoTrue } from './gotrue';
 import type { AuthMailer, AuthServiceOptions } from './service';
-import { createAuthRoutes, createSessionResolver } from './service';
+import { createAuthRoutes, createSessionResolver, mountAuthRoutes } from './service';
 import type { SessionRecord, SessionStore, StoredTokens } from './session-store';
 
 const ORIGIN = 'http://localhost:8080';
@@ -104,7 +104,9 @@ function harness(
       tokens,
       activeTenantId: null,
     })),
-    updateTokens: typedMock(async () => true),
+    claimRefresh: typedMock(async () => ({ claimed: false as const, claimId: null, tokens })),
+    completeRefresh: typedMock(async () => false),
+    releaseRefresh: typedMock(async () => undefined),
     setTenant: typedMock(async () => true),
     revoke: typedMock(async () => undefined),
     revokeUser: typedMock(async () => 1),
@@ -134,7 +136,21 @@ function harness(
     logger: { info: typedMock(() => undefined), error: typedMock(() => undefined) },
   };
   for (const route of routes) route.mount(app, deps);
-  return { app, routes, calls, userCalls, mails, rpc, userRpc, gotrue, sessions, mailer, resolver };
+  return {
+    app,
+    routes,
+    calls,
+    userCalls,
+    mails,
+    rpc,
+    userRpc,
+    gotrue,
+    sessions,
+    mailer,
+    resolver,
+    options,
+    deps,
+  };
 }
 
 const post = (body: unknown, cookie?: string, csrf?: string): RequestInit => ({
@@ -149,6 +165,14 @@ const post = (body: unknown, cookie?: string, csrf?: string): RequestInit => ({
 });
 
 describe('auth routes', () => {
+  it('mounts the complete auth route set through the exported route adapter', () => {
+    const setup = harness();
+    const mounted = mountAuthRoutes(new Hono(), setup.deps, setup.options);
+
+    expect(mounted).toHaveLength(setup.routes.length);
+    expect(mounted.map(({ path }) => path)).toEqual(setup.routes.map(({ path }) => path));
+  });
+
   it('covers failed credentials, live and missing sessions, forbidden tenant switches, and logout after revocation', async () => {
     const resolver = {
       resolve: typedMock(async () => ({
@@ -686,6 +710,19 @@ describe('auth routes', () => {
       'A'.repeat(43),
       '00000000-0000-4000-8000-000000000001',
     );
+
+    sessions.setTenant.mockResolvedValueOnce(false);
+    const cannotSelectOrganisation = await app.request('/onboarding/organisation', {
+      method: 'POST',
+      headers: {
+        Origin: ORIGIN,
+        'Content-Type': 'application/json',
+        Cookie: cookie,
+        'X-CSRF-Token': 'csrf',
+      },
+      body: JSON.stringify({ name: 'CVC Capital' }),
+    });
+    expect(cannotSelectOrganisation.status).toBe(500);
   });
 
   it('declares only the intended auth routes public', () => {
@@ -718,6 +755,120 @@ describe('auth routes', () => {
 });
 
 describe('session resolver', () => {
+  it('fails closed when a competing refresh lease disappears before rotation is stored', async () => {
+    const userId = '22222222-2222-4222-8222-222222222222';
+    let lookups = 0;
+    const lookup = typedMock(async () => {
+      lookups += 1;
+      return lookups === 1
+        ? { userId, tokens: { ...tokens, expiresAt: 1 }, activeTenantId: null }
+        : null;
+    });
+    const sessions: SessionStore = {
+      create: typedMock(async () => ({ sessionId: 'A'.repeat(43) })),
+      lookup,
+      claimRefresh: typedMock(async () => ({
+        claimed: false as const,
+        claimId: null,
+        tokens: { ...tokens, expiresAt: 1 },
+      })),
+      completeRefresh: typedMock(async () => false),
+      releaseRefresh: typedMock(async () => undefined),
+      setTenant: typedMock(async () => true),
+      revoke: typedMock(async () => undefined),
+      revokeUser: typedMock(async () => 1),
+    };
+    const resolver = createSessionResolver({
+      sessions,
+      gotrue: {
+        refresh: typedMock(async () => null),
+        passwordLogin: typedMock(async () => null),
+        logout: typedMock(async () => undefined),
+        createUser: typedMock(async (): Promise<'exists'> => 'exists'),
+        ensureDemoUser: typedMock(async () => undefined),
+        setPassword: typedMock(async () => undefined),
+      },
+      sessionSecret: secret,
+      now: () => 1_800_000_000_000,
+    });
+
+    await expect(resolver.resolve('A'.repeat(43))).resolves.toBeNull();
+    expect(lookup).toHaveBeenCalledTimes(2);
+  });
+
+  it('shares refresh-token rotation across independent resolver instances', async () => {
+    const userId = '22222222-2222-4222-8222-222222222222';
+    let currentTokens: StoredTokens = { ...tokens, expiresAt: 1 };
+    let activeClaim: string | null = null;
+    let finishRefresh: ((value: Authenticated | null) => void) | undefined;
+    let signalRefreshStarted: (() => void) | undefined;
+    const refreshStarted = new Promise<void>((resolve) => {
+      signalRefreshStarted = resolve;
+    });
+    const refreshed: StoredTokens = {
+      ...tokens,
+      accessToken: 'rotated-access',
+      refreshToken: 'rotated-refresh',
+      expiresAt: 2_000_000_000_000,
+    };
+    const refresh = typedMock(
+      () =>
+        new Promise<Authenticated | null>((resolve) => {
+          finishRefresh = resolve;
+          signalRefreshStarted?.();
+        }),
+    );
+    const claimRefresh = typedMock(async () => {
+      if (activeClaim !== null)
+        return { claimed: false as const, claimId: null, tokens: currentTokens };
+      activeClaim = 'A'.repeat(43);
+      return { claimed: true as const, claimId: activeClaim, tokens: currentTokens };
+    });
+    const completeRefresh = typedMock(
+      async (_sessionId: string, claimId: string, next: StoredTokens) => {
+        if (activeClaim !== claimId) return false;
+        currentTokens = next;
+        activeClaim = null;
+        return true;
+      },
+    );
+    const sessions: SessionStore = {
+      create: typedMock(async () => ({ sessionId: 'A'.repeat(43) })),
+      lookup: typedMock(async () => ({ userId, tokens: currentTokens, activeTenantId: null })),
+      claimRefresh,
+      completeRefresh,
+      releaseRefresh: typedMock(async (_sessionId: string, claimId: string) => {
+        if (activeClaim === claimId) activeClaim = null;
+      }),
+      setTenant: typedMock(async () => true),
+      revoke: typedMock(async () => undefined),
+      revokeUser: typedMock(async () => 1),
+    };
+    const gotrue: GoTrue = {
+      refresh,
+      passwordLogin: typedMock(async () => null),
+      logout: typedMock(async () => undefined),
+      createUser: typedMock(async (): Promise<'exists'> => 'exists'),
+      ensureDemoUser: typedMock(async () => undefined),
+      setPassword: typedMock(async () => undefined),
+    };
+    const options = { sessions, gotrue, sessionSecret: secret, now: () => 1_800_000_000_000 };
+    const firstInstance = createSessionResolver(options);
+    const secondInstance = createSessionResolver(options);
+
+    const first = firstInstance.resolve('A'.repeat(43));
+    await refreshStarted;
+    const second = secondInstance.resolve('A'.repeat(43));
+    await vi.waitFor(() => expect(claimRefresh).toHaveBeenCalledTimes(2));
+    finishRefresh?.({ userId, tokens: refreshed });
+
+    const [firstSession, secondSession] = await Promise.all([first, second]);
+    expect(firstSession?.accessToken).toBe('rotated-access');
+    expect(secondSession?.accessToken).toBe('rotated-access');
+    expect(refresh).toHaveBeenCalledTimes(1);
+    expect(completeRefresh).toHaveBeenCalledTimes(1);
+  });
+
   it('shares one refresh across concurrent requests for the same session', async () => {
     let finishRefresh: ((value: { userId: string; tokens: StoredTokens }) => void) | undefined;
     let startRefresh: (() => void) | undefined;
@@ -737,7 +888,7 @@ describe('session resolver', () => {
           startRefresh?.();
         }),
     );
-    const updateTokens = typedMock(async () => true);
+    const completeRefresh = typedMock(async () => true);
     const store: SessionStore = {
       create: typedMock(async () => ({ sessionId: 'A'.repeat(43) })),
       lookup: typedMock(async () => ({
@@ -745,7 +896,13 @@ describe('session resolver', () => {
         tokens: { ...tokens, expiresAt: 1 },
         activeTenantId: null,
       })),
-      updateTokens,
+      claimRefresh: typedMock(async () => ({
+        claimed: true as const,
+        claimId: 'A'.repeat(43),
+        tokens: { ...tokens, expiresAt: 1 },
+      })),
+      completeRefresh,
+      releaseRefresh: typedMock(async () => undefined),
       setTenant: typedMock(async () => true),
       revoke: typedMock(async () => undefined),
       revokeUser: typedMock(async () => 1),
@@ -770,6 +927,6 @@ describe('session resolver', () => {
     const [a, b] = await Promise.all([one, two]);
     expect(a).toEqual(b);
     expect(refresh).toHaveBeenCalledTimes(1);
-    expect(updateTokens).toHaveBeenCalledTimes(1);
+    expect(completeRefresh).toHaveBeenCalledTimes(1);
   });
 });

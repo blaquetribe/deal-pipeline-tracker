@@ -1,6 +1,6 @@
 # 02 Auth and onboarding: progress
 
-Status: implemented; local quality, database, and compose smoke checks pass. Remaining known limitations are listed below.
+Status: implemented; refresh-token rotation is coordinated through Postgres across API instances. Production SMTP relay behavior and the refresh crash window remain documented limitations.
 Owner/branch: feat/02-api-auth (continues the feature 02 database work)
 Depends on: 01
 
@@ -8,7 +8,7 @@ Depends on: 01
 Sign-up with verification, sessions, tenant switcher, invitations, Mailer. Covers GOTCHAS rows 1, 5, 14, 18, 21, 24, 28, 29, 31, 41.
 
 ## Scope
-- In: sign-up, email verification, login, **password reset** (token flow; the mockup shows "Forgot password?" but nothing designs it), server-side sessions with single-flight refresh, tenant switcher, invitations, Mailer and Mailpit, rate limits, nonce-based CSP in Next `proxy.ts` (headers only; mechanism confirmed in the installed Next docs, proven by a test here), signed-out route sweep, and the registration onboarding flow (owner and invitee) designed in `onboarding-flow.md`. No SSO, no magic link.
+- In: sign-up, email verification, login, **password reset** (token flow; the mockup shows "Forgot password?" but nothing designs it), server-side sessions with in-process and database-coordinated refresh, tenant switcher, invitations, Mailer and Mailpit, rate limits, nonce-based CSP in Next `proxy.ts` (headers only; mechanism confirmed in the installed Next docs, proven by a test here), signed-out route sweep, and the registration onboarding flow (owner and invitee) designed in `onboarding-flow.md`. No SSO, no magic link.
 - Out (and where it goes): avatars (08), approvals (04).
 
 ## Design notes
@@ -53,19 +53,20 @@ What is covered, where it lives, how to run it.
 - [x] Web imports shared schemas and does not use Supabase.
 
 ## Tests
-`make test-db`: 337 pgTAP assertions across 16 files, all passing. `scripts/compose-smoke.sh`: all checks pass, including the new migrations, PostgREST role switching and negative tests. `pnpm test`: 405 tests pass across 28 files. SMTP tests cover Mailpit defaults, rendered messages, TLS/auth settings, and fail-closed invalid configuration.
+Historical Feature 02 verification passed 337 pgTAP assertions across 16 files, 405 Vitest tests across 28 files, and the full compose smoke. On 2026-10-29, the complete current pgTAP suite passes 596 assertions across 30 files, including the new refresh-lease tests.
 
 ## Log
 - 2026-10-26: ADR 0015. Slice A written test-first (red: role missing), migration, green. pgTAP lives in the `extensions` schema, so the test grants `api_service` usage on it inside its own rolled-back transaction; production does not. Real PostgREST check: role switching and `app.uid()` work. Smoke script extended (not sabotage-tested; `shellcheck` not installed locally, CI runs it).
 
 - 2026-10-26: slice B written test-first (red: missing functions and tables), migration, green, 313 assertions. Four sabotage runs (once-per-user check, invitation email binding, token hash readable, invitation cap) each failed the intended test. A test caught that a leftover user identity on the connection would have beaten the invitee as actor; fixed by letting an explicit `app.actor` win.
 - 2026-10-28: Coverage follow-up added auth API/form/onboarding regression tests and fixed malformed `/onboarding/skip/:step` input to return a stable 400 `invalid_step` response instead of leaking a Zod exception as a 500. The full suite passes 502 tests and all local coverage thresholds pass; GitHub CI for the follow-up PR remains pending.
+- 2026-10-29: Replaced process-local-only refresh coordination with a Postgres lease per session. The API service can claim a short hashed lease, rotate tokens only while holding it, and wait for another instance's rotation; direct uncoordinated token writes are no longer executable by `api_service`. Added migration `20261126000000_api_session_refresh_claim.sql`, pgTAP, and two-resolver regression coverage. Coverage regression tests verify lease disappearance fails closed and malformed encrypted tokens are rejected. Full Vitest passes (646 passed, 1 skipped), coverage thresholds pass (85.06% global branches; 90%+ API branches), pgTAP passes (596 assertions across 30 files), and typecheck, lint, stylelint, format check and build pass. PR #32's quality CI is pending after the coverage fix.
 
 ## Deviations / debt
 Anything that differs from the plan or is deferred (also mirror in README "next steps").
 
 - SMTP uses Nodemailer with configurable implicit TLS or required STARTTLS; optional credentials must be paired and are rejected unless TLS is enabled. Mailpit remains the local no-auth default. Production relay connectivity and certificate behavior still need deployment verification.
-- **Multi-instance risk:** refresh single-flight is process-local. Concurrent refresh requests handled by different API instances are not coordinated, although session persistence is in Postgres.
+- **Refresh crash window:** if an API instance crashes after GoTrue rotates a refresh token but before the new token is committed to the session row, a retry after the lease expires can invalidate the session. The database lease prevents concurrent API instances from using the same token simultaneously but cannot make GoTrue's external rotation and Postgres persistence one transaction.
 - Component tests cover stepper semantics, canonical step selection, redirects from a mismatched URL, and focus/link behavior for validation errors.
 - Password reset consumes the one-use token before calling GoTrue to change the password. If GoTrue fails after consumption, the user must request another reset link.
 - Existing organisations retain their current `closing_soon_days`; the forward migration changes only the default for newly created tenants.

@@ -21,6 +21,10 @@ export interface SessionRecord {
   readonly activeTenantId: string | null;
 }
 
+export type RefreshClaim =
+  | { readonly claimed: true; readonly claimId: string; readonly tokens: StoredTokens }
+  | { readonly claimed: false; readonly claimId: null; readonly tokens: StoredTokens };
+
 interface SessionStoreOptions {
   readonly rpc: Rpc;
   readonly jwtSecret: string;
@@ -43,6 +47,7 @@ const lookupRowsSchema = z.array(
     active_tenant_id: z.string().nullable(),
   }),
 );
+const refreshClaimRowsSchema = z.array(z.object({ claimed: z.boolean(), tokens_enc: z.string() }));
 
 const toBytea = (blob: Buffer): string => `\\x${blob.toString('hex')}`;
 const fromBytea = (value: string): Buffer => Buffer.from(value.replace(/^\\x/, ''), 'hex');
@@ -92,20 +97,50 @@ export function createSessionStore({ rpc, jwtSecret, sessionSecret }: SessionSto
       }
     },
 
-    /** False when the session is gone, expired or revoked. */
-    async updateTokens(sessionId: string, tokens: StoredTokens): Promise<boolean> {
-      try {
-        await asService('session_update_tokens', {
+    /** Atomically claims a refresh lease shared by every API instance and reads current tokens. */
+    async claimRefresh(sessionId: string, leaseMs: number): Promise<RefreshClaim | null> {
+      if (!SESSION_ID.test(sessionId)) return null;
+      const claimId = randomToken();
+      const rows = refreshClaimRowsSchema.parse(
+        await asService('session_refresh_claim', {
           p_session_hash: sha256Hex(sessionId),
-          p_tokens_enc: seal(tokens),
-        });
-        return true;
-      } catch (error) {
-        if (isDenied(error)) {
-          return false;
-        }
-        throw error;
+          p_claim_hash: sha256Hex(claimId),
+          p_lease_ms: leaseMs,
+        }),
+      );
+      const row = rows[0];
+      if (!row) return null;
+      try {
+        const tokens = storedTokensSchema.parse(
+          JSON.parse(decryptSecret(fromBytea(row.tokens_enc), key)),
+        );
+        return row.claimed
+          ? { claimed: true, claimId, tokens }
+          : { claimed: false, claimId: null, tokens };
+      } catch {
+        return null;
       }
+    },
+
+    /** Persists rotation only while this process still owns the unexpired lease. */
+    async completeRefresh(
+      sessionId: string,
+      claimId: string,
+      tokens: StoredTokens,
+    ): Promise<boolean> {
+      const result = await asService('session_refresh_complete', {
+        p_session_hash: sha256Hex(sessionId),
+        p_claim_hash: sha256Hex(claimId),
+        p_tokens_enc: seal(tokens),
+      });
+      return z.boolean().parse(result);
+    },
+
+    async releaseRefresh(sessionId: string, claimId: string): Promise<void> {
+      await asService('session_refresh_release', {
+        p_session_hash: sha256Hex(sessionId),
+        p_claim_hash: sha256Hex(claimId),
+      });
     },
 
     /** False when the user is not an active member of that tenant (or the session is gone). */

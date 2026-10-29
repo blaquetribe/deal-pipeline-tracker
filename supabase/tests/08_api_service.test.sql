@@ -1,7 +1,7 @@
 -- Feature 02, slice A: the narrow api_service role, server-side sessions, single-use email tokens and
 -- tenant-scoped profiles (ADR 0015). Written before the migration.
 begin;
-select plan(46);
+select plan(47);
 
 -- The role and its surface ----------------------------------------------------------------------------------
 select has_role('api_service', 'api_service exists');
@@ -15,7 +15,8 @@ select is(
 select set_eq(
   $$select p.proname::text from pg_proc p join pg_namespace n on n.oid = p.pronamespace
     where n.nspname = 'public' and has_function_privilege('api_service', p.oid, 'EXECUTE')$$,
-  $$values ('session_create'), ('session_lookup'), ('session_update_tokens'), ('session_set_tenant'),
+  $$values ('session_create'), ('session_lookup'), ('session_refresh_claim'),
+           ('session_refresh_complete'), ('session_refresh_release'), ('session_set_tenant'),
            ('session_revoke'), ('session_revoke_user'), ('token_issue'), ('token_consume'),
            ('invitation_preview'), ('invitation_accept'), ('account_lookup'),
            ('claim_closing_soon_emails'), ('complete_closing_soon_emails'), ('seed_demo_data'),
@@ -62,7 +63,10 @@ select is((select count(*) from public.session_lookup(repeat('b', 64))), 0::bigi
 select throws_ok($$select public.session_create('not-a-hash', 'aaaaaaaa-0000-4000-8000-000000000001', '\x01')$$, '22023', 'invalid session hash', 'only a sha256 hex digest is accepted');
 select throws_ok($$select public.session_create(repeat('a', 64), 'aaaaaaaa-0000-4000-8000-000000000001', '\x01')$$, '23505', null, 'a hash cannot be reused');
 select throws_ok($$select public.session_create(repeat('c', 64), 'aaaaaaaa-0000-4000-8000-000000000004', '\x01')$$, '42501', 'email not verified', 'an unverified user gets no session');
-select lives_ok($$select public.session_update_tokens(repeat('a', 64), '\x0304')$$, 'refreshed tokens can be stored');
+select ok((select claimed from public.session_refresh_claim(repeat('a', 64), repeat('1', 64), 20000)) is true,
+  'an API instance claims the rotating session token');
+select ok(public.session_refresh_complete(repeat('a', 64), repeat('1', 64), '\x0304') is true,
+  'only the lease owner can atomically store refreshed tokens');
 select is((select tokens_enc from public.session_lookup(repeat('a', 64))), '\x0304'::bytea, 'and replace the old ones');
 
 select is((select active_tenant_id from public.session_lookup(repeat('a', 64))), null::uuid, 'no tenant is active until one is chosen');
@@ -83,7 +87,8 @@ reset role;
 update public.api_sessions set expires_at = now() - interval '1 second' where session_hash = repeat('f', 64);
 set local role api_service;
 select is((select count(*) from public.session_lookup(repeat('f', 64))), 0::bigint, 'an expired session finds nothing');
-select throws_ok($$select public.session_update_tokens(repeat('f', 64), '\x09')$$, '42501', 'no active session', 'and cannot be refreshed');
+select throws_ok($$select public.session_update_tokens(repeat('f', 64), '\x09')$$, '42501', null,
+  'the legacy direct token update path is no longer executable');
 
 select public.session_create(repeat('9', 64), 'aaaaaaaa-0000-4000-8000-000000000002', '\x01');
 reset role;
