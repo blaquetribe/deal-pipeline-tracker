@@ -250,3 +250,9 @@ Running log feeding the README reflection required by the brief. Add an entry pe
 - **What the human decided or corrected:** requested continued project work and said they would add the refreshed UI screenshot to the repository. The full feature walkthrough presentation remains the final project task after the UI pass.
 - **How it was verified:** focused tests, full Vitest (660 passed, 1 skipped), typecheck, lint, stylelint, format check, production build, and live seeded-app visual review passed. No database changes.
 - **What went wrong or was surprising:** the previous `sr-only` treatment clipped the browser focus indication on file inputs, and the avatar and PDF labels used visibly different styles. GitHub Actions cannot start jobs while the repository account billing/spending limit is active; local checks are not a substitute for a green GitHub run.
+
+### 2026-10-30 / Upload-controls merge
+- **What Codex did:** opened PR #41, inspected GitHub's check annotations, and merged the change after local verification.
+- **What the human decided or corrected:** explicitly directed continued progress despite the same billing/spending startup block affecting Actions. This authorized merging PR #41 while accurately recording that its workflows did not pass or run.
+- **How it was verified:** GitHub annotations state that the CI and advisory jobs were not started due to recent failed payments or the spending limit; dependent jobs were skipped. The branch's push hook passed typecheck and all 660 Vitest tests (1 skipped), with stylelint, format, build, focused tests, and live review already verified locally.
+- **What went wrong or was surprising:** GitHub labels these never-started jobs as failed, even though no job step or code-level check ran.
