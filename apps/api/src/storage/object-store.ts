@@ -1,6 +1,5 @@
 import { createReadStream, createWriteStream } from 'node:fs';
 import { mkdir, mkdtemp, readdir, rm, stat } from 'node:fs/promises';
-import { tmpdir } from 'node:os';
 import { dirname, resolve, sep } from 'node:path';
 import { Readable } from 'node:stream';
 import { pipeline } from 'node:stream/promises';
@@ -56,7 +55,11 @@ function createFileStore(config: ObjectStoreConfig): ObjectStore {
     async put(key, body, byteSize) {
       const path = pathFor(key);
       await mkdir(dirname(path), { recursive: true });
-      const staging = await mkdtemp(resolve(tmpdir(), 'dpt-object-'));
+      // Stage on the object volume so the final hard link is always same-device.
+      // Compose mounts /tmp as tmpfs and the object directory as a named volume.
+      const stagingRoot = resolve(root, '.staging');
+      await mkdir(stagingRoot, { recursive: true, mode: 0o700 });
+      const staging = await mkdtemp(resolve(stagingRoot, 'upload-'));
       const stagedPath = resolve(staging, 'object');
       try {
         let written = 0;

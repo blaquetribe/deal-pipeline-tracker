@@ -10,6 +10,12 @@ Running log feeding the README reflection required by the brief. Add an entry pe
 - **What went wrong or was surprising:**
 
 ## Entries
+### 2026-10-30 / Final UI walkthrough, upload repair, and evidence
+- **What Codex did:** fixed cross-filesystem upload staging and error classification; refreshed the shared app shell and dashboard/deal/settings/roles surfaces; added a persistent theme toggle and responsive mobile table treatment; captured desktop, mobile, avatar-upload, and PDF-upload evidence; refreshed the 16-slide walkthrough; and clarified README startup and test-account steps.
+- **What the human decided or corrected:** asked to finish the project, make the UI less bland and cumbersome, repair uploads, refresh screenshots and the walkthrough, commit the presentation, and document exact local run and dev-account steps.
+- **How it was verified:** avatar PNG and deal PDF uploads succeeded through the running Compose app; mobile viewport was 390px with no document horizontal overflow; updated slides were rendered and visually reviewed and passed package/layout/font/import validation. `make ci-local` passed: 679 Vitest passed/1 skipped, pgTAP 630 assertions in 32 files, typecheck/lint/stylelint/format/build, shell/action checks, offline advisory tests, secret and image scans, and Compose smoke. The first database run caught test pollution from retained dev uploads; its assertions were scoped to their fixture tenant before the passing rerun.
+- **What went wrong or was surprising:** filesystem temp staging crossed the host-mounted storage filesystem and caused `EXDEV`; screenshots also captured repeated test uploads on the same demo deal, which are retained only in the local development volume.
+
 ### 2026-10-30 / Feature 05 closing-alert preferences and recipients
 - **What Codex did:** added database-authorized and audited tenant alert settings, an organisation settings page, shared/API contracts, and recipient resolution for deal assignees, active approval delegates, optional IC/all-active-member groups, and Owner/Admin fallback. Added pgTAP coverage for permissions, audit, dedupe, delegation, and tenant isolation.
 - **What the human decided or corrected:** previously approved keeping closing alerts at the existing IC/member policy and requested that product work finish before final UI evidence and presentation work. The accepted ADR 0011 requirements already define preference and delegate behavior.

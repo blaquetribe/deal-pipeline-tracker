@@ -32,7 +32,7 @@ describe('ProfileAvatar', () => {
     vi.stubGlobal('fetch', fetch);
     render(<ProfileAvatar />);
     expect(await screen.findByText('TE')).toBeVisible();
-    const fileInput = screen.getByLabelText('Update photo');
+    const fileInput = screen.getByLabelText('Change photo');
     expect(fileInput).toHaveClass('ui-file-input');
     expect(fileInput.closest('label')).toHaveClass('ui-file-trigger');
     const image = new File(['image bytes'], 'avatar.png', { type: 'image/png' });
@@ -47,5 +47,13 @@ describe('ProfileAvatar', () => {
       ),
     );
     expect(await screen.findByText('Profile photo updated.')).toBeVisible();
+  });
+
+  it('disables photo selection until an organisation is selected', async () => {
+    mocks.read.mockResolvedValueOnce({ ...session, tenantId: null });
+    render(<ProfileAvatar />);
+    const fileInput = await screen.findByLabelText('Change photo');
+    expect(fileInput).toBeDisabled();
+    expect(screen.getByText('Choose an organisation before changing your photo.')).toBeVisible();
   });
 });

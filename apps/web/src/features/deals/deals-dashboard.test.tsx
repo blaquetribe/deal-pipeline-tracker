@@ -79,6 +79,22 @@ describe('DealsDashboard', () => {
     );
   });
 
+  it('filters the deal list when a pipeline stage count is selected', async () => {
+    const fetch = stubFetch({ total: 1, items: [deal] });
+    const user = userEvent.setup();
+    render(<DealsDashboard />);
+    await screen.findByRole('row', { name: /Northstar Systems/ });
+
+    await user.click(screen.getByRole('button', { name: 'Filter deals to Sourcing (1)' }));
+
+    await waitFor(() =>
+      expect(fetch).toHaveBeenCalledWith(
+        '/api/deals?limit=25&offset=0&stage=sourcing',
+        expect.objectContaining({ credentials: 'same-origin' }),
+      ),
+    );
+  });
+
   it('offers a stage board and moves a deal only to an allowed, complete destination', async () => {
     const fetch = stubFetch({ total: 1, items: [deal] });
     const user = userEvent.setup();

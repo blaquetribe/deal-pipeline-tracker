@@ -88,11 +88,19 @@ export function createFileRoutes({
         const inputType = avatarType(await signature(inputPath));
         if (!inputType)
           throw new HttpError(415, 'unsupported_media_type', 'Use a PNG, JPEG, or WebP image.');
-        await sharp(inputPath, { limitInputPixels: 20_000_000, animated: false })
-          .rotate()
-          .resize(256, 256, { fit: 'cover', position: 'attention' })
-          .webp({ quality: 82 })
-          .toFile(outputPath);
+        try {
+          await sharp(inputPath, { limitInputPixels: 20_000_000, animated: false })
+            .rotate()
+            .resize(256, 256, { fit: 'cover', position: 'attention' })
+            .webp({ quality: 82 })
+            .toFile(outputPath);
+        } catch {
+          throw new HttpError(
+            415,
+            'invalid_image',
+            'This image could not be read. Choose a PNG, JPEG, or WebP photo.',
+          );
+        }
         const fileStat = await stat(outputPath);
         const digest = await hashFile(outputPath);
         const objectId = randomUUID();
@@ -121,9 +129,6 @@ export function createFileRoutes({
           throw error;
         }
         return Response.json({ fileId: createdFileId }, { status: 201 });
-      } catch (error) {
-        if (error instanceof HttpError) throw error;
-        throw new HttpError(400, 'invalid_image', 'The image could not be processed.');
       } finally {
         await rm(directory, { recursive: true, force: true });
       }
@@ -178,9 +183,6 @@ export function createFileRoutes({
           throw error;
         }
         return Response.json({ fileId: createdFileId }, { status: 201 });
-      } catch (error) {
-        if (error instanceof HttpError) throw error;
-        throw new HttpError(400, 'invalid_file', 'The attachment could not be processed.');
       } finally {
         await rm(directory, { recursive: true, force: true });
       }

@@ -226,7 +226,7 @@ describe('file routes', () => {
       headers,
       body: Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]),
     });
-    expect(malformed.status).toBe(400);
+    expect(malformed.status).toBe(415);
     expect(put).not.toHaveBeenCalled();
   });
 
@@ -254,8 +254,32 @@ describe('file routes', () => {
     userRpc.call.mockRejectedValueOnce(new Error('database failure'));
     expect(
       (await app.request('/files/avatar', { method: 'POST', headers, body: webp })).status,
-    ).toBe(400);
+    ).toBe(500);
     expect(deleteObject).toHaveBeenCalledOnce();
+  });
+
+  it('does not report a storage write failure as an invalid image', async () => {
+    const { app, put } = fixture();
+    const png = await sharp({
+      create: { width: 8, height: 8, channels: 3, background: '#112233' },
+    })
+      .png()
+      .toBuffer();
+    put.mockRejectedValueOnce(Object.assign(new Error('cross-device link'), { code: 'EXDEV' }));
+    const response = await app.request('/files/avatar', {
+      method: 'POST',
+      headers: {
+        Cookie: 'dpt_session=session',
+        Origin: 'http://localhost:8080',
+        'X-CSRF-Token': 'csrf',
+        'Content-Type': 'image/png',
+      },
+      body: png,
+    });
+    expect(response.status).toBe(500);
+    expect(await response.json()).toMatchObject({
+      error: { code: 'internal', message: 'Something went wrong.' },
+    });
   });
 
   it('rejects malformed PDF routes and removes uploaded data if ready marking fails', async () => {
@@ -285,7 +309,7 @@ describe('file routes', () => {
       headers,
       body: '%PDF-1.7\nvalid enough for signature',
     });
-    expect(response.status).toBe(400);
+    expect(response.status).toBe(500);
     expect(deleteObject).toHaveBeenCalledOnce();
   });
 

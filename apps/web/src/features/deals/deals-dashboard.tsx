@@ -310,11 +310,28 @@ export function DealsDashboard() {
             Review opportunities across your organisation.
           </p>
         </div>
-        <p aria-live="polite" className="text-sm text-fg-muted">
-          {loading
-            ? 'Loading deals…'
-            : `${result?.total ?? 0} ${result?.total === 1 ? 'deal' : 'deals'}`}
-        </p>
+        <div className="flex flex-wrap items-center gap-3">
+          <p
+            aria-live="polite"
+            className="rounded-control bg-brand-soft px-3 py-1.5 text-sm font-semibold text-brand-fg"
+          >
+            {loading
+              ? 'Loading deals…'
+              : `${result?.total ?? 0} ${result?.total === 1 ? 'deal' : 'deals'}`}
+          </p>
+          <Button
+            onClick={() => {
+              if (!createForm.current) return;
+              createForm.current.open = true;
+              createForm.current.scrollIntoView({ behavior: 'smooth', block: 'center' });
+              createForm.current.querySelector<HTMLInputElement>('input[name="name"]')?.focus();
+            }}
+            type="button"
+            variant="primary"
+          >
+            Add deal
+          </Button>
+        </div>
       </div>
 
       <section aria-labelledby="pipeline-overview-title" className="mt-6 space-y-4">
@@ -339,7 +356,7 @@ export function DealsDashboard() {
         ) : summary ? (
           <div aria-busy={false} className="space-y-4">
             <div className="grid gap-3 sm:grid-cols-2">
-              <article className="material-card p-4">
+              <article className="pipeline-stat pipeline-stat-value material-card p-4">
                 <h4 className="text-sm text-fg-muted">Open pipeline value</h4>
                 <ul className="mt-2 space-y-1 font-semibold tabular-nums">
                   {summary.totalsByCurrency.length ? (
@@ -353,9 +370,11 @@ export function DealsDashboard() {
                   )}
                 </ul>
               </article>
-              <article className="material-card p-4">
+              <article className="pipeline-stat pipeline-stat-closing material-card p-4">
                 <h4 className="text-sm text-fg-muted">Closing soon</h4>
-                <p className="mt-2 text-2xl font-semibold">{summary.closingSoonCount}</p>
+                <p className="mt-2 text-3xl font-semibold tabular-nums">
+                  {summary.closingSoonCount}
+                </p>
                 <p className="text-sm text-fg-muted">
                   Within {summary.windowDays} days, including overdue deals
                 </p>
@@ -366,11 +385,19 @@ export function DealsDashboard() {
                 <h4 className="font-semibold" id="stage-overview-title">
                   Deals by stage
                 </h4>
-                <ul className="mt-3 divide-y divide-line">
+                <ul className="mt-3 space-y-1">
                   {summary.pipelineByStage.map((item) => (
-                    <li className="flex justify-between gap-3 py-2" key={item.stage}>
-                      <span>{STAGE_LABELS[item.stage]}</span>
-                      <span className="tabular-nums">{item.count}</span>
+                    <li key={item.stage}>
+                      <button
+                        aria-label={`Filter deals to ${STAGE_LABELS[item.stage]} (${item.count})`}
+                        aria-pressed={stage === item.stage}
+                        className="stage-overview-link"
+                        onClick={() => changeStage(item.stage)}
+                        type="button"
+                      >
+                        <span>{STAGE_LABELS[item.stage]}</span>
+                        <span className="stage-overview-count">{item.count}</span>
+                      </button>
                     </li>
                   ))}
                 </ul>
@@ -480,10 +507,8 @@ export function DealsDashboard() {
         </div>
       </div>
 
-      <details className="material-card mt-4 p-4" ref={createForm}>
-        <summary className="cursor-pointer font-semibold outline-focus focus-visible:outline-2">
-          New deal
-        </summary>
+      <details className="material-card mt-4 p-4" id="new-deal-form" ref={createForm}>
+        <summary className="deal-create-trigger">New deal</summary>
         <form
           className="mt-4 grid gap-4 sm:grid-cols-2"
           onSubmit={(event) => void submitDeal(event)}
@@ -619,221 +644,232 @@ export function DealsDashboard() {
       )}
 
       {view === 'list' && result && result.items.length > 0 && (
-        <div aria-busy={loading} className="material-card mt-4 overflow-x-auto">
-          <table className="w-full min-w-[68rem] border-collapse text-left text-sm">
-            <caption className="sr-only">Deals in the active organisation</caption>
-            <thead className="border-b border-line text-fg-muted">
-              <tr>
-                <th className="px-4 py-3 font-medium" scope="col">
-                  Deal
-                </th>
-                <th className="px-4 py-3 font-medium" scope="col">
-                  Stage
-                </th>
-                <th className="px-4 py-3 font-medium" scope="col">
-                  Sector
-                </th>
-                <th className="px-4 py-3 text-right font-medium" scope="col">
-                  Size
-                </th>
-                <th className="px-4 py-3 font-medium" scope="col">
-                  Expected close
-                </th>
-                <th className="px-4 py-3 font-medium" scope="col">
-                  Stage action
-                </th>
-                <th className="px-4 py-3 font-medium" scope="col">
-                  Deal actions
-                </th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-line">
-              {result.items.map((deal) => (
-                <tr key={deal.id}>
-                  <th className="px-4 py-4 font-semibold" scope="row">
-                    <Link className="underline focus-visible:outline-2" href={`/deals/${deal.id}`}>
-                      {deal.name}
-                    </Link>
+        <>
+          <p className="mt-3 text-xs text-fg-muted sm:hidden">
+            Swipe the table sideways to see every field and deal action.
+          </p>
+          <div aria-busy={loading} className="material-card mt-4 min-w-0 overflow-x-auto">
+            <table className="w-full min-w-[68rem] border-collapse text-left text-sm">
+              <caption className="sr-only">Deals in the active organisation</caption>
+              <thead className="border-b border-line text-fg-muted">
+                <tr>
+                  <th className="px-4 py-3 font-medium" scope="col">
+                    Deal
                   </th>
-                  <td className="px-4 py-4">
-                    <StageBadge stage={deal.stage} />
-                  </td>
-                  <td className="px-4 py-4 text-fg-muted">{deal.sector ?? 'Not set'}</td>
-                  <td className="px-4 py-4 text-right tabular-nums">
-                    {formatMinorAmount(deal.amount, deal.currency)}
-                  </td>
-                  <td className="px-4 py-4 text-fg-muted">
-                    {formatCloseDate(deal.expected_close_date)}
-                  </td>
-                  <td className="px-4 py-4">
-                    {(() => {
-                      const destinations = STAGE_TRANSITIONS.filter(
-                        ([from]) => from === deal.stage,
-                      ).map(([, to]) => to);
-                      const selected = moveTargets[deal.id] ?? '';
-                      const check = selected
-                        ? evaluateMove(deal.stage, selected, [
-                            ...(deal.sector ? ['sector'] : []),
-                            ...(deal.amount !== null ? ['amount'] : []),
-                            ...(deal.expected_close_date ? ['expected_close_date'] : []),
-                          ])
-                        : null;
-                      return destinations.length === 0 ? (
-                        <span className="text-fg-muted">Final stage</span>
-                      ) : (
-                        <div className="flex min-w-52 items-center gap-2">
-                          <label className="sr-only" htmlFor={`move-stage-${deal.id}`}>
-                            Move {deal.name} to stage
-                          </label>
-                          <SelectControl
-                            className="min-w-0 flex-1"
-                            disabled={movingDeal === deal.id || loading}
-                            id={`move-stage-${deal.id}`}
-                            onChange={(event) => {
-                              const parsed = stageSchema.safeParse(event.currentTarget.value);
-                              const targetStage = parsed.success ? parsed.data : '';
-                              setMoveTargets((current) => ({
-                                ...current,
-                                [deal.id]: targetStage,
-                              }));
-                            }}
-                            value={selected}
+                  <th className="px-4 py-3 font-medium" scope="col">
+                    Stage
+                  </th>
+                  <th className="px-4 py-3 font-medium" scope="col">
+                    Sector
+                  </th>
+                  <th className="px-4 py-3 text-right font-medium" scope="col">
+                    Size
+                  </th>
+                  <th className="px-4 py-3 font-medium" scope="col">
+                    Expected close
+                  </th>
+                  <th className="px-4 py-3 font-medium" scope="col">
+                    Stage action
+                  </th>
+                  <th className="px-4 py-3 font-medium" scope="col">
+                    Deal actions
+                  </th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-line">
+                {result.items.map((deal) => (
+                  <tr key={deal.id}>
+                    <th className="px-4 py-4 font-semibold" scope="row">
+                      <Link
+                        className="underline focus-visible:outline-2"
+                        href={`/deals/${deal.id}`}
+                      >
+                        {deal.name}
+                      </Link>
+                    </th>
+                    <td className="px-4 py-4">
+                      <StageBadge stage={deal.stage} />
+                    </td>
+                    <td className="px-4 py-4 text-fg-muted">{deal.sector ?? 'Not set'}</td>
+                    <td className="px-4 py-4 text-right tabular-nums">
+                      {formatMinorAmount(deal.amount, deal.currency)}
+                    </td>
+                    <td className="px-4 py-4 text-fg-muted">
+                      {formatCloseDate(deal.expected_close_date)}
+                    </td>
+                    <td className="px-4 py-4">
+                      {(() => {
+                        const destinations = STAGE_TRANSITIONS.filter(
+                          ([from]) => from === deal.stage,
+                        ).map(([, to]) => to);
+                        const selected = moveTargets[deal.id] ?? '';
+                        const check = selected
+                          ? evaluateMove(deal.stage, selected, [
+                              ...(deal.sector ? ['sector'] : []),
+                              ...(deal.amount !== null ? ['amount'] : []),
+                              ...(deal.expected_close_date ? ['expected_close_date'] : []),
+                            ])
+                          : null;
+                        return destinations.length === 0 ? (
+                          <span className="text-fg-muted">Final stage</span>
+                        ) : (
+                          <div className="flex min-w-52 items-center gap-2">
+                            <label className="sr-only" htmlFor={`move-stage-${deal.id}`}>
+                              Move {deal.name} to stage
+                            </label>
+                            <SelectControl
+                              className="min-w-0 flex-1"
+                              disabled={movingDeal === deal.id || loading}
+                              id={`move-stage-${deal.id}`}
+                              onChange={(event) => {
+                                const parsed = stageSchema.safeParse(event.currentTarget.value);
+                                const targetStage = parsed.success ? parsed.data : '';
+                                setMoveTargets((current) => ({
+                                  ...current,
+                                  [deal.id]: targetStage,
+                                }));
+                              }}
+                              value={selected}
+                            >
+                              <option value="">Move to…</option>
+                              {destinations.map((destination) => (
+                                <option key={destination} value={destination}>
+                                  {STAGE_LABELS[destination]}
+                                </option>
+                              ))}
+                            </SelectControl>
+                            <Button
+                              className="text-sm"
+                              disabled={
+                                !selected ||
+                                check?.ok === false ||
+                                movingDeal === deal.id ||
+                                loading
+                              }
+                              onClick={() => void moveStage(deal.id)}
+                              size="small"
+                              type="button"
+                              variant="secondary"
+                            >
+                              {movingDeal === deal.id ? 'Moving…' : 'Move'}
+                            </Button>
+                            {check && !check.ok && check.code === 'missing_fields' && (
+                              <span className="sr-only">
+                                Required fields missing: {check.fields.join(', ')}.
+                              </span>
+                            )}
+                          </div>
+                        );
+                      })()}
+                    </td>
+                    <td className="px-4 py-4">
+                      <details className="min-w-56 rounded-control border border-line p-2">
+                        <summary
+                          aria-label={`Edit ${deal.name}`}
+                          className="cursor-pointer font-medium outline-focus focus-visible:outline-2"
+                        >
+                          Edit deal
+                        </summary>
+                        <form
+                          className="mt-3 grid gap-3"
+                          onSubmit={(event) => void submitUpdate(event, deal)}
+                        >
+                          <label
+                            className="grid gap-1 text-xs font-medium"
+                            htmlFor={`update-name-${deal.id}`}
                           >
-                            <option value="">Move to…</option>
-                            {destinations.map((destination) => (
-                              <option key={destination} value={destination}>
-                                {STAGE_LABELS[destination]}
-                              </option>
-                            ))}
-                          </SelectControl>
+                            Name
+                            <Input
+                              defaultValue={deal.name}
+                              id={`update-name-${deal.id}`}
+                              maxLength={200}
+                              name="name"
+                              required
+                            />
+                          </label>
+                          <label
+                            className="grid gap-1 text-xs font-medium"
+                            htmlFor={`update-sector-${deal.id}`}
+                          >
+                            Sector
+                            <Input
+                              defaultValue={deal.sector ?? ''}
+                              id={`update-sector-${deal.id}`}
+                              maxLength={100}
+                              name="sector"
+                            />
+                          </label>
+                          <label
+                            className="grid gap-1 text-xs font-medium"
+                            htmlFor={`update-amount-${deal.id}`}
+                          >
+                            Deal size
+                            <Input
+                              defaultValue={majorAmountForInput(deal.amount, deal.currency)}
+                              id={`update-amount-${deal.id}`}
+                              inputMode="decimal"
+                              name="amount"
+                              type="text"
+                            />
+                          </label>
+                          <label
+                            className="grid gap-1 text-xs font-medium"
+                            htmlFor={`update-currency-${deal.id}`}
+                          >
+                            Currency
+                            <Input
+                              className="uppercase"
+                              defaultValue={deal.currency}
+                              id={`update-currency-${deal.id}`}
+                              maxLength={3}
+                              minLength={3}
+                              name="currency"
+                              pattern="[A-Z]{3}"
+                              required
+                            />
+                          </label>
+                          <label
+                            className="grid gap-1 text-xs font-medium"
+                            htmlFor={`update-close-date-${deal.id}`}
+                          >
+                            Expected close date
+                            <Input
+                              defaultValue={deal.expected_close_date ?? ''}
+                              id={`update-close-date-${deal.id}`}
+                              name="expectedCloseDate"
+                              type="date"
+                            />
+                          </label>
+                          <label
+                            className="grid gap-1 text-xs font-medium"
+                            htmlFor={`update-close-time-${deal.id}`}
+                          >
+                            Expected close time
+                            <Input
+                              defaultValue={deal.expected_close_time?.slice(0, 5) ?? ''}
+                              id={`update-close-time-${deal.id}`}
+                              name="expectedCloseTime"
+                              type="time"
+                            />
+                          </label>
                           <Button
                             className="text-sm"
-                            disabled={
-                              !selected || check?.ok === false || movingDeal === deal.id || loading
-                            }
-                            onClick={() => void moveStage(deal.id)}
+                            disabled={updatingDeal === deal.id}
                             size="small"
-                            type="button"
-                            variant="secondary"
+                            type="submit"
+                            variant="primary"
                           >
-                            {movingDeal === deal.id ? 'Moving…' : 'Move'}
+                            {updatingDeal === deal.id ? 'Saving…' : 'Save changes'}
                           </Button>
-                          {check && !check.ok && check.code === 'missing_fields' && (
-                            <span className="sr-only">
-                              Required fields missing: {check.fields.join(', ')}.
-                            </span>
-                          )}
-                        </div>
-                      );
-                    })()}
-                  </td>
-                  <td className="px-4 py-4">
-                    <details className="min-w-56 rounded-control border border-line p-2">
-                      <summary
-                        aria-label={`Edit ${deal.name}`}
-                        className="cursor-pointer font-medium outline-focus focus-visible:outline-2"
-                      >
-                        Edit deal
-                      </summary>
-                      <form
-                        className="mt-3 grid gap-3"
-                        onSubmit={(event) => void submitUpdate(event, deal)}
-                      >
-                        <label
-                          className="grid gap-1 text-xs font-medium"
-                          htmlFor={`update-name-${deal.id}`}
-                        >
-                          Name
-                          <Input
-                            defaultValue={deal.name}
-                            id={`update-name-${deal.id}`}
-                            maxLength={200}
-                            name="name"
-                            required
-                          />
-                        </label>
-                        <label
-                          className="grid gap-1 text-xs font-medium"
-                          htmlFor={`update-sector-${deal.id}`}
-                        >
-                          Sector
-                          <Input
-                            defaultValue={deal.sector ?? ''}
-                            id={`update-sector-${deal.id}`}
-                            maxLength={100}
-                            name="sector"
-                          />
-                        </label>
-                        <label
-                          className="grid gap-1 text-xs font-medium"
-                          htmlFor={`update-amount-${deal.id}`}
-                        >
-                          Deal size
-                          <Input
-                            defaultValue={majorAmountForInput(deal.amount, deal.currency)}
-                            id={`update-amount-${deal.id}`}
-                            inputMode="decimal"
-                            name="amount"
-                            type="text"
-                          />
-                        </label>
-                        <label
-                          className="grid gap-1 text-xs font-medium"
-                          htmlFor={`update-currency-${deal.id}`}
-                        >
-                          Currency
-                          <Input
-                            className="uppercase"
-                            defaultValue={deal.currency}
-                            id={`update-currency-${deal.id}`}
-                            maxLength={3}
-                            minLength={3}
-                            name="currency"
-                            pattern="[A-Z]{3}"
-                            required
-                          />
-                        </label>
-                        <label
-                          className="grid gap-1 text-xs font-medium"
-                          htmlFor={`update-close-date-${deal.id}`}
-                        >
-                          Expected close date
-                          <Input
-                            defaultValue={deal.expected_close_date ?? ''}
-                            id={`update-close-date-${deal.id}`}
-                            name="expectedCloseDate"
-                            type="date"
-                          />
-                        </label>
-                        <label
-                          className="grid gap-1 text-xs font-medium"
-                          htmlFor={`update-close-time-${deal.id}`}
-                        >
-                          Expected close time
-                          <Input
-                            defaultValue={deal.expected_close_time?.slice(0, 5) ?? ''}
-                            id={`update-close-time-${deal.id}`}
-                            name="expectedCloseTime"
-                            type="time"
-                          />
-                        </label>
-                        <Button
-                          className="text-sm"
-                          disabled={updatingDeal === deal.id}
-                          size="small"
-                          type="submit"
-                          variant="primary"
-                        >
-                          {updatingDeal === deal.id ? 'Saving…' : 'Save changes'}
-                        </Button>
-                      </form>
-                    </details>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
+                        </form>
+                      </details>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </>
       )}
 
       {moveNotice && (

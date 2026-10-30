@@ -119,10 +119,13 @@ select ok((select keys @> array[
 ]::text[] from cleanup_result), 'cleanup returns the key of a stale pending row for object deletion');
 select is((select count(*)::integer from public.files where state = 'pending'), 0,
   'cleanup removes stale pending metadata');
-select is((select count(*)::integer from public.files where state = 'ready'), 2,
-  'cleanup leaves ready file rows untouched');
-select is(array_length(public.file_list_object_keys(), 1), 2,
-  'cleanup worker lists stored keys without receiving table access');
+select is((select count(*)::integer from public.files
+  where state = 'ready' and tenant_id = '31313131-0000-4000-8000-000000000001'), 2,
+  'cleanup leaves this test tenant’s ready file rows untouched');
+select ok(public.file_list_object_keys() @> array[
+  'Dev/users/30303030-0000-4000-8000-000000000001/avatar/42323232-0000-4000-8000-000000000001-aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa',
+  'Dev/tenants/31313131-0000-4000-8000-000000000001/attachment/42323232-0000-4000-8000-000000000002-bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb'
+]::text[], 'cleanup worker lists stored keys without receiving table access');
 reset role;
 
 select * from finish();

@@ -1,4 +1,5 @@
 import { render, screen } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
 import type { ReactNode } from 'react';
 import { describe, expect, it, vi } from 'vitest';
 
@@ -17,6 +18,7 @@ vi.mock('../auth', () => ({
 vi.mock('../notifications', () => ({ NotificationBell: () => <button>Notifications</button> }));
 
 import { AppShell } from './app-shell';
+import { ThemeToggle } from './theme-toggle';
 
 describe('AppShell', () => {
   it('uses the requested desktop and mobile navigation with the active page marked', () => {
@@ -38,6 +40,7 @@ describe('AppShell', () => {
       expect(nav.querySelector('a[href="/settings"]')).toHaveTextContent('Settings');
     }
     expect(screen.getByRole('complementary')).toHaveClass('material-glass');
+    expect(screen.getByRole('complementary').parentElement).toHaveClass('grid-cols-1', 'min-w-0');
     expect(screen.getByRole('heading', { name: 'Role management' })).toBeVisible();
   });
 
@@ -54,5 +57,19 @@ describe('AppShell', () => {
     expect(screen.getByText('Profile')).toBeVisible();
     expect(screen.getByRole('button', { name: 'Notifications' })).toBeVisible();
     expect(screen.getByRole('button', { name: 'Sign out' })).toBeVisible();
+  });
+
+  it('switches the theme and saves the preference for the next visit', async () => {
+    document.documentElement.classList.remove('dark');
+    const user = userEvent.setup();
+    render(<ThemeToggle />);
+
+    await user.click(screen.getByRole('button', { name: 'Switch to dark mode' }));
+
+    expect(document.documentElement).toHaveClass('dark');
+    expect(document.cookie).toContain('theme=dark');
+    expect(screen.getByRole('button', { name: 'Switch to light mode' })).toHaveTextContent(
+      'Light mode',
+    );
   });
 });

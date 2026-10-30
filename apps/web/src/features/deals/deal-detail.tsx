@@ -340,7 +340,7 @@ export function DealDetail({ dealId }: DealDetailProps) {
         action={<StageBadge stage={deal.stage} />}
       />
 
-      <section aria-labelledby="overview-title" className="material-card p-5">
+      <section aria-labelledby="overview-title" className="deal-overview material-card p-5">
         <h2 className="text-xl font-semibold" id="overview-title">
           Overview
         </h2>

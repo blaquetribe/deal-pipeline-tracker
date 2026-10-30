@@ -18,13 +18,14 @@ export default async function RootLayout({ children }: { readonly children: Reac
   return (
     <html lang="en" className={theme === 'dark' ? 'dark' : ''}>
       <body>
+        <div aria-hidden="true" className="app-background" />
         <a
           className="sr-only rounded-control bg-surface-raised text-fg focus:not-sr-only focus:absolute focus:start-2 focus:top-2 focus:px-3 focus:py-2"
           href="#main"
         >
           Skip to content
         </a>
-        <main id="main" className="p-4 sm:p-6">
+        <main id="main" className="app-main overflow-x-clip p-4 sm:p-6 xl:p-8">
           {children}
         </main>
       </body>

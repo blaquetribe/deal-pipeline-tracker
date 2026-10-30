@@ -4,7 +4,7 @@ Source material for the team presentation. Each item: the problem, the resolutio
 
 ## Current walkthrough deck
 
-The final 16-slide walkthrough is [deal-pipeline-tracker-walkthrough.pptx](presentation/deal-pipeline-tracker-walkthrough.pptx). It includes the current UI captures, identity and deal flows, architecture, security model, approvals, realtime, storage, design rationale, verification results, documented limits, and a live demo path. Presenter notes on each slide carry the talk track and source files.
+The final 16-slide walkthrough is [deal-pipeline-tracker-walkthrough.pptx](presentation/deal-pipeline-tracker-walkthrough.pptx). It includes refreshed current-build UI captures, identity and deal flows, architecture, security model, approvals, realtime, storage and the upload fix, responsive UI decisions, verification results, documented limits, and a step-by-step live demo path. The repository copy is committed alongside its screenshot evidence. Presenter notes on each slide carry the talk track and source files.
 
 ## Suggested talk track
 1. The brief in one slide: what was asked, what was deliberately left open.
