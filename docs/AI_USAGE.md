@@ -256,3 +256,9 @@ Running log feeding the README reflection required by the brief. Add an entry pe
 - **What the human decided or corrected:** explicitly directed continued progress despite the same billing/spending startup block affecting Actions. This authorized merging PR #41 while accurately recording that its workflows did not pass or run.
 - **How it was verified:** GitHub annotations state that the CI and advisory jobs were not started due to recent failed payments or the spending limit; dependent jobs were skipped. The branch's push hook passed typecheck and all 660 Vitest tests (1 skipped), with stylelint, format, build, focused tests, and live review already verified locally.
 - **What went wrong or was surprising:** GitHub labels these never-started jobs as failed, even though no job step or code-level check ran.
+
+### 2026-10-30 / Final current-build UI review
+- **What Codex did:** reviewed the seeded pipeline List and Board, deal detail/activity and attachments, new-deal form, roles list, and custom-role form after PR #41. Updated the handoff to capture reviewed areas and remaining evidence work.
+- **What the human decided or corrected:** asked to continue the UI pass and said they would add refreshed screenshots to the repository. The walkthrough presentation remains the last implementation task.
+- **How it was verified:** visually inspected the current running seeded app through the browser and confirmed the controls use the shared design layer; no database or application code changes were needed in this review.
+- **What went wrong or was surprising:** the repository still contains only the original Board/activity screenshots; no refreshed screenshot has arrived yet. Actions remains blocked before startup by account billing/spending.
