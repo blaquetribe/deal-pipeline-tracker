@@ -17,6 +17,8 @@ import { useEffect, useId, useRef, useState, type FormEvent } from 'react';
 
 import { PageHeading } from '../shell/page-heading';
 import { Button } from '../ui/button';
+import { Input } from '../ui/input';
+import { SelectControl } from '../ui/select-control';
 import { sessionRead, sessionRequest } from './api';
 import { PendingInvitations } from './pending-invitations';
 import { SignOutButton } from './sign-out-button';
@@ -320,9 +322,9 @@ export function Onboarding() {
                 >
                   Display name
                 </label>
-                <input
+                <Input
                   autoComplete="name"
-                  className="w-full rounded-control border border-line bg-surface-raised px-3 py-2 text-fg outline-focus focus-visible:outline-2"
+                  className="w-full"
                   id={`${id}-profile-display-name`}
                   maxLength={100}
                   name="displayName"
@@ -337,9 +339,9 @@ export function Onboarding() {
                 >
                   Job title <span className="text-fg-muted">(optional)</span>
                 </label>
-                <input
+                <Input
                   autoComplete="organization-title"
-                  className="w-full rounded-control border border-line bg-surface-raised px-3 py-2 text-fg outline-focus focus-visible:outline-2"
+                  className="w-full"
                   id={`${id}-profile-job-title`}
                   maxLength={100}
                   name="jobTitle"
@@ -369,9 +371,9 @@ export function Onboarding() {
                 >
                   Organisation name
                 </label>
-                <input
+                <Input
                   autoComplete="organization"
-                  className="w-full rounded-control border border-line bg-surface-raised px-3 py-2 text-fg outline-focus focus-visible:outline-2"
+                  className="w-full"
                   id={`${id}-organisation-name`}
                   maxLength={120}
                   name="name"
@@ -386,8 +388,8 @@ export function Onboarding() {
                 >
                   Time zone
                 </label>
-                <input
-                  className="w-full rounded-control border border-line bg-surface-raised px-3 py-2 text-fg outline-focus focus-visible:outline-2"
+                <Input
+                  className="w-full"
                   defaultValue="Africa/Johannesburg"
                   id={`${id}-organisation-timezone`}
                   maxLength={100}
@@ -403,8 +405,8 @@ export function Onboarding() {
                 >
                   Default currency
                 </label>
-                <input
-                  className="w-full rounded-control border border-line bg-surface-raised px-3 py-2 text-fg outline-focus focus-visible:outline-2"
+                <Input
+                  className="w-full"
                   defaultValue="ZAR"
                   id={`${id}-organisation-currency`}
                   maxLength={3}
@@ -436,8 +438,8 @@ export function Onboarding() {
                 >
                   Time zone
                 </label>
-                <input
-                  className="w-full rounded-control border border-line bg-surface-raised px-3 py-2 text-fg outline-focus focus-visible:outline-2"
+                <Input
+                  className="w-full"
                   defaultValue="Africa/Johannesburg"
                   id={`${id}-defaults-timezone`}
                   maxLength={100}
@@ -453,8 +455,8 @@ export function Onboarding() {
                 >
                   Default currency
                 </label>
-                <input
-                  className="w-full rounded-control border border-line bg-surface-raised px-3 py-2 text-fg outline-focus focus-visible:outline-2"
+                <Input
+                  className="w-full"
                   defaultValue="ZAR"
                   id={`${id}-defaults-currency`}
                   maxLength={3}
@@ -470,8 +472,8 @@ export function Onboarding() {
                 >
                   Closing soon window (days)
                 </label>
-                <input
-                  className="w-full rounded-control border border-line bg-surface-raised px-3 py-2 text-fg outline-focus focus-visible:outline-2"
+                <Input
+                  className="w-full"
                   defaultValue={60}
                   id={`${id}-closing-soon-days`}
                   max={365}
@@ -526,9 +528,9 @@ export function Onboarding() {
                   <label className="mb-1 block text-sm font-medium" htmlFor={`${id}-invite-email`}>
                     Teammate email
                   </label>
-                  <input
+                  <Input
                     autoComplete="email"
-                    className="w-full rounded-control border border-line bg-surface-raised px-3 py-2 text-fg outline-focus focus-visible:outline-2"
+                    className="w-full"
                     id={`${id}-invite-email`}
                     maxLength={254}
                     name="email"
@@ -540,8 +542,8 @@ export function Onboarding() {
                   <label className="mb-1 block text-sm font-medium" htmlFor={`${id}-invite-role`}>
                     Role
                   </label>
-                  <select
-                    className="w-full rounded-control border border-line bg-surface-raised px-3 py-2 text-fg outline-focus focus-visible:outline-2"
+                  <SelectControl
+                    className="w-full"
                     disabled={rolesLoading || roleOptions.length === 0}
                     id={`${id}-invite-role`}
                     name="roleKey"
@@ -553,7 +555,7 @@ export function Onboarding() {
                         {role.name}
                       </option>
                     ))}
-                  </select>
+                  </SelectControl>
                 </div>
                 <div className="flex flex-wrap gap-3">
                   <Button disabled={pending} type="submit" variant="primary">

@@ -20,6 +20,8 @@ import type { FormEvent } from 'react';
 
 import { StageBadge } from '../pipeline';
 import { Button } from '../ui/button';
+import { Input } from '../ui/input';
+import { SelectControl } from '../ui/select-control';
 import { createDeal, moveDealStage, readDashboardSummary, readDeals, updateDeal } from './api';
 import { DealsKanban } from './deals-kanban';
 import { formatMinorAmount, majorAmountForInput, parseMajorAmount } from './money';
@@ -443,9 +445,9 @@ export function DealsDashboard() {
             <label className="mb-1 block text-sm font-medium" htmlFor={searchId}>
               Search deals
             </label>
-            <input
+            <Input
               autoComplete="off"
-              className="w-full rounded-control border border-line bg-surface px-3 py-2 text-fg outline-focus focus-visible:outline-2"
+              className="w-full"
               id={searchId}
               maxLength={100}
               onChange={(event) => setSearch(event.currentTarget.value)}
@@ -462,8 +464,8 @@ export function DealsDashboard() {
           <label className="mb-1 block text-sm font-medium" htmlFor={stageId}>
             Pipeline stage
           </label>
-          <select
-            className="w-full rounded-control border border-line bg-surface px-3 py-2 text-fg outline-focus focus-visible:outline-2"
+          <SelectControl
+            className="w-full"
             id={stageId}
             onChange={(event) => changeStage(event.currentTarget.value)}
             value={stage}
@@ -474,7 +476,7 @@ export function DealsDashboard() {
                 {STAGE_LABELS[item]}
               </option>
             ))}
-          </select>
+          </SelectControl>
         </div>
       </div>
 
@@ -490,31 +492,20 @@ export function DealsDashboard() {
             <label className="mb-1 block text-sm font-medium" htmlFor={dealNameId}>
               Deal name
             </label>
-            <input
-              className="w-full rounded-control border border-line bg-surface px-3 py-2 text-fg outline-focus focus-visible:outline-2"
-              id={dealNameId}
-              maxLength={200}
-              name="name"
-              required
-            />
+            <Input className="w-full" id={dealNameId} maxLength={200} name="name" required />
           </div>
           <div>
             <label className="mb-1 block text-sm font-medium" htmlFor={sectorId}>
               Sector
             </label>
-            <input
-              className="w-full rounded-control border border-line bg-surface px-3 py-2 text-fg outline-focus focus-visible:outline-2"
-              id={sectorId}
-              maxLength={100}
-              name="sector"
-            />
+            <Input className="w-full" id={sectorId} maxLength={100} name="sector" />
           </div>
           <div>
             <label className="mb-1 block text-sm font-medium" htmlFor={amountId}>
               Deal size
             </label>
-            <input
-              className="w-full rounded-control border border-line bg-surface px-3 py-2 text-fg outline-focus focus-visible:outline-2"
+            <Input
+              className="w-full"
               id={amountId}
               inputMode="decimal"
               name="amount"
@@ -529,9 +520,9 @@ export function DealsDashboard() {
             <label className="mb-1 block text-sm font-medium" htmlFor={currencyId}>
               Currency
             </label>
-            <input
+            <Input
               autoCapitalize="characters"
-              className="w-full rounded-control border border-line bg-surface px-3 py-2 text-fg uppercase outline-focus focus-visible:outline-2"
+              className="w-full uppercase"
               defaultValue="ZAR"
               id={currencyId}
               maxLength={3}
@@ -545,12 +536,7 @@ export function DealsDashboard() {
             <label className="mb-1 block text-sm font-medium" htmlFor={closeDateId}>
               Expected close date
             </label>
-            <input
-              className="rounded-control border border-line bg-surface px-3 py-2 text-fg outline-focus focus-visible:outline-2"
-              id={closeDateId}
-              name="expectedCloseDate"
-              type="date"
-            />
+            <Input id={closeDateId} name="expectedCloseDate" type="date" />
           </div>
           {createError && (
             <p
@@ -699,8 +685,8 @@ export function DealsDashboard() {
                           <label className="sr-only" htmlFor={`move-stage-${deal.id}`}>
                             Move {deal.name} to stage
                           </label>
-                          <select
-                            className="min-w-0 flex-1 rounded-control border border-line bg-surface px-2 py-2 text-sm outline-focus focus-visible:outline-2"
+                          <SelectControl
+                            className="min-w-0 flex-1"
                             disabled={movingDeal === deal.id || loading}
                             id={`move-stage-${deal.id}`}
                             onChange={(event) => {
@@ -719,7 +705,7 @@ export function DealsDashboard() {
                                 {STAGE_LABELS[destination]}
                               </option>
                             ))}
-                          </select>
+                          </SelectControl>
                           <Button
                             className="text-sm"
                             disabled={
@@ -753,40 +739,53 @@ export function DealsDashboard() {
                         className="mt-3 grid gap-3"
                         onSubmit={(event) => void submitUpdate(event, deal)}
                       >
-                        <label className="grid gap-1 text-xs font-medium">
+                        <label
+                          className="grid gap-1 text-xs font-medium"
+                          htmlFor={`update-name-${deal.id}`}
+                        >
                           Name
-                          <input
-                            className="rounded-control border border-line bg-surface px-2 py-2 text-sm outline-focus focus-visible:outline-2"
+                          <Input
                             defaultValue={deal.name}
+                            id={`update-name-${deal.id}`}
                             maxLength={200}
                             name="name"
                             required
                           />
                         </label>
-                        <label className="grid gap-1 text-xs font-medium">
+                        <label
+                          className="grid gap-1 text-xs font-medium"
+                          htmlFor={`update-sector-${deal.id}`}
+                        >
                           Sector
-                          <input
-                            className="rounded-control border border-line bg-surface px-2 py-2 text-sm outline-focus focus-visible:outline-2"
+                          <Input
                             defaultValue={deal.sector ?? ''}
+                            id={`update-sector-${deal.id}`}
                             maxLength={100}
                             name="sector"
                           />
                         </label>
-                        <label className="grid gap-1 text-xs font-medium">
+                        <label
+                          className="grid gap-1 text-xs font-medium"
+                          htmlFor={`update-amount-${deal.id}`}
+                        >
                           Deal size
-                          <input
-                            className="rounded-control border border-line bg-surface px-2 py-2 text-sm outline-focus focus-visible:outline-2"
+                          <Input
                             defaultValue={majorAmountForInput(deal.amount, deal.currency)}
+                            id={`update-amount-${deal.id}`}
                             inputMode="decimal"
                             name="amount"
                             type="text"
                           />
                         </label>
-                        <label className="grid gap-1 text-xs font-medium">
+                        <label
+                          className="grid gap-1 text-xs font-medium"
+                          htmlFor={`update-currency-${deal.id}`}
+                        >
                           Currency
-                          <input
-                            className="rounded-control border border-line bg-surface px-2 py-2 text-sm uppercase outline-focus focus-visible:outline-2"
+                          <Input
+                            className="uppercase"
                             defaultValue={deal.currency}
+                            id={`update-currency-${deal.id}`}
                             maxLength={3}
                             minLength={3}
                             name="currency"
@@ -794,20 +793,26 @@ export function DealsDashboard() {
                             required
                           />
                         </label>
-                        <label className="grid gap-1 text-xs font-medium">
+                        <label
+                          className="grid gap-1 text-xs font-medium"
+                          htmlFor={`update-close-date-${deal.id}`}
+                        >
                           Expected close date
-                          <input
-                            className="rounded-control border border-line bg-surface px-2 py-2 text-sm outline-focus focus-visible:outline-2"
+                          <Input
                             defaultValue={deal.expected_close_date ?? ''}
+                            id={`update-close-date-${deal.id}`}
                             name="expectedCloseDate"
                             type="date"
                           />
                         </label>
-                        <label className="grid gap-1 text-xs font-medium">
+                        <label
+                          className="grid gap-1 text-xs font-medium"
+                          htmlFor={`update-close-time-${deal.id}`}
+                        >
                           Expected close time
-                          <input
-                            className="rounded-control border border-line bg-surface px-2 py-2 text-sm outline-focus focus-visible:outline-2"
+                          <Input
                             defaultValue={deal.expected_close_time?.slice(0, 5) ?? ''}
+                            id={`update-close-time-${deal.id}`}
                             name="expectedCloseTime"
                             type="time"
                           />

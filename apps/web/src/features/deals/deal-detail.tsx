@@ -14,6 +14,9 @@ import type { FormEvent } from 'react';
 import { StageBadge } from '../pipeline';
 import { PageHeading } from '../shell/page-heading';
 import { Button } from '../ui/button';
+import { Input } from '../ui/input';
+import { SelectControl } from '../ui/select-control';
+import { Textarea } from '../ui/textarea';
 import { formatActivityBody } from './activity-format';
 import {
   configureDealApprovalPolicy,
@@ -400,8 +403,8 @@ export function DealDetail({ dealId }: DealDetailProps) {
                 <label className="mb-1 block text-sm font-medium" htmlFor={quorumId}>
                   Required approvals
                 </label>
-                <input
-                  className="w-28 rounded-control border border-line bg-surface p-2 outline-focus focus-visible:outline-2"
+                <Input
+                  className="w-28"
                   id={quorumId}
                   max={50}
                   min={1}
@@ -441,8 +444,8 @@ export function DealDetail({ dealId }: DealDetailProps) {
               <label className="block text-sm font-medium" htmlFor={rejectionReasonId}>
                 Rejection reason (optional)
               </label>
-              <textarea
-                className="min-h-20 w-full rounded-control border border-line bg-surface p-3 outline-focus focus-visible:outline-2"
+              <Textarea
+                className="w-full"
                 id={rejectionReasonId}
                 maxLength={2000}
                 onChange={(event) => setRejectionReason(event.currentTarget.value)}
@@ -507,8 +510,7 @@ export function DealDetail({ dealId }: DealDetailProps) {
                   <label className="mb-1 block text-sm font-medium" htmlFor={absenceStartId}>
                     Starts
                   </label>
-                  <input
-                    className="rounded-control border border-line bg-surface p-2 outline-focus focus-visible:outline-2"
+                  <Input
                     id={absenceStartId}
                     onChange={(event) => setAbsenceStart(event.currentTarget.value)}
                     required
@@ -520,8 +522,7 @@ export function DealDetail({ dealId }: DealDetailProps) {
                   <label className="mb-1 block text-sm font-medium" htmlFor={absenceEndId}>
                     Ends
                   </label>
-                  <input
-                    className="rounded-control border border-line bg-surface p-2 outline-focus focus-visible:outline-2"
+                  <Input
                     id={absenceEndId}
                     min={absenceStart || undefined}
                     onChange={(event) => setAbsenceEnd(event.currentTarget.value)}
@@ -581,8 +582,8 @@ export function DealDetail({ dealId }: DealDetailProps) {
                             >
                               Replacement approver
                             </label>
-                            <select
-                              className="min-w-56 rounded-control border border-line bg-surface p-2 outline-focus focus-visible:outline-2"
+                            <SelectControl
+                              className="min-w-56"
                               defaultValue={
                                 reassignmentOptions.eligibleReplacements[0]?.membershipId
                               }
@@ -597,7 +598,7 @@ export function DealDetail({ dealId }: DealDetailProps) {
                                   {replacement.displayName ?? 'Unnamed member'}
                                 </option>
                               ))}
-                            </select>
+                            </SelectControl>
                           </div>
                           <Button disabled={approvalBusy} type="submit" variant="secondary">
                             Reassign approver
@@ -635,13 +636,7 @@ export function DealDetail({ dealId }: DealDetailProps) {
           <label className="mb-2 block text-sm font-medium" htmlFor={noteId}>
             Add a note
           </label>
-          <textarea
-            className="min-h-28 w-full rounded-control border border-line bg-surface p-3 outline-focus focus-visible:outline-2"
-            id={noteId}
-            maxLength={10000}
-            name="body"
-            required
-          />
+          <Textarea className="w-full" id={noteId} maxLength={10000} name="body" required />
           {noteError ? (
             <p className="mt-2 text-danger" role="alert">
               {noteError}

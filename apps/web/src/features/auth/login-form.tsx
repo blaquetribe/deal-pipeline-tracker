@@ -6,6 +6,7 @@ import { useRouter } from 'next/navigation';
 import { useEffect, useId, useRef, useState, type FormEvent } from 'react';
 
 import { Button } from '../ui/button';
+import { Input } from '../ui/input';
 import { authRequest } from './api';
 
 export function LoginForm({ onAuthenticated }: { readonly onAuthenticated?: () => Promise<void> }) {
@@ -61,9 +62,9 @@ export function LoginForm({ onAuthenticated }: { readonly onAuthenticated?: () =
         <label className="mb-1 block text-sm font-medium" htmlFor={`${id}-email`}>
           Email address
         </label>
-        <input
+        <Input
           autoComplete="email"
-          className="w-full rounded-control border border-line bg-surface-raised px-3 py-2 text-fg outline-focus focus-visible:outline-2"
+          className="w-full"
           id={`${id}-email`}
           maxLength={254}
           name="email"
@@ -75,9 +76,9 @@ export function LoginForm({ onAuthenticated }: { readonly onAuthenticated?: () =
         <label className="mb-1 block text-sm font-medium" htmlFor={`${id}-password`}>
           Password
         </label>
-        <input
+        <Input
           autoComplete="current-password"
-          className="w-full rounded-control border border-line bg-surface-raised px-3 py-2 text-fg outline-focus focus-visible:outline-2"
+          className="w-full"
           id={`${id}-password`}
           maxLength={1024}
           name="password"

@@ -4,6 +4,7 @@ import { tenantChoicesResponseSchema, type TenantChoicesResponse } from '@dpt/sh
 import { useRouter } from 'next/navigation';
 import { useEffect, useId, useState } from 'react';
 
+import { SelectControl } from '../ui/select-control';
 import { sessionRead, sessionRequest } from './api';
 
 export function TenantSwitcher() {
@@ -61,8 +62,8 @@ export function TenantSwitcher() {
       <label className="text-sm font-medium" htmlFor={id}>
         Organisation
       </label>
-      <select
-        className="rounded-control border border-line bg-surface-raised px-3 py-2 text-sm text-fg outline-focus focus-visible:outline-2 disabled:opacity-60"
+      <SelectControl
+        className="disabled:opacity-60"
         disabled={pending}
         id={id}
         onChange={(event) => void change(event.currentTarget.value)}
@@ -74,7 +75,7 @@ export function TenantSwitcher() {
             {tenant.tenantName}
           </option>
         ))}
-      </select>
+      </SelectControl>
       {error && (
         <p className="text-sm text-danger-fg" role="alert">
           {error}
