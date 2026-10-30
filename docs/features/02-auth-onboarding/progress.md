@@ -56,6 +56,7 @@ What is covered, where it lives, how to run it.
 Historical Feature 02 verification passed 337 pgTAP assertions across 16 files, 405 Vitest tests across 28 files, and the full compose smoke. On 2026-10-29, the complete current pgTAP suite passes 596 assertions across 30 files, including the new refresh-lease tests.
 
 ## Log
+- 2026-10-30: Fixed tenant-switch refresh behavior. After `/auth/tenant` accepts a new active tenant, the browser reloads so mount-only tenant data requests rerun under the server-selected tenant. Added a component regression assertion; full Vitest, typecheck, lint, stylelint, formatting, and production build pass. Seeded browser verification showed all five Asteron deals immediately after switching. No DB changes were needed.
 - 2026-10-26: ADR 0015. Slice A written test-first (red: role missing), migration, green. pgTAP lives in the `extensions` schema, so the test grants `api_service` usage on it inside its own rolled-back transaction; production does not. Real PostgREST check: role switching and `app.uid()` work. Smoke script extended (not sabotage-tested; `shellcheck` not installed locally, CI runs it).
 
 - 2026-10-26: slice B written test-first (red: missing functions and tables), migration, green, 313 assertions. Four sabotage runs (once-per-user check, invitation email binding, token hash readable, invitation cap) each failed the intended test. A test caught that a leftover user identity on the connection would have beaten the invitee as actor; fixed by letting an explicit `app.actor` win.
