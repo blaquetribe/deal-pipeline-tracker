@@ -1,6 +1,10 @@
 import { describe, expect, it } from 'vitest';
 
-import { notificationSchema } from './notifications';
+import {
+  closingAlertSettingsSchema,
+  notificationSchema,
+  updateClosingAlertSettingsBodySchema,
+} from './notifications';
 
 const notification = {
   id: 'bbbbbbbb-0000-4000-8000-000000000001',
@@ -90,5 +94,40 @@ describe('notification schema', () => {
         payload: { ...overdueAlert.payload, message: 'Approval was automatically approved.' },
       }),
     ).toThrow(/message/);
+  });
+});
+
+const defaults = { alertDays: [5, 1], alertOnOverdue: true, extraRecipients: 'none' } as const;
+
+describe('closing alert settings contract', () => {
+  it('accepts the documented tenant defaults', () => {
+    expect(closingAlertSettingsSchema.parse(defaults)).toEqual(defaults);
+  });
+
+  it('allows overdue-only and no-alert configurations', () => {
+    expect(
+      updateClosingAlertSettingsBodySchema.parse({
+        alertDays: [],
+        alertOnOverdue: true,
+        extraRecipients: 'none',
+      }),
+    ).toEqual({ alertDays: [], alertOnOverdue: true, extraRecipients: 'none' });
+  });
+
+  it('rejects duplicate, fractional and out-of-range thresholds', () => {
+    for (const alertDays of [[5, 5], [1.5], [366]]) {
+      expect(() => updateClosingAlertSettingsBodySchema.parse({ ...defaults, alertDays })).toThrow(
+        /alertDays|threshold/i,
+      );
+    }
+  });
+
+  it('rejects unsupported recipient modes and unknown body fields', () => {
+    expect(() =>
+      updateClosingAlertSettingsBodySchema.parse({ ...defaults, extraRecipients: 'everyone' }),
+    ).toThrow(/extraRecipients|Invalid option/i);
+    expect(() =>
+      updateClosingAlertSettingsBodySchema.parse({ ...defaults, tenantId: 'untrusted' }),
+    ).toThrow(/Unrecognized key/i);
   });
 });

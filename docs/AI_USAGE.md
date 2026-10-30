@@ -10,6 +10,12 @@ Running log feeding the README reflection required by the brief. Add an entry pe
 - **What went wrong or was surprising:**
 
 ## Entries
+### 2026-10-30 / Feature 05 closing-alert preferences and recipients
+- **What Codex did:** added database-authorized and audited tenant alert settings, an organisation settings page, shared/API contracts, and recipient resolution for deal assignees, active approval delegates, optional IC/all-active-member groups, and Owner/Admin fallback. Added pgTAP coverage for permissions, audit, dedupe, delegation, and tenant isolation.
+- **What the human decided or corrected:** previously approved keeping closing alerts at the existing IC/member policy and requested that product work finish before final UI evidence and presentation work. The accepted ADR 0011 requirements already define preference and delegate behavior.
+- **How it was verified:** full Vitest passes (675 passed, 1 skipped; 85.02% global branch coverage); pgTAP passes 630 assertions; typecheck, lint, Stylelint, format check, and production build pass. GitHub Actions remain unable to start because of the account billing/spending block.
+- **What went wrong or was surprising:** the first settings pgTAP run exposed an ambiguous fixture join and fixed the fixture to name tenant, user, and role explicitly. The existing email-queue test also depended on the current time falling after 07:00 Johannesburg; it now scans with a deterministic prior-day tenant-local timestamp.
+
 ### 2026-10-29 / Human-readable deal assignment activity
 - **What Codex did:** restored the formatter for legacy assignee-change activity entries, summarizing role counts while hiding raw user IDs and JSON. The append-only event ledger is unchanged.
 - **What the human decided or corrected:** earlier reported that assignment changes were not human readable and asked to continue the project; requested the DoorSprint-informed styling pass and walkthrough presentation after product work is finished.

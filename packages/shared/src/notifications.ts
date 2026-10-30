@@ -50,4 +50,17 @@ export const notificationSchema = z.discriminatedUnion('kind', [
 
 export const notificationListSchema = z.array(notificationSchema);
 
+const closingAlertPreferencesShape = {
+  alertDays: z
+    .array(z.number().int().min(1).max(365))
+    .max(10)
+    .refine((values) => new Set(values).size === values.length, 'Thresholds must be unique.'),
+  alertOnOverdue: z.boolean(),
+  extraRecipients: z.enum(['none', 'ic', 'all']),
+};
+
+export const closingAlertSettingsSchema = z.strictObject(closingAlertPreferencesShape);
+export const updateClosingAlertSettingsBodySchema = z.strictObject(closingAlertPreferencesShape);
+export type ClosingAlertSettings = z.infer<typeof closingAlertSettingsSchema>;
+
 export type Notification = z.infer<typeof notificationSchema>;

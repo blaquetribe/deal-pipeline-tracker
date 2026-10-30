@@ -1,6 +1,6 @@
 # Closing soon: the countdown and the alerts
 
-Status: countdown, dashboard summary, and core server-side alert delivery implemented. Owner decisions confirmed 2026-10-26. Decision record: [ADR 0011](../../decisions/0011-closing-soon-countdown-and-alert.md). Recipient preferences and absence/delegation remain follow-up scope.
+Status: countdown, dashboard summary, server-side alert delivery, recipient preferences, and absence/delegation-aware recipients implemented. Owner decisions confirmed 2026-10-26. Decision record: [ADR 0011](../../decisions/0011-closing-soon-countdown-and-alert.md).
 Owners: feature 03 (date maths, countdown UI), feature 05 (realtime delivery), feature 02 (Mailer).
 
 **Requirement:** "closing soon" shows a real countdown, including **hours on the final day**. When a deal reaches **5 days** (and **1 day**, and when it becomes **overdue**) from its expected closing date, the **team and the person assigned** are notified, by an in-app notification and by email that uses the **deal details and a link to the deal**.
@@ -72,7 +72,7 @@ Always text on a chip; an urgent style (tokens, plus icon) at 5 days or fewer an
 ## Data (migrations in features 03 and 05)
 - `deals.expected_close_date`, `deals.expected_close_time`.
 - `deal_assignees(deal_id, tenant_id, user_id, role)`, role `owner | lead | member`. **Assignment is not access control**: visibility stays tenant-level.
-- `tenant_settings`: `timezone`, `closing_soon_days` (60), `alert_days` (`{5,1}`), `alert_on_overdue` (true), `alert_extra_recipients` (`none | ic | all`).
+- `tenants`: `timezone`, `closing_soon_days` (60), `alert_days` (`{5,1}`), `alert_on_overdue` (true), `alert_extra_recipients` (`none | ic | all`).
 - `notifications(id, tenant_id, user_id, kind, deal_id, dedupe_key unique, payload, created_at, read_at)`; RLS: a user sees and may mark read only their own.
 - `email_outbox(id, tenant_id, user_id, kind, payload, not_before, status)` for retry and cancel.
 
@@ -86,7 +86,7 @@ Close date today, past or edited; time set later, earlier or removed; deal creat
 - **Realtime:** the recipient's socket receives it; another tenant's does not.
 - **Email:** digest groups per recipient; subject has no deal data; body has the details and the correct link built from config; content escaped; `not_before` respected.
 
-Core alert scan, dedupe, notification authorization, realtime delivery, and email outbox behavior are covered by `supabase/tests/23_notifications.test.sql`, API/email Vitest coverage, and the full compose smoke. Active recipients are deal assignees, falling back to active Owner/Admin when there are none; Owner/Admin preferences, broader tenant-wide recipients, and delegation-aware delivery are not implemented.
+Core alert scan, dedupe, notification authorization, realtime delivery, and email outbox behavior are covered by `supabase/tests/23_notifications.test.sql`, API/email Vitest coverage, and the full compose smoke. Active recipients are deal assignees and valid active delegates, falling back to active Owner/Admin when there are no active assignees. Tenant managers can configure thresholds, overdue delivery, and additional IC or all-member recipients at `/settings`; database authorization and recipient expansion remain tenant-scoped. Presence is still cut-list scope.
 
 ## Decisions confirmed by the owner (2026-10-26)
 1. "The team" = the deal's assignees and team members, with the Owner/Admin fallback.

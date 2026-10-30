@@ -26,11 +26,16 @@ const notification = {
   created_at: '2026-10-28T10:00:00Z',
   read_at: null,
 };
+const alertSettings = { alertDays: [5, 1], alertOnOverdue: true, extraRecipients: 'none' } as const;
 
 function harness(tenantId: string | null = TENANT) {
   const userRpc = {
     call: vi.fn<(name: string, args: Record<string, unknown>, bearer: string) => Promise<unknown>>(
-      async (name) => (name === 'list_notifications' ? [notification] : true),
+      async (name) => {
+        if (name === 'list_notifications') return [notification];
+        if (name === 'get_closing_alert_settings') return alertSettings;
+        return true;
+      },
     ),
   };
   const resolver: SessionResolver = {
@@ -60,6 +65,8 @@ describe('notification routes', () => {
     expect(describeRoutes(routes)).toEqual([
       { method: 'GET', path: '/notifications', access: 'session' },
       { method: 'POST', path: '/notifications/:notificationId/read', access: 'session' },
+      { method: 'GET', path: '/closing-alert-settings', access: 'session' },
+      { method: 'PUT', path: '/closing-alert-settings', access: 'session' },
     ]);
   });
 
@@ -88,6 +95,71 @@ describe('notification routes', () => {
     resolver.resolve = resolve;
     const response = await app.request('/notifications');
     expect(response.status).toBe(401);
+    expect(userRpc.call).not.toHaveBeenCalled();
+  });
+
+  it('reads alert settings through the caller JWT and active tenant', async () => {
+    const { app, userRpc } = harness();
+    const response = await app.request('/closing-alert-settings', { headers: { Cookie: COOKIE } });
+    expect(response.status).toBe(200);
+    expect(await response.json()).toEqual(alertSettings);
+    expect(userRpc.call).toHaveBeenCalledWith(
+      'get_closing_alert_settings',
+      { p_tenant: TENANT },
+      'caller-jwt',
+    );
+  });
+
+  it('requires a selected tenant before reading or updating alert settings', async () => {
+    const { app, userRpc } = harness(null);
+    const get = await app.request('/closing-alert-settings', { headers: { Cookie: COOKIE } });
+    expect(get.status).toBe(409);
+    const put = await app.request('/closing-alert-settings', {
+      method: 'PUT',
+      headers: {
+        Cookie: COOKIE,
+        Origin: 'http://localhost:8080',
+        'X-CSRF-Token': 'csrf-token',
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(alertSettings),
+    });
+    expect(put.status).toBe(409);
+    expect(userRpc.call).not.toHaveBeenCalled();
+  });
+
+  it('updates settings through the caller JWT and rejects invalid input before the RPC', async () => {
+    const { app, userRpc } = harness();
+    const headers = {
+      Cookie: COOKIE,
+      Origin: 'http://localhost:8080',
+      'X-CSRF-Token': 'csrf-token',
+      'Content-Type': 'application/json',
+    };
+    const response = await app.request('/closing-alert-settings', {
+      method: 'PUT',
+      headers,
+      body: JSON.stringify({ alertDays: [10, 5, 1], alertOnOverdue: false, extraRecipients: 'ic' }),
+    });
+    expect(response.status).toBe(204);
+    expect(userRpc.call).toHaveBeenCalledWith(
+      'update_closing_alert_settings',
+      {
+        p_tenant: TENANT,
+        p_alert_days: [10, 5, 1],
+        p_alert_on_overdue: false,
+        p_extra_recipients: 'ic',
+      },
+      'caller-jwt',
+    );
+
+    userRpc.call.mockClear();
+    const invalid = await app.request('/closing-alert-settings', {
+      method: 'PUT',
+      headers,
+      body: JSON.stringify({ alertDays: [5, 5], alertOnOverdue: true, extraRecipients: 'none' }),
+    });
+    expect(invalid.status).toBe(400);
     expect(userRpc.call).not.toHaveBeenCalled();
   });
 

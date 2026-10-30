@@ -4,8 +4,13 @@ export { evaluateMove, STAGE_REQUIREMENTS, STAGE_TRANSITIONS } from './stage-mac
 export type { DealField, MoveCheck } from './stage-machine';
 export { ONBOARDING_STEPS } from './onboarding';
 export type { OnboardingFlow } from './onboarding';
-export { notificationListSchema, notificationSchema } from './notifications';
-export type { Notification } from './notifications';
+export {
+  closingAlertSettingsSchema,
+  notificationListSchema,
+  notificationSchema,
+  updateClosingAlertSettingsBodySchema,
+} from './notifications';
+export type { ClosingAlertSettings, Notification } from './notifications';
 export { daysUntil, formatCloseCountdown } from './countdown';
 export { dealFilesResponseSchema, fileUploadResponseSchema } from './files';
 export {
