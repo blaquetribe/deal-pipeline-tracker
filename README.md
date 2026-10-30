@@ -80,14 +80,18 @@ The smoke test builds a fresh stack, signs in through the gateway as a seeded us
 
 GitHub Actions runs the quality, database, image, security-scan, and Compose smoke checks. The repository is private, but branch protection is unavailable on its current GitHub plan, so a green workflow is not mechanically required before merging. Recent PRs encountered the account billing/spending limit before Actions job steps started; those runs are not green and provide no code-level diagnostics. Local verification results and the affected PRs are recorded in `docs/HANDOFF.md` and `docs/PROGRESS.md`.
 
-## What I would do next
+## Project completion and follow-ups
 
-- Feature 04 custom role editing is implemented and merged. Database/API delegation is tenant opt-in, time-bounded, and preserves the original approver slot; the UI lets approvers schedule and revoke their own delegation. Unavailable slots without an eligible replacement intentionally block signing. Unreachable quorum now produces an hourly in-app alert to the request creator and active Owner/Admin members.
-- Decide how to handle the rare duplicate email after SMTP succeeds but outbox completion persistence fails. Presence remains deferred.
-- Run a real Cloudflare R2 smoke test with a dedicated bucket-scoped token; Feature 08's S3-compatible driver, local file store, BFF file routes, avatar upload, and initials fallback are implemented. Virus scanning and presigned URLs remain out of scope.
-- Finish final visual QA for the project-wide UI pass using Doorsprint as a visual reference. The shared button system and native input/select/textarea baseline are in place, and auth, onboarding, tenant-switcher, deal, delegation, and role forms now use shared React control wrappers. These preserve native semantics and use the existing tokens; no new dependency was needed. Evaluate shadcn components for complex interactions where they add value. Activity events now use human-readable stage labels, assignment summaries, and closing-alert copy. Baseline Board and deal activity screenshots are in `docs/evidence/ui/`; refresh them before preparing the full feature walkthrough presentation, which remains the final project task.
-- Optional stretch: document extraction. IC approval SLA escalation is implemented as a one-time in-app alert after 24 hours; approval gates at other stages are outside the agreed workflow.
-- Measure memory and disk use on Docker Desktop and verify the stack on both amd64 and arm64 hosts; local container verification to date has primarily used Podman on arm64.
+The core features and owner-approved extended scope are complete. The final [feature walkthrough and decision rationale](docs/presentation/deal-pipeline-tracker-walkthrough.pptx) covers the product flows, architecture, safeguards, trade-offs, verification, and live demo path. Refreshed current-build UI evidence is indexed in [`docs/evidence/ui/`](docs/evidence/ui/README.md).
+
+Environment-dependent follow-ups:
+
+- Verify a production SMTP relay and certificate chain. A rare duplicate email remains possible if SMTP accepts a message and the outbox completion write then fails. Session refresh has a separate documented crash window between GoTrue token rotation and persistence.
+- Run a real Cloudflare R2 smoke test with a dedicated bucket-scoped token. The S3-compatible driver, local file store, BFF file routes, avatar upload, and initials fallback are implemented. Virus scanning and presigned URLs remain out of scope.
+- Verify memory use and behavior on Docker Desktop and amd64 hosts. The full local CI recipe passed on this Apple Silicon Podman environment.
+- GitHub Actions on recent PRs could not start because of the repository account billing/spending limit; those runs are not green. The current local `make ci-local` recipe passed. Live AI PR review also needs the owner's Cloudflare secrets and `ai-review` label.
+
+Optional stretch work remains document extraction and realtime presence. Approval gates beyond IC Review, FX conversion, per-deal information barriers, hosted deployment, and legal sign-off on POPIA retention remain outside the agreed scope.
 
 The deals page offers List and Board views. Board drag-and-drop uses the same allowed stage transitions and version checks as the keyboard-accessible List controls. Both views share server-side filters and pagination; the board displays the current page of results. Reduced-motion preferences disable its transition effects.
 

@@ -1,6 +1,6 @@
 # 02 Auth and onboarding: progress
 
-Status: implemented; refresh-token rotation is coordinated through Postgres across API instances. Production SMTP relay behavior and the refresh crash window remain documented limitations.
+Status: done; refresh-token rotation is coordinated through Postgres across API instances. Production SMTP relay behavior and the refresh crash window remain documented operating limitations.
 Owner/branch: feat/02-api-auth (continues the feature 02 database work)
 Depends on: 01
 
