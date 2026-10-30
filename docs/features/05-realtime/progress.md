@@ -1,7 +1,7 @@
 # 05 Realtime: progress
 
-Status: in progress (closing-alert preferences and delegate-aware recipients are implemented locally; pending review)
-Owner: feature 05; active branch `codex/feature-05-alert-preferences` (pending PR)
+Status: done (PR #44 merged to `main` as `d9e86aa`; presence remains cut-list scope)
+Owner: feature 05
 Depends on: 03
 
 ## Goal
@@ -24,7 +24,7 @@ WebSocket relay of RLS-filtered events, live cache updates, presence. Covers GOT
 - [x] Tenant-scoped alert preferences with Owner/Admin authorization, audit trail, and an organisation settings page
 - [x] Alert recipients include active deal assignees, valid active delegates, optional IC/all-member groups, and Owner/Admin fallback
 - [x] Handover and feature documentation updated
-- [ ] Final diff review and PR
+- [x] Final diff review and PR #44 merged
 
 ## Tests
 What is covered, where it lives, how to run it.
@@ -48,6 +48,7 @@ Dated notes: what changed, what was learned, problems.
 - 2026-10-28: implemented RLS-backed per-user WebSocket delivery, notification list/read APIs and bell UI, hourly closing-soon scan, append-only system audit event, leased email outbox and generic digest template. Local Vitest, coverage, pgTAP, typecheck, lint, stylelint, format, production build and full isolated compose smoke pass. Captured authenticated notification UI at mobile and desktop widths; GitHub CI remains before merge.
 - 2026-10-29: live UI validation exposed an initialization race: Realtime's first channel join could precede caller-JWT setup, and the user-id filter was not accepted by the active Realtime schema. The API now awaits `setAuth` before subscribing and uses the active-tenant filter while RLS continues to authorize rows. Browser verification received a new closing-soon alert and displayed the connected state. Added regression coverage for token rotation and disconnect during async initialization. Local verification passes: 551 tests, coverage gates (85.06% global branches; 92.30% API branches), formatting, lint, stylelint, typecheck, build, and the full isolated compose smoke. PR #15 merged to `main` after all required GitHub checks passed: secret scan, typecheck/lint/test/build, pgTAP, API/web/gateway image jobs and compose smoke; advisory AI review passed.
 - 2026-10-30: implemented the accepted ADR 0011 follow-up: Owner/Admins can configure up to ten pre-close thresholds, overdue alerts, and optional IC/all-member recipients. Added audited settings RPCs, validation, and a shared `/settings` form. Closing alerts now notify the active deal team and any valid active delegate; they fall back to active Owner/Admins when there are no active assignees. Empty thresholds disable pre-close reminders while the overdue switch remains independent. Added tenant-bound pgTAP coverage for settings authorization, audit, recipient groups, delegation, deduplication, and cross-tenant isolation. Full pgTAP passes (630 assertions). Full Vitest/coverage passes (675 passed, 1 skipped; 85.02% branch coverage), typecheck, lint, Stylelint, format check, and production build pass. GitHub CI is subject to the repository billing/spending block described in the handoff.
+- 2026-10-30: PR #44 merged as `d9e86aa`. GitHub Actions checks were marked failed without starting runner steps because of the account billing/spending block; they produced no code diagnostics. Local verification listed above passed.
 
 ## Deviations / debt
 Anything that differs from the plan or is deferred (also mirror in README "next steps").
