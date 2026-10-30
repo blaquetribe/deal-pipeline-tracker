@@ -9,6 +9,7 @@ const mocks = vi.hoisted(() => ({
   authRequest: vi.fn<(path: string, body: unknown) => Promise<unknown>>(),
   sessionRequest: vi.fn<(path: string, method: string, body?: unknown) => Promise<unknown>>(),
   sessionRead: vi.fn<(path: string) => Promise<unknown>>(),
+  reloadCurrentPage: vi.fn<() => void>(),
 }));
 
 vi.mock('next/link', () => ({
@@ -32,6 +33,7 @@ vi.mock('./api', () => ({
   sessionRequest: mocks.sessionRequest,
   sessionRead: mocks.sessionRead,
 }));
+vi.mock('./navigation', () => ({ reloadCurrentPage: mocks.reloadCurrentPage }));
 
 import { ApiClientError } from './api';
 import { AuthShell } from './auth-shell';
@@ -52,6 +54,7 @@ beforeEach(() => {
   mocks.authRequest.mockReset().mockResolvedValue({});
   mocks.sessionRequest.mockReset().mockResolvedValue({});
   mocks.sessionRead.mockReset();
+  mocks.reloadCurrentPage.mockReset();
 });
 
 describe('authentication forms', () => {
@@ -182,7 +185,7 @@ describe('authentication forms', () => {
         tenantId: '22222222-2222-4222-8222-222222222222',
       }),
     );
-    expect(mocks.refresh).toHaveBeenCalled();
+    expect(mocks.reloadCurrentPage).toHaveBeenCalledOnce();
   });
 
   it('renders no tenant switch control for one tenant and reports a tenant-load error', async () => {
@@ -225,6 +228,7 @@ describe('authentication forms', () => {
     expect(await screen.findByRole('alert')).toHaveTextContent(
       'Organisation could not be changed.',
     );
+    expect(mocks.reloadCurrentPage).not.toHaveBeenCalled();
     view.unmount();
   });
 

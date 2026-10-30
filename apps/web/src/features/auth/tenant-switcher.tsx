@@ -1,15 +1,14 @@
 'use client';
 
 import { tenantChoicesResponseSchema, type TenantChoicesResponse } from '@dpt/shared';
-import { useRouter } from 'next/navigation';
 import { useEffect, useId, useState } from 'react';
 
 import { SelectControl } from '../ui/select-control';
 import { sessionRead, sessionRequest } from './api';
+import { reloadCurrentPage } from './navigation';
 
 export function TenantSwitcher() {
   const id = useId();
-  const router = useRouter();
   const [choices, setChoices] = useState<TenantChoicesResponse | null>(null);
   const [pending, setPending] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -37,7 +36,7 @@ export function TenantSwitcher() {
     try {
       await sessionRequest('/auth/tenant', 'POST', { tenantId });
       setChoices((current) => (current ? { ...current, activeTenantId: tenantId } : current));
-      router.refresh();
+      reloadCurrentPage();
     } catch (cause) {
       setError(cause instanceof Error ? cause.message : 'Organisation could not be changed.');
     } finally {
