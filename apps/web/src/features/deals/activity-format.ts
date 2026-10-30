@@ -1,3 +1,5 @@
+import { isStage, STAGE_LABELS } from '@dpt/shared';
+
 type AssigneeRole = 'owner' | 'lead' | 'member';
 
 type Assignee = {
@@ -61,6 +63,7 @@ function describeAssignees(assignees: Assignee[]): string {
 
 export function formatActivityBody(kind: string, body: string): string {
   if (kind === 'closing_soon_alert') return formatClosingSoonAlert(body);
+  if (kind === 'stage_change') return formatStageChange(body);
   if (kind !== 'field_change' || !body.startsWith(assignmentPrefix)) return body;
 
   const change = body.slice(assignmentPrefix.length);
@@ -72,6 +75,35 @@ export function formatActivityBody(kind: string, body: string): string {
   if (before === null || after === null) return 'Deal team assignments changed.';
 
   return `Assigned team changed from ${describeAssignees(before)} to ${describeAssignees(after)}.`;
+}
+
+function formatStageChange(body: string): string {
+  const match = /^([a-z_]+) -> ([a-z_]+)(?:: (.+))?$/.exec(body);
+  if (!match || !isStage(match[1]) || !isStage(match[2])) {
+    return 'A stage change was recorded.';
+  }
+
+  const [, from, to, reason] = match;
+  const transition = `Moved from ${STAGE_LABELS[from]} to ${STAGE_LABELS[to]}.`;
+  if (!reason) return transition;
+  if (reason === 'approval quorum reached') {
+    return `${transition} The IC approval quorum was met.`;
+  }
+
+  return `${transition} Reason: ${reason.replace(/[.\s]+$/, '')}.`;
+}
+
+export function formatActivityKind(kind: string): string {
+  const labels: Record<string, string> = {
+    note: 'Note',
+    field_change: 'Deal updated',
+    stage_change: 'Stage changed',
+    decision: 'Decision',
+    approval_decision: 'Approval decision',
+    correction: 'Correction',
+    closing_soon_alert: 'Closing soon alert',
+  };
+  return labels[kind] ?? kind.replaceAll('_', ' ');
 }
 
 function formatClosingSoonAlert(body: string): string {

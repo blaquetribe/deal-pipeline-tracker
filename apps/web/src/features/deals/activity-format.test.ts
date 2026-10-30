@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import { formatActivityBody } from './activity-format';
+import { formatActivityBody, formatActivityKind } from './activity-format';
 
 describe('formatActivityBody', () => {
   it('formats legacy assignee snapshots without exposing user ids', () => {
@@ -33,6 +33,26 @@ describe('formatActivityBody', () => {
       'Updated: expected close date changed.',
     );
     expect(formatActivityBody('note', 'A useful note.')).toBe('A useful note.');
+  });
+
+  it('formats stage transitions with pipeline labels and a readable approval reason', () => {
+    expect(formatActivityBody('stage_change', 'due_diligence -> ic_review')).toBe(
+      'Moved from Due Diligence to IC Review.',
+    );
+    expect(formatActivityBody('stage_change', 'ic_review -> signed: approval quorum reached')).toBe(
+      'Moved from IC Review to Signed. The IC approval quorum was met.',
+    );
+  });
+
+  it('does not expose unknown stage identifiers from malformed events', () => {
+    expect(formatActivityBody('stage_change', 'unknown_stage -> ic_review')).toBe(
+      'A stage change was recorded.',
+    );
+  });
+
+  it('uses reader-facing labels for event kinds', () => {
+    expect(formatActivityKind('stage_change')).toBe('Stage changed');
+    expect(formatActivityKind('field_change')).toBe('Deal updated');
   });
 
   it('summarizes system closing alerts without exposing JSON recipients', () => {
