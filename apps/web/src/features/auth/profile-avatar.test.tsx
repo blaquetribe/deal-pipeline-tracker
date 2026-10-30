@@ -32,8 +32,11 @@ describe('ProfileAvatar', () => {
     vi.stubGlobal('fetch', fetch);
     render(<ProfileAvatar />);
     expect(await screen.findByText('TE')).toBeVisible();
+    const fileInput = screen.getByLabelText('Update photo');
+    expect(fileInput).toHaveClass('ui-file-input');
+    expect(fileInput.closest('label')).toHaveClass('ui-file-trigger');
     const image = new File(['image bytes'], 'avatar.png', { type: 'image/png' });
-    fireEvent.change(screen.getByLabelText('Update photo'), { target: { files: [image] } });
+    fireEvent.change(fileInput, { target: { files: [image] } });
     await waitFor(() =>
       expect(fetch).toHaveBeenCalledWith(
         '/api/files/avatar',
