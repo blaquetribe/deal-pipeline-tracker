@@ -1,4 +1,8 @@
-import { notificationListSchema } from '@dpt/shared';
+import {
+  closingAlertSettingsSchema,
+  notificationListSchema,
+  updateClosingAlertSettingsBodySchema,
+} from '@dpt/shared';
 import { z } from 'zod';
 
 import { HttpError } from '../../http/errors';
@@ -52,7 +56,56 @@ export function createNotificationRoutes({ userRpc }: NotificationRoutesOptions)
     },
   });
 
-  return [list, markRead];
+  const readClosingAlertSettings = sessionRoute({
+    method: 'GET',
+    path: '/closing-alert-settings',
+    body: noBody,
+    handler: async ({ session }) => {
+      if (!session.tenantId) {
+        throw new HttpError(
+          409,
+          'tenant_required',
+          'Choose an organisation to view alert settings.',
+        );
+      }
+      const settings = closingAlertSettingsSchema.parse(
+        await userRpc.call(
+          'get_closing_alert_settings',
+          { p_tenant: session.tenantId },
+          session.accessToken,
+        ),
+      );
+      return { body: settings };
+    },
+  });
+
+  const updateClosingAlertSettings = sessionRoute({
+    method: 'PUT',
+    path: '/closing-alert-settings',
+    body: updateClosingAlertSettingsBodySchema,
+    handler: async ({ body, session }) => {
+      if (!session.tenantId) {
+        throw new HttpError(
+          409,
+          'tenant_required',
+          'Choose an organisation before editing alert settings.',
+        );
+      }
+      await userRpc.call(
+        'update_closing_alert_settings',
+        {
+          p_tenant: session.tenantId,
+          p_alert_days: body.alertDays,
+          p_alert_on_overdue: body.alertOnOverdue,
+          p_extra_recipients: body.extraRecipients,
+        },
+        session.accessToken,
+      );
+      return { status: 204 };
+    },
+  });
+
+  return [list, markRead, readClosingAlertSettings, updateClosingAlertSettings];
 }
 
 export function mountNotificationRoutes(

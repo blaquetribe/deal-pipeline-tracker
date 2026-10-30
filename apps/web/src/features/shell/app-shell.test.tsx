@@ -35,6 +35,7 @@ describe('AppShell', () => {
           .some((link) => nav.contains(link) && link.getAttribute('aria-current') === 'page'),
       ).toBe(true);
       expect(nav.querySelector('a[href="/"]')).toHaveTextContent('Pipeline');
+      expect(nav.querySelector('a[href="/settings"]')).toHaveTextContent('Settings');
     }
     expect(screen.getByRole('complementary')).toHaveClass('material-glass');
     expect(screen.getByRole('heading', { name: 'Role management' })).toBeVisible();

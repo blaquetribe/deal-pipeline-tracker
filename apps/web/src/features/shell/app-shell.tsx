@@ -4,11 +4,12 @@ import type { ReactNode } from 'react';
 import { ProfileAvatar, SignOutButton, TenantSwitcher } from '../auth';
 import { NotificationBell } from '../notifications';
 
-type AppPage = 'pipeline' | 'roles';
+type AppPage = 'pipeline' | 'roles' | 'settings';
 
 const navigation = [
   { href: '/', label: 'Pipeline', page: 'pipeline' },
   { href: '/roles', label: 'Roles', page: 'roles' },
+  { href: '/settings', label: 'Settings', page: 'settings' },
 ] as const;
 
 function PrimaryLinks({ currentPage }: { readonly currentPage: AppPage }) {

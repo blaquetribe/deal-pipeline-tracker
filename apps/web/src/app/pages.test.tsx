@@ -54,6 +54,7 @@ import OnboardingPage from './onboarding/page';
 import HomePage from './page';
 import ResetPasswordPage from './reset-password/page';
 import RolesPage from './roles/page';
+import SettingsPage from './settings/page';
 import SignupPage from './signup/page';
 import VerifyEmailPage from './verify-email/page';
 
@@ -122,5 +123,11 @@ describe('Next page wrappers', () => {
     expect(screen.getByRole('heading', { name: 'Role management' })).toBeInTheDocument();
     expect(screen.getByText('Role management component')).toBeInTheDocument();
     expect(container.querySelector('[data-current-page="roles"]')).toBeInTheDocument();
+  });
+
+  it('renders the organisation closing alert settings page', () => {
+    const { container } = render(<SettingsPage />);
+    expect(screen.getByRole('heading', { name: 'Closing alerts' })).toBeInTheDocument();
+    expect(container.querySelector('[data-current-page="settings"]')).toBeInTheDocument();
   });
 });
