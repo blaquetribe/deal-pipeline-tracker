@@ -622,7 +622,7 @@ describe('DealDetail', () => {
         {
           ...activity.events[0],
           kind: 'stage_change',
-          body: 'Moved from sourcing to screening.',
+          body: 'sourcing -> screening',
           actorName: null,
           amendsEventId: 'bbbbbbbb-0000-4000-8000-000000000099',
         },
@@ -646,7 +646,8 @@ describe('DealDetail', () => {
 
     render(<DealDetail dealId={dealId} />);
 
-    expect(await screen.findByText('stage change')).toBeVisible();
+    expect(await screen.findByText('Stage changed')).toBeVisible();
+    expect(screen.getByText('Moved from Sourcing to Screening.')).toBeVisible();
     expect(screen.getByText('person@example.test', { exact: false })).toBeVisible();
   });
 

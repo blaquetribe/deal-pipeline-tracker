@@ -17,7 +17,7 @@ import { Button } from '../ui/button';
 import { Input } from '../ui/input';
 import { SelectControl } from '../ui/select-control';
 import { Textarea } from '../ui/textarea';
-import { formatActivityBody } from './activity-format';
+import { formatActivityBody, formatActivityKind } from './activity-format';
 import {
   configureDealApprovalPolicy,
   cancelApprovalAbsence,
@@ -655,13 +655,7 @@ export function DealDetail({ dealId }: DealDetailProps) {
           <ol className="mt-4 space-y-3">
             {activity.events.map((item) => (
               <li className="material-card p-4" key={item.id}>
-                <p className="font-medium">
-                  {item.kind === 'note'
-                    ? 'Note'
-                    : item.kind === 'closing_soon_alert'
-                      ? 'Closing soon alert'
-                      : item.kind.replaceAll('_', ' ')}
-                </p>
+                <p className="font-medium">{formatActivityKind(item.kind)}</p>
                 <p className="mt-2 whitespace-pre-wrap">
                   {formatActivityBody(item.kind, item.body)}
                 </p>
