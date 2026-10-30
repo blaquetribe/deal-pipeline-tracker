@@ -42,7 +42,10 @@ describe('DealFiles', () => {
     render(<DealFiles dealId={dealId} />);
     await userEvent.click(screen.getByRole('button', { name: 'View attachments' }));
     const file = new File(['%PDF-1.7'], 'confidential.pdf', { type: 'application/pdf' });
-    fireEvent.change(screen.getByLabelText('Add PDF'), { target: { files: [file] } });
+    const fileInput = screen.getByLabelText('Add PDF');
+    expect(fileInput).toHaveClass('ui-file-input');
+    expect(fileInput.closest('label')).toHaveClass('ui-file-trigger');
+    fireEvent.change(fileInput, { target: { files: [file] } });
     await waitFor(() => expect(mocks.upload).toHaveBeenCalledWith(dealId, file));
     expect(await screen.findByText('PDF attached to this deal.')).toBeVisible();
     expect(mocks.read).toHaveBeenCalledTimes(2);

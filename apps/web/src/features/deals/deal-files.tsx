@@ -97,20 +97,17 @@ export function DealFiles({ dealId }: DealFilesProps) {
             <p className="mt-3 text-sm text-fg-muted">No attachments yet.</p>
           )}
           <div className="mt-4">
-            <label
-              className="cursor-pointer rounded-control border border-line px-3 py-2 text-sm font-medium hover:bg-surface"
-              htmlFor={inputId}
-            >
+            <label className="ui-file-trigger" data-disabled={busy ? 'true' : undefined}>
               {busy ? 'Uploading…' : 'Add PDF'}
+              <input
+                accept="application/pdf,.pdf"
+                className="ui-file-input"
+                disabled={busy}
+                id={inputId}
+                onChange={(event) => void upload(event.currentTarget.files?.[0])}
+                type="file"
+              />
             </label>
-            <input
-              accept="application/pdf,.pdf"
-              className="sr-only"
-              disabled={busy}
-              id={inputId}
-              onChange={(event) => void upload(event.currentTarget.files?.[0])}
-              type="file"
-            />
           </div>
           <p aria-live="polite" className="mt-2 text-sm text-fg-muted">
             {message || 'PDF · max 20 MB'}

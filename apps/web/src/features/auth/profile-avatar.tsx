@@ -94,21 +94,18 @@ export function ProfileAvatar() {
         <span aria-hidden="true">{initials(user?.fullName ?? null)}</span>
       </div>
       <div>
-        <label
-          className="cursor-pointer text-sm font-medium text-brand underline-offset-2 hover:underline"
-          htmlFor={inputId}
-        >
+        <label className="ui-file-trigger" data-disabled={busy ? 'true' : undefined}>
           {busy ? 'Uploading…' : 'Update photo'}
+          <input
+            accept="image/png,image/jpeg,image/webp"
+            className="ui-file-input"
+            disabled={busy}
+            id={inputId}
+            onChange={(event) => void upload(event.currentTarget.files?.[0])}
+            ref={input}
+            type="file"
+          />
         </label>
-        <input
-          accept="image/png,image/jpeg,image/webp"
-          className="sr-only"
-          disabled={busy}
-          id={inputId}
-          onChange={(event) => void upload(event.currentTarget.files?.[0])}
-          ref={input}
-          type="file"
-        />
         <p aria-live="polite" className="text-xs text-fg-muted">
           {message || 'PNG, JPEG, or WebP · max 5 MB'}
         </p>
