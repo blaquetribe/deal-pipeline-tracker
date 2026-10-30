@@ -78,7 +78,7 @@ scripts/compose-smoke.sh
 
 The smoke test builds a fresh stack, signs in through the gateway as a seeded user, checks that sample deals are visible, runs the seed again to check idempotency, and verifies that only the gateway publishes a port. `docker compose down -v` removes the smoke stack's data when run outside the smoke script.
 
-GitHub Actions runs the quality, database, image, security-scan, and Compose smoke checks. The repository is private, but branch protection is unavailable on its current GitHub plan, so a green workflow is not mechanically required before merging. PRs #37-#42 were merged at the owner's direction while Actions jobs could not start because of the account billing/spending limit; those runs are not green and their code checks remain unverified in GitHub. Local verification results are recorded in `docs/HANDOFF.md` and `docs/PROGRESS.md`.
+GitHub Actions runs the quality, database, image, security-scan, and Compose smoke checks. The repository is private, but branch protection is unavailable on its current GitHub plan, so a green workflow is not mechanically required before merging. Recent PRs encountered the account billing/spending limit before Actions job steps started; those runs are not green and provide no code-level diagnostics. Local verification results and the affected PRs are recorded in `docs/HANDOFF.md` and `docs/PROGRESS.md`.
 
 ## What I would do next
 
