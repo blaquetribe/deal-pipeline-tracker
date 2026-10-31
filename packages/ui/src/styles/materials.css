@@ -290,6 +290,113 @@
   outline-offset: 3px;
 }
 
+.deal-edit-dialog {
+  width: min(44rem, calc(100% - 2rem));
+  max-height: calc(100svh - 2rem);
+  margin: auto;
+  overflow: auto;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-panel);
+  padding: 0;
+  background: var(--surface);
+  color: var(--fg);
+  box-shadow: var(--card-shadow);
+}
+
+.deal-edit-dialog::backdrop {
+  background: rgb(8 16 32 / 68%);
+  backdrop-filter: blur(3px);
+}
+
+.deal-edit-header {
+  border-bottom: 1px solid var(--line-subtle);
+  padding: 1.5rem 1.5rem 1.25rem;
+}
+
+.deal-edit-fields {
+  display: grid;
+  gap: 1rem;
+  padding: 1.5rem;
+}
+
+.deal-edit-fields label {
+  display: grid;
+  gap: 0.4rem;
+  font-size: 0.875rem;
+  font-weight: 600;
+}
+
+.deal-edit-error {
+  margin: 0 1.5rem 1rem;
+  border: 1px solid color-mix(in srgb, var(--danger-fg) 32%, transparent);
+  border-radius: var(--radius-control);
+  padding: 0.75rem;
+  background: var(--danger-soft);
+  color: var(--danger-fg);
+  font-size: 0.875rem;
+}
+
+.deal-edit-footer {
+  position: sticky;
+  bottom: 0;
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.75rem;
+  border-top: 1px solid var(--line-subtle);
+  padding: 1rem 1.5rem;
+  background: var(--surface);
+}
+
+.deal-action-toast {
+  position: fixed;
+  inset-inline-end: 1rem;
+  inset-block-end: 1rem;
+  z-index: 70;
+  display: flex;
+  width: min(28rem, calc(100vw - 2rem));
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1rem;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-panel);
+  padding: 1rem;
+  background: var(--surface-raised);
+  color: var(--fg);
+  box-shadow: var(--card-shadow);
+}
+
+.deal-action-toast-success {
+  border-inline-start: 4px solid var(--success);
+}
+
+.deal-action-toast-error {
+  border-inline-start: 4px solid var(--danger);
+}
+
+.deal-action-toast-info {
+  border-inline-start: 4px solid var(--brand);
+}
+
+.notification-panel {
+  position: absolute;
+  z-index: 60;
+  inset-inline-end: 0;
+  top: calc(100% + 0.5rem);
+  width: min(24rem, calc(100vw - 2rem));
+  max-height: min(32rem, calc(100svh - 7rem));
+  border: 1px solid var(--line);
+  background: var(--surface-raised);
+  color: var(--fg);
+  overflow: auto;
+  box-shadow: var(--card-shadow);
+}
+
+@media (width >= 36rem) {
+  .deal-edit-fields {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
 /*
 |--------------------------------------------------------------------------
 | Motion

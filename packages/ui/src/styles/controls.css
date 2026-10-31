@@ -93,6 +93,15 @@ button.text-danger-fg {
   color: var(--danger-fg);
 }
 
+.app-topbar button.profile-photo-trigger {
+  min-height: 1.5rem;
+  justify-content: flex-start;
+  padding: 0.125rem 0.25rem;
+  color: var(--brand-fg);
+  font-size: 0.75rem;
+  line-height: 1rem;
+}
+
 button.bg-brand,
 a.bg-brand {
   border-color: transparent;
@@ -108,6 +117,35 @@ button:disabled {
 button:focus-visible {
   outline: 3px solid var(--focus);
   outline-offset: 2px;
+}
+
+.my-work-progress-track {
+  display: block;
+  width: 100%;
+  height: 0.5rem;
+  appearance: none;
+  border: 1px solid var(--line);
+  border-radius: 9999px;
+  background: var(--surface-subtle);
+}
+
+.my-work-progress-track::-webkit-progress-bar {
+  border-radius: 9999px;
+  background: var(--surface-subtle);
+}
+
+.my-work-progress-track::-webkit-progress-value,
+.my-work-progress-track::-moz-progress-bar {
+  border-radius: 9999px;
+  background: var(--brand);
+  transition: width 180ms ease-out;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .my-work-progress-track::-webkit-progress-value,
+  .my-work-progress-track::-moz-progress-bar {
+    transition: none;
+  }
 }
 
 button:hover:not(:disabled) {

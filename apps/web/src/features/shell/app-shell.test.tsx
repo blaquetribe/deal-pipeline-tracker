@@ -1,4 +1,4 @@
-import { render, screen } from '@testing-library/react';
+import { render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import type { ReactNode } from 'react';
 import { describe, expect, it, vi } from 'vitest';
@@ -31,12 +31,11 @@ describe('AppShell', () => {
     const navigation = screen.getAllByRole('navigation', { name: 'Workspace navigation' });
     expect(navigation).toHaveLength(2);
     for (const nav of navigation) {
-      expect(
-        screen
-          .getAllByRole('link', { name: 'Roles' })
-          .some((link) => nav.contains(link) && link.getAttribute('aria-current') === 'page'),
-      ).toBe(true);
-      expect(nav.querySelector('a[href="/"]')).toHaveTextContent('Pipeline');
+      expect(within(nav).queryByRole('link', { name: 'Roles' })).not.toBeInTheDocument();
+      expect(nav.querySelector('a[href="/"]')).toHaveTextContent('My Work');
+      expect(nav.querySelector('a[href="/pipeline"]')).toHaveTextContent('Pipeline');
+      expect(nav.querySelector('a[href="/team"]')).toHaveTextContent('Team');
+      expect(nav.querySelector('a[href="/approvals"]')).toHaveTextContent('Approvals');
       expect(nav.querySelector('a[href="/settings"]')).toHaveTextContent('Settings');
     }
     expect(screen.getByRole('complementary')).toHaveClass('material-glass');

@@ -26,6 +26,12 @@ const row = {
   },
   created_at: '2026-10-28T10:00:00Z',
   read_at: null,
+} as const;
+
+const readRow = {
+  ...row,
+  id: 'bbbbbbbb-0000-4000-8000-000000000005',
+  read_at: '2026-10-29T10:00:00Z',
 };
 
 const approvalAlert = {
@@ -102,7 +108,7 @@ describe('notification bell', () => {
   it('shows the empty state and refreshes from same-origin realtime inserts', async () => {
     render(<NotificationBell />);
     fireEvent.click(screen.getByRole('button', { name: 'Notifications' }));
-    await screen.findByText('You’re all caught up.');
+    await screen.findByText(/You’re all caught up/);
     expect(screen.getByRole('region', { name: 'Notifications' })).toHaveClass(
       'material-glass-strong',
     );
@@ -125,16 +131,51 @@ describe('notification bell', () => {
       'aria-expanded',
       'true',
     );
-    expect(screen.getByRole('link', { name: /Example deal/ })).toHaveAttribute(
+    expect(screen.getByRole('link', { name: 'Open deal' })).toHaveAttribute(
       'href',
       row.payload.href,
     );
-    const link = screen.getByRole('link', { name: /Example deal/ });
+    const link = screen.getByRole('link', { name: 'Open deal' });
     const click = createEvent.click(link);
     click.preventDefault();
     fireEvent(link, click);
     await waitFor(() => expect(markNotificationRead).toHaveBeenCalledWith(row.id));
     expect(screen.getByRole('button', { name: 'Notifications' })).toBeInTheDocument();
+  });
+
+  it('removes handled notifications from Unread while retaining them in All', async () => {
+    vi.mocked(readNotifications)
+      .mockResolvedValueOnce([row])
+      .mockResolvedValue([{ ...readRow, id: row.id }]);
+    render(<NotificationBell />);
+    fireEvent.click(screen.getByRole('button', { name: 'Notifications' }));
+    expect(await screen.findByText('Example deal')).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'Mark as read' }));
+    await waitFor(() => expect(markNotificationRead).toHaveBeenCalledWith(row.id));
+    expect(await screen.findByText(/You’re all caught up/)).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'All' }));
+    expect(await screen.findByText('Example deal')).toBeInTheDocument();
+    expect(screen.getByText('Read')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Notifications' })).toBeInTheDocument();
+  });
+
+  it('offers bulk read and starts with unread items only', async () => {
+    const secondUnread = { ...row, id: `${row.id}-2` };
+    vi.mocked(readNotifications)
+      .mockResolvedValueOnce([row, secondUnread, readRow])
+      .mockResolvedValue([
+        { ...readRow, id: row.id },
+        { ...readRow, id: secondUnread.id },
+        readRow,
+      ]);
+    render(<NotificationBell />);
+    fireEvent.click(screen.getByRole('button', { name: 'Notifications' }));
+    expect(await screen.findAllByText('Example deal')).toHaveLength(2);
+    fireEvent.click(screen.getByRole('button', { name: 'Mark all read' }));
+    await waitFor(() => expect(markNotificationRead).toHaveBeenCalledWith(row.id));
+    expect(markNotificationRead).toHaveBeenCalledWith(secondUnread.id);
+    expect(screen.getByRole('button', { name: 'All' })).toBeInTheDocument();
+    expect(await screen.findByText(/You’re all caught up/)).toBeInTheDocument();
   });
 
   it('reports load failures and ignores invalid socket messages', async () => {

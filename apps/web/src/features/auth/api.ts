@@ -1,4 +1,10 @@
-import { authSessionResponseSchema } from '@dpt/shared';
+import {
+  authSessionResponseSchema,
+  assignableRolesResponseSchema,
+  memberRoleBodySchema,
+  teamMembersResponseSchema,
+  type MemberRoleBody,
+} from '@dpt/shared';
 
 export class ApiClientError extends Error {
   constructor(
@@ -71,4 +77,30 @@ export async function sessionRead(path: string): Promise<unknown> {
   });
   if (!response.ok) throw await readError(response);
   return response.json();
+}
+
+export async function readAuthSession() {
+  return authSessionResponseSchema.parse(await sessionRead('/auth/session'));
+}
+
+export async function readTeamMembers() {
+  return teamMembersResponseSchema.parse(await sessionRead('/team/members'));
+}
+
+export async function readAssignableRoles() {
+  return assignableRolesResponseSchema.parse(await sessionRead('/team/assignable-roles'));
+}
+
+export async function grantTeamMemberRole(userId: string, input: MemberRoleBody) {
+  const body = memberRoleBodySchema.parse(input);
+  await sessionRequest(`/team/members/${encodeURIComponent(userId)}/roles`, 'POST', body);
+}
+
+export async function revokeTeamMemberRole(userId: string, input: MemberRoleBody) {
+  const body = memberRoleBodySchema.parse(input);
+  await sessionRequest(`/team/members/${encodeURIComponent(userId)}/roles`, 'DELETE', body);
+}
+
+export async function deactivateTeamMember(userId: string) {
+  await sessionRequest(`/team/members/${encodeURIComponent(userId)}`, 'DELETE');
 }

@@ -5,13 +5,24 @@ import { ProfileAvatar, SignOutButton, TenantSwitcher } from '../auth';
 import { NotificationBell } from '../notifications';
 import { ThemeToggle } from './theme-toggle';
 
-type AppPage = 'pipeline' | 'roles' | 'settings';
+type AppPage = 'my-work' | 'pipeline' | 'team' | 'approvals' | 'roles' | 'settings';
 
 const navigation = [
-  { href: '/', label: 'Pipeline', page: 'pipeline' },
-  { href: '/roles', label: 'Roles', page: 'roles' },
+  { href: '/', label: 'My Work', page: 'my-work' },
+  { href: '/pipeline', label: 'Pipeline', page: 'pipeline' },
+  { href: '/team', label: 'Team', page: 'team' },
+  { href: '/approvals', label: 'Approvals', page: 'approvals' },
   { href: '/settings', label: 'Settings', page: 'settings' },
 ] as const;
+
+const pageDescriptions: Record<AppPage, string> = {
+  'my-work': 'Your workspace',
+  pipeline: 'Investment pipeline',
+  team: 'Team and invitations',
+  approvals: 'IC approval queue',
+  roles: 'Roles and permissions',
+  settings: 'Organisation settings',
+};
 
 function PrimaryLinks({ currentPage }: { readonly currentPage: AppPage }) {
   return (
@@ -52,7 +63,10 @@ export function AppShell({
         <nav aria-label="Workspace navigation" className="hidden flex-col gap-1 lg:flex">
           <PrimaryLinks currentPage={currentPage} />
         </nav>
-        <nav aria-label="Workspace navigation" className="flex gap-1 lg:hidden">
+        <nav
+          aria-label="Workspace navigation"
+          className="flex max-w-full gap-1 overflow-x-auto lg:hidden"
+        >
           <PrimaryLinks currentPage={currentPage} />
         </nav>
         <div className="mt-auto hidden rounded-panel border border-white/10 bg-white/5 p-3 lg:block">
@@ -70,7 +84,7 @@ export function AppShell({
               Deal Pipeline Tracker
             </p>
             <p className="mt-1 text-sm font-medium text-fg-muted">
-              {currentPage === 'pipeline' ? 'Investment pipeline' : 'Organisation settings'}
+              {pageDescriptions[currentPage]}
             </p>
           </div>
           <div className="flex flex-wrap items-center gap-3">

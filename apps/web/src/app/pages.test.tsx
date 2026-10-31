@@ -29,12 +29,15 @@ vi.mock('../features/auth', () => ({
   ResetRequestForm: () => <p>Reset request form</p>,
   SignOutButton: () => <button>Sign out</button>,
   SignupForm: () => <p>Signup form</p>,
+  TeamManagement: () => <p>Team management component</p>,
   TenantSwitcher: () => <p>Tenant switcher</p>,
   VerifyEmail: ({ token }: { token: string | null }) => <p>Verify token: {token ?? 'missing'}</p>,
 }));
 vi.mock('../features/deals', () => ({
+  ApprovalsInbox: () => <p>Approvals inbox component</p>,
   DealDetail: ({ dealId }: { dealId: string }) => <p>Deal id: {dealId}</p>,
   DealsDashboard: () => <p>Deals dashboard</p>,
+  MyWorkDashboard: () => <p>Personal work dashboard</p>,
 }));
 vi.mock('../features/roles', () => ({ RoleManagement: () => <p>Role management component</p> }));
 vi.mock('../features/shell', () => ({
@@ -45,6 +48,7 @@ vi.mock('../features/shell', () => ({
 }));
 
 import AcceptInvitationPage from './accept-invitation/page';
+import ApprovalsPage from './approvals/page';
 import CheckEmailPage from './check-email/page';
 import DealPage from './deals/[dealId]/page';
 import ForgotPasswordPage from './forgot-password/page';
@@ -52,10 +56,12 @@ import LoginPage from './login/page';
 import OnboardingStepPage from './onboarding/[step]/page';
 import OnboardingPage from './onboarding/page';
 import HomePage from './page';
+import PipelinePage from './pipeline/page';
 import ResetPasswordPage from './reset-password/page';
 import RolesPage from './roles/page';
 import SettingsPage from './settings/page';
 import SignupPage from './signup/page';
+import TeamPage from './team/page';
 import VerifyEmailPage from './verify-email/page';
 
 describe('Next page wrappers', () => {
@@ -95,10 +101,14 @@ describe('Next page wrappers', () => {
     }
   });
 
-  it('renders the home, onboarding and valid onboarding-step pages', async () => {
+  it('renders the personal home, pipeline, onboarding and valid onboarding-step pages', async () => {
     const home = render(<HomePage />);
-    expect(screen.getByText('Deals dashboard')).toBeInTheDocument();
+    expect(screen.getByText('Personal work dashboard')).toBeInTheDocument();
     home.unmount();
+    const pipeline = render(<PipelinePage />);
+    expect(screen.getByText('Deals dashboard')).toBeInTheDocument();
+    expect(pipeline.container.querySelector('[data-current-page="pipeline"]')).toBeInTheDocument();
+    pipeline.unmount();
     const onboarding = render(<OnboardingPage />);
     expect(screen.getByText('Onboarding form')).toBeInTheDocument();
     onboarding.unmount();
@@ -123,6 +133,21 @@ describe('Next page wrappers', () => {
     expect(screen.getByRole('heading', { name: 'Role management' })).toBeInTheDocument();
     expect(screen.getByText('Role management component')).toBeInTheDocument();
     expect(container.querySelector('[data-current-page="roles"]')).toBeInTheDocument();
+  });
+
+  it('renders the discoverable team and IC approvals pages', () => {
+    const team = render(<TeamPage />);
+    expect(screen.getByRole('heading', { name: 'Team access' })).toBeInTheDocument();
+    expect(screen.getByText('Team management component')).toBeInTheDocument();
+    expect(team.container.querySelector('[data-current-page="team"]')).toBeInTheDocument();
+    team.unmount();
+
+    const approvals = render(<ApprovalsPage />);
+    expect(screen.getByRole('heading', { name: 'IC approvals' })).toBeInTheDocument();
+    expect(screen.getByText('Approvals inbox component')).toBeInTheDocument();
+    expect(
+      approvals.container.querySelector('[data-current-page="approvals"]'),
+    ).toBeInTheDocument();
   });
 
   it('renders the organisation closing alert settings page', () => {

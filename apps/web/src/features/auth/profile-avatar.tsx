@@ -4,6 +4,7 @@ import { authSessionResponseSchema } from '@dpt/shared';
 import Image from 'next/image';
 import { useEffect, useId, useRef, useState } from 'react';
 
+import { Button } from '../ui/button';
 import { sessionRead } from './api';
 
 function initials(name: string | null): string {
@@ -124,35 +125,44 @@ export function ProfileAvatar() {
         ) : null}
         <span aria-hidden="true">{initials(user?.fullName ?? null)}</span>
       </div>
-      <div className="min-w-36">
+      <div className="min-w-0">
         {user?.fullName ? (
-          <p className="mb-1 text-sm leading-none font-semibold">{user.fullName}</p>
+          <p className="max-w-40 truncate text-sm leading-tight font-semibold">{user.fullName}</p>
         ) : null}
-        <label
-          className="ui-file-trigger"
-          data-disabled={busy || !user?.tenantId ? 'true' : undefined}
+        <Button
+          aria-describedby={`${inputId}-hint`}
+          className="profile-photo-trigger"
+          disabled={busy || !user?.tenantId}
+          onClick={() => input.current?.click()}
+          size="small"
+          type="button"
+          variant="quiet"
         >
-          {busy ? 'Saving photo…' : 'Change photo'}
-          <input
-            accept="image/png,image/jpeg,image/webp"
-            className="ui-file-input"
-            disabled={busy || !user?.tenantId}
-            id={inputId}
-            onChange={(event) => void upload(event.currentTarget.files?.[0])}
-            ref={input}
-            type="file"
-          />
-        </label>
+          {busy ? 'Saving…' : 'Change photo'}
+        </Button>
+        <input
+          accept="image/png,image/jpeg,image/webp"
+          aria-label="Choose profile photo"
+          className="sr-only"
+          disabled={busy || !user?.tenantId}
+          id={inputId}
+          onChange={(event) => void upload(event.currentTarget.files?.[0])}
+          ref={input}
+          tabIndex={-1}
+          type="file"
+        />
+        <span className="sr-only" id={`${inputId}-hint`}>
+          PNG, JPEG, or WebP image, smaller than 5 MB.
+        </span>
         <p
           aria-live={
             message && /could not|ended|readable|choose an organisation/i.test(message)
               ? 'assertive'
               : 'polite'
           }
-          className="text-xs text-fg-muted"
+          className={message ? 'max-w-48 text-xs text-fg-muted' : 'sr-only'}
         >
-          {message ||
-            (busy ? 'Optimising and saving your photo…' : 'PNG, JPEG, or WebP · max 5 MB')}
+          {message || (busy ? 'Optimising and saving your photo…' : '')}
         </p>
       </div>
     </div>

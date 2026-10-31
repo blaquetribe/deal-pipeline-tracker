@@ -12,9 +12,9 @@ vi.mock('../features/shell', () => ({
   PageHeading: ({ title }: { title: string }) => <h1>{title}</h1>,
 }));
 vi.mock('../features/deals', () => ({
-  DealsDashboard: () => (
-    <section aria-labelledby="deals-title">
-      <h2 id="deals-title">Deals</h2>
+  MyWorkDashboard: () => (
+    <section>
+      <h2>My assigned work</h2>
     </section>
   ),
 }));
@@ -25,11 +25,11 @@ describe('HomePage', () => {
   it('has one level-one heading naming the product', () => {
     render(<HomePage />);
     expect(screen.getAllByRole('heading', { level: 1 })).toHaveLength(1);
-    expect(screen.getByRole('heading', { level: 1, name: 'Deal pipeline' })).toBeVisible();
+    expect(screen.getByRole('heading', { level: 1, name: 'My workspace' })).toBeVisible();
   });
 
-  it('opens the deals dashboard', () => {
+  it('opens the signed-in user workspace', () => {
     render(<HomePage />);
-    expect(screen.getByRole('heading', { level: 2, name: 'Deals' })).toBeVisible();
+    expect(screen.getByRole('heading', { level: 2, name: 'My assigned work' })).toBeVisible();
   });
 });

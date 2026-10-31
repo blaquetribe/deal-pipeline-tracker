@@ -1,4 +1,4 @@
-import { dealListResponseSchema } from '@dpt/shared';
+import { dealListResponseSchema, myWorkResponseSchema } from '@dpt/shared';
 import { Hono } from 'hono';
 import { describe, expect, it, vi } from 'vitest';
 
@@ -34,6 +34,27 @@ function harness(tenantId: string | null = 'cccccccc-0000-4000-8000-000000000001
               expected_close_date: '2027-03-31',
               expected_close_time: null,
               created_at: '2026-10-28T10:00:00+00:00',
+            },
+          ],
+        };
+      }
+      if (name === 'list_my_deal_work') {
+        return {
+          total: 1,
+          activeCount: 1,
+          items: [
+            {
+              id: DEAL,
+              name: 'Northstar Systems',
+              stage: 'sourcing',
+              version: 1,
+              sector: 'Technology',
+              amount: '123456789012345',
+              currency: 'ZAR',
+              expected_close_date: '2027-03-31',
+              expected_close_time: null,
+              created_at: '2026-10-28T10:00:00+00:00',
+              assignment_role: 'lead',
             },
           ],
         };
@@ -143,6 +164,7 @@ describe('deal assignment routes', () => {
     expect(describeRoutes(routes)).toEqual([
       { method: 'POST', path: '/deals', access: 'session' },
       { method: 'GET', path: '/deals', access: 'session' },
+      { method: 'GET', path: '/deals/my-work', access: 'session' },
       { method: 'GET', path: '/deals/dashboard-summary', access: 'session' },
       { method: 'GET', path: '/deals/:dealId', access: 'session' },
       { method: 'PUT', path: '/deals/:dealId', access: 'session' },
@@ -154,6 +176,7 @@ describe('deal assignment routes', () => {
     ]);
     expect(routes.map((route) => route.permission)).toEqual([
       'deal.create',
+      'deal.view',
       'deal.view',
       'deal.view',
       'deal.view',
@@ -381,6 +404,46 @@ describe('deal assignment routes', () => {
       },
       'user-jwt',
     );
+  });
+
+  it('lists only the authenticated user’s assigned work through the active tenant JWT', async () => {
+    const { app, userRpc } = harness();
+    const response = await app.request('/deals/my-work?limit=10&offset=2', {
+      headers: { Cookie: SESSION_COOKIE },
+    });
+    expect(response.status).toBe(200);
+    expect(myWorkResponseSchema.parse(await response.json())).toMatchObject({
+      total: 1,
+      activeCount: 1,
+      items: [{ id: DEAL, assignment_role: 'lead' }],
+    });
+    expect(userRpc.call).toHaveBeenCalledWith(
+      'list_my_deal_work',
+      {
+        p_tenant: 'cccccccc-0000-4000-8000-000000000001',
+        p_limit: 10,
+        p_offset: 2,
+      },
+      'user-jwt',
+    );
+  });
+
+  it('requires an active tenant and rejects invalid personal-work pagination', async () => {
+    const noTenant = harness(null);
+    const noTenantResponse = await noTenant.app.request('/deals/my-work', {
+      headers: { Cookie: SESSION_COOKIE },
+    });
+    const { app, userRpc } = harness();
+    const invalid = await app.request('/deals/my-work?limit=101', {
+      headers: { Cookie: SESSION_COOKIE },
+    });
+    const repeated = await app.request('/deals/my-work?offset=0&offset=1', {
+      headers: { Cookie: SESSION_COOKIE },
+    });
+    expect(noTenantResponse.status).toBe(409);
+    expect(invalid.status).toBe(400);
+    expect(repeated.status).toBe(400);
+    expect(userRpc.call).not.toHaveBeenCalled();
   });
 
   it('moves a deal through the database stage machine with optimistic versioning', async () => {

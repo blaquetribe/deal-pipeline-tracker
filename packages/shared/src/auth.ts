@@ -70,6 +70,33 @@ export const inviteMemberBodySchema = z.strictObject({
 });
 export const revokeInvitationBodySchema = z.strictObject({ invitationId: z.uuid() });
 export const tenantSelectionBodySchema = z.strictObject({ tenantId: z.uuid() });
+export const teamMemberSchema = z.strictObject({
+  userId: z.uuid(),
+  email: z.email().nullable(),
+  fullName: z.string().nullable(),
+  deactivatedAt: z.iso.datetime({ offset: true }).nullable(),
+  roles: z.array(
+    z.strictObject({
+      key: z.string(),
+      name: z.string(),
+      isSystem: z.boolean(),
+    }),
+  ),
+});
+export const teamMembersResponseSchema = z.strictObject({ members: z.array(teamMemberSchema) });
+export const assignableRoleSchema = z.strictObject({
+  id: z.uuid(),
+  key: z.string().regex(/^[a-z][a-z0-9_]{0,39}$/),
+  name: z.string().min(1),
+});
+export const assignableRolesResponseSchema = z.strictObject({
+  canManageRoles: z.boolean(),
+  roles: z.array(assignableRoleSchema),
+});
+export type AssignableRole = z.infer<typeof assignableRoleSchema>;
+export const memberRoleBodySchema = z.strictObject({
+  roleKey: z.string().regex(/^[a-z][a-z0-9_]{0,39}$/),
+});
 export const profileBodySchema = z.strictObject({
   displayName: z.string().trim().min(1, { error: 'Enter a display name.' }).max(100),
   jobTitle: z.string().trim().max(100).nullable().optional(),
@@ -141,6 +168,9 @@ export const invitationRegistrationResponseSchema = z.object({
 export type OnboardingStateResponse = z.infer<typeof onboardingStateResponseSchema>;
 export type TenantChoicesResponse = z.infer<typeof tenantChoicesResponseSchema>;
 export type PendingInvitationsResponse = z.infer<typeof pendingInvitationsResponseSchema>;
+export type TeamMember = z.infer<typeof teamMemberSchema>;
+export type TeamMembersResponse = z.infer<typeof teamMembersResponseSchema>;
+export type MemberRoleBody = z.infer<typeof memberRoleBodySchema>;
 export type InvitationPreviewResponse = z.infer<typeof invitationPreviewResponseSchema>;
 
 export type SignupBody = z.infer<typeof signupBodySchema>;

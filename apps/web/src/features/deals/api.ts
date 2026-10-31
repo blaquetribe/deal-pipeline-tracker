@@ -16,6 +16,8 @@ import {
   approvalRequestBodySchema,
   dealApprovalStatusSchema,
   dashboardSummarySchema,
+  myWorkQuerySchema,
+  myWorkResponseSchema,
   type CreateDealBody,
   type ApprovalAbsence,
   type ApprovalDelegation,
@@ -28,6 +30,15 @@ import { sessionRead, sessionRequest } from '../auth/api';
 
 export async function readDeals(query: URLSearchParams) {
   return dealListResponseSchema.parse(await sessionRead(`/deals?${query.toString()}`));
+}
+
+export async function readMyWork(query: URLSearchParams) {
+  const parsed = myWorkQuerySchema.parse(Object.fromEntries(query.entries()));
+  const params = new URLSearchParams({
+    limit: String(parsed.limit),
+    offset: String(parsed.offset),
+  });
+  return myWorkResponseSchema.parse(await sessionRead(`/deals/my-work?${params.toString()}`));
 }
 
 export async function readDashboardSummary() {

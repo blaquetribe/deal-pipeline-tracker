@@ -16,14 +16,51 @@ import { formatMinorAmount } from './money';
 
 type Deal = DealListResponse['items'][number];
 
+function missingFieldLabel(field: string): string {
+  switch (field) {
+    case 'amount':
+      return 'deal size';
+    case 'sector':
+      return 'sector';
+    case 'expected_close_date':
+      return 'expected close date';
+    default:
+      return field;
+  }
+}
+
+function dropGuidance(deal: Deal, destination: Stage): string {
+  const allowed = STAGE_TRANSITIONS.some(([from, to]) => from === deal.stage && to === destination);
+  if (allowed) {
+    const check = evaluateMove(deal.stage, destination, [
+      ...(deal.sector ? ['sector'] : []),
+      ...(deal.amount !== null ? ['amount'] : []),
+      ...(deal.expected_close_date ? ['expected_close_date'] : []),
+    ]);
+    if (!check.ok && check.code === 'missing_fields') {
+      return `Add ${check.fields.map(missingFieldLabel).join(' and ')} before moving to ${STAGE_LABELS[destination]}.`;
+    }
+    return `Drop to move to ${STAGE_LABELS[destination]}.`;
+  }
+  if (deal.stage === 'ic_review' && destination === 'signed') {
+    return 'An approved IC quorum moves this deal to Signed.';
+  }
+  if (deal.stage === 'ic_review' && destination === 'closed') {
+    return 'Approve the IC review first, then move the Signed deal to Closed.';
+  }
+  return `Move through the required stages before ${STAGE_LABELS[destination]}.`;
+}
+
 export function DealsKanban({
   deals,
   disabled,
   onMove,
+  onInvalidMove,
 }: {
   readonly deals: readonly Deal[];
   readonly disabled: boolean;
   readonly onMove: (dealId: string, stage: Stage) => void;
+  readonly onInvalidMove: (message: string) => void;
 }) {
   const [draggedId, setDraggedId] = useState<string | null>(null);
   const [overStage, setOverStage] = useState<Stage | null>(null);
@@ -44,9 +81,15 @@ export function DealsKanban({
     ]).ok;
   }
 
+  const draggedDeal = deals.find((deal) => deal.id === draggedId) ?? null;
+
   return (
     <section aria-label="Deals by pipeline stage" className="mt-4 overflow-x-auto pb-3">
       <div className="grid min-w-[70rem] grid-cols-7 gap-3">
+        <p className="col-span-6 px-1 text-xs font-semibold tracking-wide text-fg-muted uppercase">
+          Pipeline progression
+        </p>
+        <p className="px-1 text-xs font-semibold tracking-wide text-fg-muted uppercase">Outcome</p>
         {STAGES.map((stage) => {
           const stageDeals = deals.filter((deal) => deal.stage === stage);
           const accepting = draggedId ? canDrop(draggedId, stage) : false;
@@ -57,14 +100,14 @@ export function DealsKanban({
               className={`rounded-card min-h-56 border p-2 transition-colors duration-150 motion-reduce:transition-none ${
                 overStage === stage && accepting
                   ? 'border-brand bg-brand/10'
-                  : 'border-line bg-surface-subtle'
+                  : overStage === stage && draggedDeal
+                    ? 'border-danger/50 bg-danger-soft'
+                    : 'border-line bg-surface-subtle'
               }`}
               key={stage}
               onDragEnter={(event) => {
-                if (draggedId && canDrop(draggedId, stage)) {
-                  event.preventDefault();
-                  setOverStage(stage);
-                }
+                if (draggedId) setOverStage(stage);
+                if (draggedId) event.preventDefault();
               }}
               onDragLeave={(event) => {
                 const nextTarget = event.relatedTarget;
@@ -73,21 +116,26 @@ export function DealsKanban({
                 }
               }}
               onDragOver={(event) => {
-                if (draggedId && canDrop(draggedId, stage)) {
+                if (draggedId && overStage !== stage) setOverStage(stage);
+                if (draggedId) {
                   event.preventDefault();
-                  event.dataTransfer.dropEffect = 'move';
+                  event.dataTransfer.dropEffect = canDrop(draggedId, stage) ? 'move' : 'none';
                 }
               }}
               onDrop={(event) => {
                 event.preventDefault();
                 const dealId = event.dataTransfer.getData('text/plain');
+                const deal = deals.find((item) => item.id === dealId);
                 if (canDrop(dealId, stage)) onMove(dealId, stage);
+                else if (deal) onInvalidMove(dropGuidance(deal, stage));
                 setDraggedId(null);
                 setOverStage(null);
               }}
             >
               <header className="flex items-center justify-between gap-2 px-1 py-2">
-                <h3 className="text-sm font-semibold">{STAGE_LABELS[stage]}</h3>
+                <h3 className="text-sm font-semibold">
+                  {stage === 'passed' ? 'Passed · outcome' : STAGE_LABELS[stage]}
+                </h3>
                 <span
                   aria-label={`${stageDeals.length} deals`}
                   className="rounded-control border border-line px-2 py-0.5 text-xs text-fg-muted tabular-nums"
@@ -95,6 +143,16 @@ export function DealsKanban({
                   {stageDeals.length}
                 </span>
               </header>
+              {draggedDeal && overStage === stage ? (
+                <p
+                  aria-live="polite"
+                  className={`mb-2 rounded-control px-2 py-1 text-xs ${
+                    accepting ? 'bg-brand-soft text-brand-fg' : 'bg-danger-soft text-danger-fg'
+                  }`}
+                >
+                  {dropGuidance(draggedDeal, stage)}
+                </p>
+              ) : null}
               <ul className="space-y-2">
                 {stageDeals.map((deal) => (
                   <li key={deal.id}>

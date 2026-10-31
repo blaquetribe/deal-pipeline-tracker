@@ -28,6 +28,30 @@ import { formatMinorAmount, majorAmountForInput, parseMajorAmount } from './mone
 
 const PAGE_SIZE = 25;
 
+type ActionToast = { readonly kind: 'success' | 'error' | 'info'; readonly message: string };
+
+function actionErrorMessage(cause: unknown, fallback: string): string {
+  if (cause instanceof Error && cause.name === 'ZodError') {
+    try {
+      const issues: unknown = JSON.parse(cause.message);
+      if (Array.isArray(issues)) {
+        const firstMessage = issues.find(
+          (issue): issue is { message: string } =>
+            typeof issue === 'object' &&
+            issue !== null &&
+            'message' in issue &&
+            typeof issue.message === 'string',
+        )?.message;
+        if (firstMessage) return firstMessage;
+      }
+    } catch {
+      return fallback;
+    }
+    return fallback;
+  }
+  return cause instanceof Error && cause.message ? cause.message : fallback;
+}
+
 function formatCloseDate(date: string | null): string {
   if (!date) return 'Not set';
   return new Intl.DateTimeFormat('en-ZA', {
@@ -44,6 +68,8 @@ export function DealsDashboard() {
   const amountId = useId();
   const currencyId = useId();
   const closeDateId = useId();
+  const editDialogRef = useRef<HTMLDialogElement>(null);
+  const editId = useId();
   const createForm = useRef<HTMLDetailsElement>(null);
   const [stage, setStage] = useState<Stage | ''>('');
   const [search, setSearch] = useState('');
@@ -61,9 +87,15 @@ export function DealsDashboard() {
   const [creating, setCreating] = useState(false);
   const [moveTargets, setMoveTargets] = useState<Record<string, Stage | ''>>({});
   const [movingDeal, setMovingDeal] = useState<string | null>(null);
-  const [moveNotice, setMoveNotice] = useState<string | null>(null);
   const [updatingDeal, setUpdatingDeal] = useState<string | null>(null);
-  const [updateNotice, setUpdateNotice] = useState<string | null>(null);
+  const [actionToast, setActionToast] = useState<ActionToast | null>(null);
+  const [editingDeal, setEditingDeal] = useState<DealListResponse['items'][number] | null>(null);
+
+  useEffect(() => {
+    if (!actionToast) return undefined;
+    const timer = window.setTimeout(() => setActionToast(null), 6_000);
+    return () => window.clearTimeout(timer);
+  }, [actionToast]);
 
   useEffect(() => {
     let active = true;
@@ -154,6 +186,18 @@ export function DealsDashboard() {
     };
   }, [summary]);
 
+  useEffect(() => {
+    const dialog = editDialogRef.current;
+    if (!dialog) return;
+    if (editingDeal && !dialog.open) {
+      if (typeof dialog.showModal === 'function') dialog.showModal();
+      else dialog.setAttribute('open', '');
+    } else if (!editingDeal && dialog.open) {
+      if (typeof dialog.close === 'function') dialog.close();
+      else dialog.removeAttribute('open');
+    }
+  }, [editingDeal]);
+
   async function refreshSummary() {
     try {
       setSummary(await readDashboardSummary());
@@ -198,7 +242,7 @@ export function DealsDashboard() {
       setLoading(false);
       if (createForm.current) createForm.current.open = false;
     } catch (cause) {
-      setCreateError(cause instanceof Error ? cause.message : 'The deal could not be created.');
+      setCreateError(actionErrorMessage(cause, 'The deal could not be created.'));
     } finally {
       setCreating(false);
     }
@@ -208,7 +252,7 @@ export function DealsDashboard() {
     const deal = result?.items.find((item) => item.id === dealId);
     const toStage = requestedTarget ?? moveTargets[dealId];
     if (!deal || !toStage) return;
-    setMoveNotice(null);
+    setActionToast(null);
     setMovingDeal(dealId);
     try {
       await moveDealStage(deal.id, toStage, deal.version);
@@ -219,11 +263,18 @@ export function DealsDashboard() {
       setResult(refreshed);
       void refreshSummary();
       setMoveTargets((current) => ({ ...current, [dealId]: '' }));
-      setMoveNotice(`${deal.name} moved to ${STAGE_LABELS[toStage]}.`);
+      setActionToast({
+        kind: 'success',
+        message: `${deal.name} moved to ${STAGE_LABELS[toStage]}.`,
+      });
     } catch (cause) {
-      setMoveNotice(
-        cause instanceof Error ? cause.message : 'The deal stage could not be changed.',
-      );
+      setActionToast({
+        kind: 'error',
+        message: actionErrorMessage(
+          cause,
+          `Could not move ${deal.name}. Check the stage requirements and try again.`,
+        ),
+      });
     } finally {
       setMovingDeal(null);
     }
@@ -240,7 +291,7 @@ export function DealsDashboard() {
       const value = form.get(name);
       return typeof value === 'string' ? value : '';
     };
-    setUpdateNotice(null);
+    setActionToast(null);
     setUpdatingDeal(deal.id);
     try {
       const name = field('name').trim();
@@ -260,6 +311,11 @@ export function DealsDashboard() {
       if (expectedCloseTime !== (deal.expected_close_time?.slice(0, 5) ?? null)) {
         changes.expectedCloseTime = expectedCloseTime;
       }
+      if (Object.keys(changes).length === 0) {
+        setEditingDeal(null);
+        setActionToast({ kind: 'info', message: 'No changes to save.' });
+        return;
+      }
       const body = updateDealBodySchema.parse({ expectedVersion: deal.version, ...changes });
       await updateDeal(deal.id, body);
       const query = new URLSearchParams({ limit: String(PAGE_SIZE), offset: String(offset) });
@@ -267,11 +323,16 @@ export function DealsDashboard() {
       if (appliedSearch) query.set('search', appliedSearch);
       setResult(await readDeals(query));
       void refreshSummary();
-      setUpdateNotice(`${deal.name} updated.`);
-      const details = formElement.closest('details');
-      if (details) details.open = false;
+      setActionToast({ kind: 'success', message: `${deal.name} updated.` });
+      setEditingDeal(null);
     } catch (cause) {
-      setUpdateNotice(cause instanceof Error ? cause.message : 'The deal could not be updated.');
+      setActionToast({
+        kind: 'error',
+        message: actionErrorMessage(
+          cause,
+          `Could not save ${deal.name}. Check the details and try again.`,
+        ),
+      });
     } finally {
       setUpdatingDeal(null);
     }
@@ -605,34 +666,53 @@ export function DealsDashboard() {
       )}
 
       {result && result.items.length > 0 && (
-        <fieldset className="mt-4 flex flex-wrap items-center justify-between gap-3">
-          <legend className="sr-only">Deals view</legend>
-          <div className="inline-flex items-center gap-1 rounded-lg border border-line-subtle bg-surface-subtle p-1">
-            <Button
-              aria-pressed={view === 'list'}
-              onClick={() => setView('list')}
-              size="small"
-              type="button"
-              variant={view === 'list' ? 'primary' : 'quiet'}
-            >
-              List
-            </Button>
-            <Button
-              aria-pressed={view === 'board'}
-              onClick={() => setView('board')}
-              size="small"
-              type="button"
-              variant={view === 'board' ? 'primary' : 'quiet'}
-            >
-              Board
-            </Button>
-          </div>
-          {view === 'board' && (
-            <span className="text-xs text-fg-muted">
-              Drag cards between allowed stages. Use List for keyboard stage controls.
-            </span>
-          )}
-        </fieldset>
+        <>
+          <aside aria-label="Stage movement rules" className="material-card mt-4 p-4 text-sm">
+            <h3 className="font-semibold">How deal stages work</h3>
+            <ul className="mt-2 grid gap-2 text-fg-muted md:grid-cols-3">
+              <li>
+                <strong className="text-fg">IC Review → Signed:</strong> IC approval quorum moves an
+                approved deal to Signed automatically.
+              </li>
+              <li>
+                <strong className="text-fg">Signed → Closed:</strong> after signing, move it to
+                Closed. Deal size, sector, and expected close date are required.
+              </li>
+              <li>
+                <strong className="text-fg">Passed:</strong> use this outcome when a deal exits the
+                pipeline. It is separate from progression to Signed and Closed.
+              </li>
+            </ul>
+          </aside>
+          <fieldset className="mt-4 flex flex-wrap items-center justify-between gap-3">
+            <legend className="sr-only">Deals view</legend>
+            <div className="inline-flex items-center gap-1 rounded-lg border border-line-subtle bg-surface-subtle p-1">
+              <Button
+                aria-pressed={view === 'list'}
+                onClick={() => setView('list')}
+                size="small"
+                type="button"
+                variant={view === 'list' ? 'primary' : 'quiet'}
+              >
+                List
+              </Button>
+              <Button
+                aria-pressed={view === 'board'}
+                onClick={() => setView('board')}
+                size="small"
+                type="button"
+                variant={view === 'board' ? 'primary' : 'quiet'}
+              >
+                Board
+              </Button>
+            </div>
+            {view === 'board' && (
+              <span className="text-xs text-fg-muted">
+                Drag cards between allowed stages. Use List for keyboard stage controls.
+              </span>
+            )}
+          </fieldset>
+        </>
       )}
 
       {view === 'board' && result && result.items.length > 0 && (
@@ -640,6 +720,7 @@ export function DealsDashboard() {
           deals={result.items}
           disabled={loading || movingDeal !== null}
           onMove={(dealId, destination) => void moveStage(dealId, destination)}
+          onInvalidMove={(message) => setActionToast({ kind: 'info', message })}
         />
       )}
 
@@ -710,15 +791,32 @@ export function DealsDashboard() {
                               ...(deal.expected_close_date ? ['expected_close_date'] : []),
                             ])
                           : null;
+                        const missingFields =
+                          check && !check.ok && check.code === 'missing_fields'
+                            ? check.fields.map((field) => {
+                                switch (field) {
+                                  case 'amount':
+                                    return 'deal size';
+                                  case 'sector':
+                                    return 'sector';
+                                  case 'expected_close_date':
+                                    return 'expected close date';
+                                  default:
+                                    return field;
+                                }
+                              })
+                            : [];
+                        const moveHelpId = `move-help-${deal.id}`;
                         return destinations.length === 0 ? (
                           <span className="text-fg-muted">Final stage</span>
                         ) : (
-                          <div className="flex min-w-52 items-center gap-2">
+                          <div className="flex min-w-56 flex-col items-start gap-2">
                             <label className="sr-only" htmlFor={`move-stage-${deal.id}`}>
-                              Move {deal.name} to stage
+                              Next stage for {deal.name}
                             </label>
                             <SelectControl
-                              className="min-w-0 flex-1"
+                              aria-describedby={selected ? moveHelpId : undefined}
+                              className="w-full"
                               disabled={movingDeal === deal.id || loading}
                               id={`move-stage-${deal.id}`}
                               onChange={(event) => {
@@ -731,7 +829,7 @@ export function DealsDashboard() {
                               }}
                               value={selected}
                             >
-                              <option value="">Move to…</option>
+                              <option value="">Choose next stage…</option>
                               {destinations.map((destination) => (
                                 <option key={destination} value={destination}>
                                   {STAGE_LABELS[destination]}
@@ -739,130 +837,49 @@ export function DealsDashboard() {
                               ))}
                             </SelectControl>
                             <Button
-                              className="text-sm"
+                              className="w-full"
                               disabled={
                                 !selected ||
-                                check?.ok === false ||
+                                missingFields.length > 0 ||
                                 movingDeal === deal.id ||
                                 loading
                               }
                               onClick={() => void moveStage(deal.id)}
                               size="small"
                               type="button"
-                              variant="secondary"
+                              variant="primary"
                             >
-                              {movingDeal === deal.id ? 'Moving…' : 'Move'}
+                              {movingDeal === deal.id
+                                ? 'Moving deal…'
+                                : selected
+                                  ? `Move to ${STAGE_LABELS[selected]}`
+                                  : 'Choose a stage'}
                             </Button>
-                            {check && !check.ok && check.code === 'missing_fields' && (
-                              <span className="sr-only">
-                                Required fields missing: {check.fields.join(', ')}.
-                              </span>
-                            )}
+                            {selected ? (
+                              <p className="text-xs text-fg-muted" id={moveHelpId}>
+                                {missingFields.length > 0
+                                  ? `Add ${missingFields.join(' and ')} before moving to ${STAGE_LABELS[selected]}.`
+                                  : `Move from ${STAGE_LABELS[deal.stage]} to ${STAGE_LABELS[selected]}.`}
+                              </p>
+                            ) : null}
                           </div>
                         );
                       })()}
                     </td>
                     <td className="px-4 py-4">
-                      <details className="min-w-56 rounded-control border border-line p-2">
-                        <summary
-                          aria-label={`Edit ${deal.name}`}
-                          className="cursor-pointer font-medium outline-focus focus-visible:outline-2"
-                        >
-                          Edit deal
-                        </summary>
-                        <form
-                          className="mt-3 grid gap-3"
-                          onSubmit={(event) => void submitUpdate(event, deal)}
-                        >
-                          <label
-                            className="grid gap-1 text-xs font-medium"
-                            htmlFor={`update-name-${deal.id}`}
-                          >
-                            Name
-                            <Input
-                              defaultValue={deal.name}
-                              id={`update-name-${deal.id}`}
-                              maxLength={200}
-                              name="name"
-                              required
-                            />
-                          </label>
-                          <label
-                            className="grid gap-1 text-xs font-medium"
-                            htmlFor={`update-sector-${deal.id}`}
-                          >
-                            Sector
-                            <Input
-                              defaultValue={deal.sector ?? ''}
-                              id={`update-sector-${deal.id}`}
-                              maxLength={100}
-                              name="sector"
-                            />
-                          </label>
-                          <label
-                            className="grid gap-1 text-xs font-medium"
-                            htmlFor={`update-amount-${deal.id}`}
-                          >
-                            Deal size
-                            <Input
-                              defaultValue={majorAmountForInput(deal.amount, deal.currency)}
-                              id={`update-amount-${deal.id}`}
-                              inputMode="decimal"
-                              name="amount"
-                              type="text"
-                            />
-                          </label>
-                          <label
-                            className="grid gap-1 text-xs font-medium"
-                            htmlFor={`update-currency-${deal.id}`}
-                          >
-                            Currency
-                            <Input
-                              className="uppercase"
-                              defaultValue={deal.currency}
-                              id={`update-currency-${deal.id}`}
-                              maxLength={3}
-                              minLength={3}
-                              name="currency"
-                              pattern="[A-Z]{3}"
-                              required
-                            />
-                          </label>
-                          <label
-                            className="grid gap-1 text-xs font-medium"
-                            htmlFor={`update-close-date-${deal.id}`}
-                          >
-                            Expected close date
-                            <Input
-                              defaultValue={deal.expected_close_date ?? ''}
-                              id={`update-close-date-${deal.id}`}
-                              name="expectedCloseDate"
-                              type="date"
-                            />
-                          </label>
-                          <label
-                            className="grid gap-1 text-xs font-medium"
-                            htmlFor={`update-close-time-${deal.id}`}
-                          >
-                            Expected close time
-                            <Input
-                              defaultValue={deal.expected_close_time?.slice(0, 5) ?? ''}
-                              id={`update-close-time-${deal.id}`}
-                              name="expectedCloseTime"
-                              type="time"
-                            />
-                          </label>
-                          <Button
-                            className="text-sm"
-                            disabled={updatingDeal === deal.id}
-                            size="small"
-                            type="submit"
-                            variant="primary"
-                          >
-                            {updatingDeal === deal.id ? 'Saving…' : 'Save changes'}
-                          </Button>
-                        </form>
-                      </details>
+                      <Button
+                        aria-haspopup="dialog"
+                        aria-label={`Edit ${deal.name}`}
+                        onClick={() => {
+                          setActionToast(null);
+                          setEditingDeal(deal);
+                        }}
+                        size="small"
+                        type="button"
+                        variant="secondary"
+                      >
+                        Edit
+                      </Button>
                     </td>
                   </tr>
                 ))}
@@ -872,16 +889,137 @@ export function DealsDashboard() {
         </>
       )}
 
-      {moveNotice && (
-        <p aria-live="polite" className="mt-3 text-sm text-fg-muted">
-          {moveNotice}
-        </p>
-      )}
-      {updateNotice && (
-        <p aria-live="polite" className="mt-3 text-sm text-fg-muted">
-          {updateNotice}
-        </p>
-      )}
+      <dialog
+        aria-describedby={`${editId}-description`}
+        aria-labelledby={`${editId}-title`}
+        className="deal-edit-dialog"
+        onClose={() => setEditingDeal(null)}
+        ref={editDialogRef}
+      >
+        {editingDeal ? (
+          <form
+            className="deal-edit-form"
+            onSubmit={(event) => void submitUpdate(event, editingDeal)}
+          >
+            <header className="deal-edit-header">
+              <p className="page-heading-eyebrow">Deal details</p>
+              <h2 className="mt-1 text-xl font-semibold" id={`${editId}-title`}>
+                Edit {editingDeal.name}
+              </h2>
+              <p className="mt-1 text-sm text-fg-muted" id={`${editId}-description`}>
+                Update the core details used across your pipeline and reports.
+              </p>
+            </header>
+            <div className="deal-edit-fields">
+              <label htmlFor={`${editId}-name`}>
+                <span>Deal name</span>
+                <Input
+                  autoFocus
+                  defaultValue={editingDeal.name}
+                  id={`${editId}-name`}
+                  maxLength={200}
+                  name="name"
+                  required
+                />
+              </label>
+              <label htmlFor={`${editId}-sector`}>
+                <span>
+                  Sector <span className="text-fg-muted">(optional)</span>
+                </span>
+                <Input
+                  defaultValue={editingDeal.sector ?? ''}
+                  id={`${editId}-sector`}
+                  maxLength={100}
+                  name="sector"
+                />
+              </label>
+              <label htmlFor={`${editId}-amount`}>
+                <span>
+                  Deal size <span className="text-fg-muted">({editingDeal.currency})</span>
+                </span>
+                <Input
+                  defaultValue={majorAmountForInput(editingDeal.amount, editingDeal.currency)}
+                  id={`${editId}-amount`}
+                  inputMode="decimal"
+                  name="amount"
+                  type="text"
+                />
+                <span className="text-xs font-normal text-fg-muted">
+                  Enter the amount in major units; decimals are exact.
+                </span>
+              </label>
+              <label htmlFor={`${editId}-currency`}>
+                <span>Currency</span>
+                <Input
+                  className="uppercase"
+                  defaultValue={editingDeal.currency}
+                  id={`${editId}-currency`}
+                  maxLength={3}
+                  minLength={3}
+                  name="currency"
+                  pattern="[A-Z]{3}"
+                  required
+                />
+              </label>
+              <label htmlFor={`${editId}-close-date`}>
+                <span>
+                  Expected close date <span className="text-fg-muted">(optional)</span>
+                </span>
+                <Input
+                  defaultValue={editingDeal.expected_close_date ?? ''}
+                  id={`${editId}-close-date`}
+                  name="expectedCloseDate"
+                  type="date"
+                />
+              </label>
+              <label htmlFor={`${editId}-close-time`}>
+                <span>
+                  Expected close time <span className="text-fg-muted">(optional)</span>
+                </span>
+                <Input
+                  defaultValue={editingDeal.expected_close_time?.slice(0, 5) ?? ''}
+                  id={`${editId}-close-time`}
+                  name="expectedCloseTime"
+                  type="time"
+                />
+              </label>
+            </div>
+            <footer className="deal-edit-footer">
+              <Button
+                disabled={updatingDeal === editingDeal.id}
+                onClick={() => setEditingDeal(null)}
+                type="button"
+                variant="secondary"
+              >
+                Cancel
+              </Button>
+              <Button disabled={updatingDeal === editingDeal.id} type="submit" variant="primary">
+                {updatingDeal === editingDeal.id ? 'Saving…' : 'Save changes'}
+              </Button>
+            </footer>
+          </form>
+        ) : null}
+      </dialog>
+
+      {actionToast ? (
+        <aside
+          aria-atomic="true"
+          aria-live={actionToast.kind === 'error' ? 'assertive' : 'polite'}
+          className={`deal-action-toast deal-action-toast-${actionToast.kind}`}
+          role={actionToast.kind === 'error' ? 'alert' : 'status'}
+        >
+          <p>{actionToast.message}</p>
+          <Button
+            aria-label="Dismiss message"
+            onClick={() => setActionToast(null)}
+            size="small"
+            type="button"
+            variant="quiet"
+          >
+            Dismiss
+          </Button>
+        </aside>
+      ) : null}
 
       <div className="mt-4 flex items-center justify-between gap-4">
         <p className="text-sm text-fg-muted">

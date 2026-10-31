@@ -67,7 +67,7 @@ Then use `http://localhost:8081` and `http://localhost:8081/mail/` in the remain
 
 ### 4. Sign in and choose an organisation
 
-Open <http://localhost:8080> (or the port you selected), enter one account from the table below, and use the shared local password `Dev-only-demo-password-change-me`. On the first sign-in, choose the account’s organisation in the **Organisation** selector. Accounts belong to one tenant each; use an Asteron account for Asteron Capital or an Imbali account for Imbali Growth Partners. The selector appears in the top bar when more than one organisation is available to that account.
+Open <http://localhost:8080> (or the port you selected), enter one account from the table below, and use the shared local password `Dev-only-demo-password-change-me`. On the first sign-in, choose the account’s organisation in the **Organisation** selector. Accounts belong to one tenant each; use an Asteron account for Asteron Capital or an Imbali account for Imbali Growth Partners. The selector appears in the top bar when more than one organisation is available to that account. Sign-in opens **My Work**, the personalized dashboard. Select **Pipeline** for the organisation-wide deal view.
 
 The seeded accounts are confirmed development users, so they do not need an email verification step. Public sign-up is disabled in the local Compose environment. To inspect verification and invitation email flows, open the local Mailpit inbox at <http://localhost:8080/mail/>.
 
@@ -77,22 +77,30 @@ Use the **Dark mode** or **Light mode** button in the top bar to switch themes; 
 
 | Organisation | Account email | Role | Useful checks |
 | --- | --- | --- | --- |
-| Asteron Capital | `owner@asteron.example.test` | Owner | Manage roles, organisation settings, members, and deals |
-| Asteron Capital | `admin@asteron.example.test` | Admin | Manage members and review tenant settings without IC approval rights by default |
+| Asteron Capital | `owner@asteron.example.test` | Owner | Manage invitations, custom roles, organisation settings, and deals |
+| Asteron Capital | `admin@asteron.example.test` | Admin | Manage invitations and review tenant settings without IC approval rights by default |
 | Asteron Capital | `lead@asteron.example.test` | Deal Lead | Create and update pipeline deals, assignments, and stage movement |
 | Asteron Capital | `member@asteron.example.test` | Deal Team Member | Review assigned work and deal activity |
 | Asteron Capital | `ic@asteron.example.test` | IC Member | Review and decide IC approval requests |
 | Asteron Capital | `observer@asteron.example.test` | Observer / Compliance | Verify read-only pipeline and audit activity access |
-| Imbali Growth Partners | `owner@imbali.example.test` | Owner | Manage roles, organisation settings, members, and deals |
-| Imbali Growth Partners | `admin@imbali.example.test` | Admin | Manage members and review tenant settings without IC approval rights by default |
+| Imbali Growth Partners | `owner@imbali.example.test` | Owner | Manage invitations, custom roles, organisation settings, and deals |
+| Imbali Growth Partners | `admin@imbali.example.test` | Admin | Manage invitations and review tenant settings without IC approval rights by default |
 | Imbali Growth Partners | `lead@imbali.example.test` | Deal Lead | Create and update pipeline deals, assignments, and stage movement |
 | Imbali Growth Partners | `member@imbali.example.test` | Deal Team Member | Review assigned work and deal activity |
 | Imbali Growth Partners | `ic@imbali.example.test` | IC Member | Review and decide IC approval requests |
 | Imbali Growth Partners | `observer@imbali.example.test` | Observer / Compliance | Verify read-only pipeline and audit activity access |
 
-The account names and roles come from the development seed. Permissions are enforced by Postgres, so a role may see controls that are disabled or absent when it lacks the required permission. Use the Owner for the complete walkthrough, then sign out and try the Deal Lead, IC Member, and Observer accounts to compare edit, approval, and read-only access. The seed creates ten fictional deals across both organisations; close dates are relative to the seed date.
+The account names and roles come from the development seed. Permissions are enforced by Postgres, so a role may see controls that are disabled or absent when it lacks the required permission. Use the Owner for the complete walkthrough, then sign out and try the Deal Lead, IC Member, and Observer accounts to compare their personalized assignments, edit access, pending approvals, and read-only access. Login is limited to five submissions per client IP in a 15-minute window (and five per account); rapid role switching in one browser can reach that limit, so space the sign-ins during a live demo. The seed creates ten fictional deals across both organisations; close dates are relative to the seed date.
 
-### 6. Stop, restart, or reset the stack
+### 6. Walk through My Work, team access, and IC approvals
+
+**My Work** opens after sign-in. It shows your assigned deals with your responsibility on each, a stage progress indicator, any IC decisions awaiting your vote, and your recent notifications. Assignment is a responsibility label; it does not change tenant-wide deal visibility. Passed is shown as an outcome, while Closed is the completed end of the stage indicator. Use **Pipeline** for all organisation deals, filters, and Board/List views.
+
+After signing in as an Owner or Admin, select **Team** in the workspace navigation. Enter a teammate's work email, choose the role they should receive after accepting, and select **Send invitation**. The same page lists pending invitations and allows an authorized manager to revoke them. To exercise acceptance, use a separate browser session for the invited address and follow the link in Mailpit at <http://localhost:8080/mail/>. Invitation links expire after seven days. **Roles** is the separate place to review system permissions and create or edit custom roles.
+
+Select **Approvals** to see deals in **IC Review**, their quorum/decision state, and a link to open each deal's review controls. The final approval request and approve/reject decisions are made on the deal page. The development seed intentionally does not create a live approval request or decision, because those actions write immutable audit records. To see the full approval cycle, use an IC Review deal and submit a request as its Deal Lead; then sign in as an eligible IC Member to review it. **Team** lists accepted and deactivated members, their organisation roles, and outstanding invitations. Owners/Admins can invite a teammate with an eligible role; Owners can grant privileged roles. From the roster, managers can add/remove roles or confirm account deactivation. Self-role changes are disabled, and Postgres enforces tenant permissions, separation of duties, and last-Owner protection. Deactivated accounts remain listed for audit context; to restore access, send the person a new invitation.
+
+### 7. Stop, restart, or reset the stack
 
 Stop containers while preserving the local database and uploaded files:
 
@@ -170,7 +178,7 @@ GitHub Actions runs the quality, database, image, security-scan, and Compose smo
 
 ## Project completion and follow-ups
 
-The core features and owner-approved extended scope are complete. The final [feature walkthrough and decision rationale](docs/presentation/deal-pipeline-tracker-walkthrough.pptx) covers the product flows, architecture, safeguards, trade-offs, verification, and live demo path. Refreshed current-build UI evidence is indexed in [`docs/evidence/ui/`](docs/evidence/ui/README.md).
+The core features and owner-approved extended scope are implemented. Project closeout remains in progress until the live approval-cycle walkthrough and final PR checks are complete. The refreshed [20-slide feature walkthrough and decision rationale](docs/presentation/deal-pipeline-tracker-walkthrough.pptx) covers product flows, architecture, safeguards, trade-offs, verification, and a step-by-step live demo path. Current-build UI evidence is indexed in [`docs/evidence/ui/`](docs/evidence/ui/README.md).
 
 Environment-dependent follow-ups:
 

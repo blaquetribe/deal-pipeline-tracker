@@ -1,5 +1,5 @@
 import type { DashboardSummary } from '@dpt/shared';
-import { fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
@@ -77,6 +77,18 @@ describe('DealsDashboard', () => {
         cache: 'no-store',
       }),
     );
+  });
+
+  it('explains approval and outcome rules before a user moves a deal', async () => {
+    stubFetch({ total: 1, items: [{ ...deal, stage: 'ic_review' }] });
+    render(<DealsDashboard />);
+
+    const guidance = await screen.findByRole('complementary', { name: 'Stage movement rules' });
+    expect(guidance).toHaveTextContent(
+      'IC approval quorum moves an approved deal to Signed automatically.',
+    );
+    expect(guidance).toHaveTextContent('Deal size, sector, and expected close date are required.');
+    expect(guidance).toHaveTextContent('Passed: use this outcome when a deal exits the pipeline.');
   });
 
   it('filters the deal list when a pipeline stage count is selected', async () => {
@@ -350,12 +362,14 @@ describe('DealsDashboard', () => {
     await screen.findByRole('row', { name: /Northstar Systems/ });
 
     await user.selectOptions(
-      screen.getByRole('combobox', { name: 'Move Northstar Systems to stage' }),
+      screen.getByRole('combobox', { name: 'Next stage for Northstar Systems' }),
       'screening',
     );
-    await user.click(screen.getByRole('button', { name: 'Move' }));
+    await user.click(screen.getByRole('button', { name: 'Move to Screening' }));
 
-    expect(await screen.findByText('Northstar Systems moved to Screening.')).toBeVisible();
+    expect(await screen.findByRole('status')).toHaveTextContent(
+      'Northstar Systems moved to Screening.',
+    );
     const moveCall = fetch.mock.calls.find(([, init]) => init?.method === 'POST');
     expect(moveCall?.[0]).toBe('/api/deals/aaaaaaaa-0000-4000-8000-000000000001/stage');
     expect(moveCall?.[1]).toEqual(
@@ -401,12 +415,18 @@ describe('DealsDashboard', () => {
     const user = userEvent.setup();
     render(<DealsDashboard />);
     await screen.findByRole('row', { name: /Northstar Systems/ });
-    await user.click(screen.getByText('Edit deal'));
-    await user.clear(screen.getByRole('textbox', { name: 'Name' }));
-    await user.type(screen.getByRole('textbox', { name: 'Name' }), 'Northstar Updated');
+    await user.click(screen.getByRole('button', { name: 'Edit Northstar Systems' }));
+    expect(screen.getByRole('dialog', { name: 'Edit Northstar Systems' })).toBeVisible();
+    const dialog = screen.getByRole('dialog', { name: 'Edit Northstar Systems' });
+    await user.clear(within(dialog).getByRole('textbox', { name: 'Deal name' }));
+    await user.type(
+      within(dialog).getByRole('textbox', { name: 'Deal name' }),
+      'Northstar Updated',
+    );
     await user.click(screen.getByRole('button', { name: 'Save changes' }));
 
-    expect(await screen.findByText('Northstar Systems updated.')).toBeVisible();
+    expect(await screen.findByRole('status')).toHaveTextContent('Northstar Systems updated.');
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
     const updateCall = fetch.mock.calls.find(([, init]) => init?.method === 'PUT');
     expect(updateCall?.[0]).toBe('/api/deals/aaaaaaaa-0000-4000-8000-000000000001');
     expect(updateCall?.[1]).toEqual(
@@ -415,5 +435,21 @@ describe('DealsDashboard', () => {
       }),
     );
     await waitFor(() => expect(fetch).toHaveBeenCalledTimes(6));
+  });
+
+  it('shows a useful message and skips the update when no deal fields changed', async () => {
+    const fetch = stubFetch({ total: 1, items: [deal] });
+    const user = userEvent.setup();
+    render(<DealsDashboard />);
+    await screen.findByRole('row', { name: /Northstar Systems/ });
+    await user.click(screen.getByRole('button', { name: 'Edit Northstar Systems' }));
+    await user.click(screen.getByRole('button', { name: 'Save changes' }));
+
+    expect(await screen.findByRole('status')).toHaveTextContent('No changes to save.');
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+    expect(fetch).not.toHaveBeenCalledWith(
+      `/api/deals/${deal.id}`,
+      expect.objectContaining({ method: 'PUT' }),
+    );
   });
 });

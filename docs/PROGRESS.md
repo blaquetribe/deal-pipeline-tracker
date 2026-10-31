@@ -3,7 +3,7 @@
 Status: `not started` | `in progress` | `blocked` | `done` | `cut`
 Tier: **core** (must ship), **extended** (ship if time allows, else README note), **stretch**.
 
-**Overall status:** complete for the core features and owner-approved extended scope. Feature 07 document extraction remains optional stretch work. Production SMTP/R2 and cross-platform deployment checks remain environment-dependent follow-ups, not unimplemented local application features.
+**Overall status:** core and owner-approved application scope is implemented. Project closeout remains in progress: persistent Team/Approvals destinations, a user-context dashboard with deal progress, role-gated management, clearer stage transitions, and actionable notifications are implemented. The final light-theme UI fixes were rebuilt and visually reviewed. Screenshots 11–15 document the current seeded Team, Approvals, My Work, Pipeline, and mobile flows. The 20-slide walkthrough is refreshed and validated. Remaining closeout gates are a live Deal Lead/IC Member approval-cycle walkthrough, final diff review/commit, and PR checks. Feature 07 document extraction remains optional stretch work. Production SMTP/R2 and cross-platform deployment checks remain environment-dependent follow-ups, not unimplemented local application features.
 
 | # | Feature | Folder | Tier | Depends on | Status |
 |---|---|---|---|---|---|
@@ -16,6 +16,23 @@ Tier: **core** (must ship), **extended** (ship if time allows, else README note)
 | 06 | Seed and polish: two tenants, all roles, sample deals, README | `docs/features/06-seed-polish` | core | 03-05 | done (PR #16 merged to main after all required checks passed) |
 | 07 | Stretch: document extraction | `docs/features/07-stretch-extraction` | stretch | 03, 08 | not started |
 | 08 | Storage and avatars: ObjectStore port (fs + R2), files table, BFF-proxied files, avatars | `docs/features/08-storage-avatars` | extended | 02, 03 | done (PR #17 merged after all required CI checks passed; real R2 smoke needs bucket-scoped credentials) |
+
+## Current closeout gates
+- [x] Persistent Team invitations with role selection and pending invitations.
+- [x] Accepted-member roster, role management, and deactivation with database-enforced tenant/security invariants; reactivation clears stale roles.
+- [x] Persistent IC Approvals inbox with status and direct deal review links.
+- [x] Signed-in My Work dashboard with DB-filtered assignments, actionable decisions, personal updates, and canonical deal-stage progress; tenant-wide Pipeline remains separate.
+- [x] Refresh desktop/mobile evidence after the sign-in/dashboard UI fixes; the 390 px capture has no horizontal page overflow.
+- [x] Vertically centered sign-in and corrected My Work light-theme contrast during the live Owner walkthrough.
+- [x] Restrict full role permissions to role managers; keep only assignable role names in Team management.
+- [x] Replace the inline pipeline-row editor with a focused responsive dialog.
+- [x] Make notifications actionable: unread queue by default, direct deal link, explicit per-item/bulk read actions, and retained All history.
+- [x] Review role-management visibility and the deal edit dialog in the rebuilt light-theme Owner session.
+- [x] Complete Owner walkthrough of My Work, Pipeline, Team, and Approvals; screenshots 11–15 record the seeded read-only views.
+- [ ] Save a dedicated screenshot of the final light-theme edit dialog and role-gated navigation; these states were reviewed live but are not in the repository evidence set.
+- [ ] Walk through the approval cycle using Deal Lead and IC Member accounts; the Owner-only walkthrough seed currently has no live approval request.
+- [x] Refresh and validate the 20-slide walkthrough presentation after UI review; include it in the closeout commit.
+- [ ] Prepare a scoped commit/PR after the approval-path walkthrough and final review; only merge if required checks pass.
 
 CSP and security headers are **core** security work, scheduled in 00 (gateway, Hono headers) and 02 (nonce CSP in Next middleware); they are not on the cut list.
 
@@ -30,6 +47,11 @@ Not planned (mockup review, ADR 0009): Calendar and Reports pages, Next-steps ch
 Anything cut must be written in the README "what I'd do next" section.
 
 ## Log
+- 2026-10-31: the owner asked where the proper user-context dashboard, deal progress, and user-management flows were. Added caller-scoped My Work at `/`, kept organisation browsing at `/pipeline`, completed Team invitations, member roster/role/deactivation UI, and persistent Approvals. ADRs 0026–0027 and GOTCHAS rows 101–102 record security and outcome handling. A follow-up found and fixed stale role grants on invitation-based reactivation. Refreshed screenshots 11–15 from seeded Asteron. Verified 5 assignments, 4 active progress bars, one Passed terminal outcome, five accepted members, and no 390 px horizontal overflow. Full Vitest: 699 passed/1 skipped; pgTAP: 655 assertions/35 files; typecheck, lint, stylelint, format check, and rebuilt Compose app pass. Final owner walkthrough and presentation refresh remain open.
+- 2026-10-31: fixed the notification queue behavior after review found read items continuing to occupy the main notification view. Unread is now the default queue; cards provide Open deal and Mark as read, bulk read is available, and All preserves read history. The List and Board views show stage rules before interaction; rejected drops show an accessible toast. The Board separates progression from the Passed outcome. Full Vitest passes (707 passed/1 skipped); typecheck, lint, stylelint, format check, and production build pass. Rebuilt the web container and reviewed the stage rules and notification panel in the seeded Owner session. No database changes were made; pgTAP remains at 661 assertions/35 files. Updated Feature 03/05 and handoff notes. Refreshed screenshot evidence, full approval walkthrough, and final deck refresh remain in the closeout gate.
+- 2026-10-31: corrected stale closeout notes and refreshed the final walkthrough deck to 20 slides. Embedded Team, IC approvals, and My Work screenshots from the seeded Asteron workspace and added a live-demo path with speaker notes. Structural package validation, first-party re-import, slide geometry, and rendered review pass. Local app at port 8081 was verified with five assigned deals, four active stage indicators, and one Passed outcome without modifying the pre-existing port-8080 database. As an isolated demo check, the Owner configured a 1-of-1 quorum and the Deal Lead submitted a request; the subsequent IC sign-in reached the API's five-attempt-per-IP, 15-minute rate limit, so the independent IC decision was not verified. Do not reset the limiter to bypass it. Still open: save the final light-theme evidence, complete the IC decision walkthrough after cooldown, final review, commit, PR, and green required checks. `gh pr list` currently cannot reach `api.github.com`, so no current remote check result is claimed.
+- 2026-10-31: the invite and IC approval flows are now reachable from persistent Team and Approvals pages. The Team page also lists active/deactivated members and supports guarded role changes and confirmed deactivation. Its read RPC exposes profile PII only to authenticated same-tenant `member.manage` users. Invitation reactivation now clears old roles before applying the newly selected role. Captured read-only screenshots 11–12. See ADR 0027 and pgTAP tests 33–34.
+- 2026-10-31: restricted full role definitions to `role.manage` in Postgres and the API, routed owner role access through Team, and supplied member managers only minimal assignable role labels. Replaced the inline table-row deal editor with a native responsive dialog and repaired duplicate inline error feedback. ADR 0028 and GOTCHAS rows 103–104 document the decisions. The rebuilt Asteron app was reviewed in light mode: the edit dialog fits the viewport and shows a compact table behind the overlay; Team shows the role-management link for the Owner, while Roles is absent from shared navigation. No deal or team data was changed. Full Vitest: 701 passed/1 skipped; pgTAP: 661 assertions across 35 files; typecheck, lint, stylelint, format check pass. Refreshed screenshot evidence for these two fixes remains open, as does the final walkthrough deck refresh.
 - Planning complete; docs scaffold created. No application code yet.
 - ADR 0002 and 0003 written; org engineering standards adopted with a project overlay; markup, testing and container standards added; GOTCHAS and security standards synced.
 - ADR 0005-0007: oxlint/oxfmt + hooks, Tailwind + `packages/ui` design layer, TanStack Query kept over alova; onboarding flow designed (feature 02).

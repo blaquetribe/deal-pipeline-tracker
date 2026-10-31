@@ -19,6 +19,7 @@ export function createRoleRoutes({ userRpc }: RoleRoutesOptions): Route[] {
     method: 'GET',
     path: '/roles',
     body: noBody,
+    permission: 'role.manage',
     handler: async ({ session }) => {
       if (!session.tenantId) {
         throw new HttpError(409, 'tenant_required', 'Choose an organisation to view its roles.');
