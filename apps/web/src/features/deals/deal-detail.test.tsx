@@ -89,8 +89,10 @@ describe('DealDetail', () => {
         const response = url.endsWith('/activity')
           ? activity
           : url.endsWith('/approval')
-            ? approvalStatus
-            : { ...deal, stage: 'ic_review' };
+            ? { ...approvalStatus, canConfigure: true }
+            : url.endsWith('/approval-policy')
+              ? { requiredApprovals: 1, delegationEnabled: false }
+              : { ...deal, stage: 'ic_review' };
         return new Response(JSON.stringify(response), {
           status: 200,
           headers: { 'Content-Type': 'application/json' },
@@ -102,10 +104,14 @@ describe('DealDetail', () => {
 
     expect(
       await screen.findByText(
-        'No IC approval request has been submitted. A Deal Lead or another user with approval-request access must submit it from this section.',
+        'No IC approval request has been submitted. This session cannot submit it. Ask a Deal Lead or another authorized requester to open this deal and select “Request IC approval” in this section.',
       ),
     ).toBeVisible();
     expect(screen.queryByRole('button', { name: 'Request IC approval' })).not.toBeInTheDocument();
+    expect(screen.getByRole('link', { name: 'Find a Deal Lead in Team' })).toHaveAttribute(
+      'href',
+      '/team',
+    );
   });
 
   it('posts a note, then refreshes the authoritative activity timeline', async () => {

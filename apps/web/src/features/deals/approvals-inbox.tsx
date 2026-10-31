@@ -89,8 +89,8 @@ export function ApprovalsInbox() {
               {approval.requestId
                 ? `${approval.approvedCount} approved · ${approval.pendingCount} pending · ${approval.rejectedCount} rejected`
                 : approval.canRequest
-                  ? 'No request yet. Open the deal to request IC approval.'
-                  : 'No request yet. A Deal Lead or another authorized requester must submit it from the deal.'}
+                  ? 'No request yet. Open the deal and select “Request IC approval” in its IC approval section.'
+                  : 'No request yet. Ask a Deal Lead or authorized requester to open the deal and select “Request IC approval” in its IC approval section.'}
               {approval.requiredApprovals ? ` · ${approval.requiredApprovals} required` : ''}
             </p>
           </div>

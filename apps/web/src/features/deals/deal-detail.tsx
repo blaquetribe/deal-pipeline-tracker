@@ -432,10 +432,21 @@ export function DealDetail({ dealId }: DealDetailProps) {
             </form>
           ) : null}
           {deal.stage === 'ic_review' && !approval.requestId && !approval.canRequest ? (
-            <p className="mt-4 text-sm text-fg-muted">
-              No IC approval request has been submitted. A Deal Lead or another user with
-              approval-request access must submit it from this section.
-            </p>
+            <div className="mt-4 space-y-2 text-sm text-fg-muted">
+              <p>
+                No IC approval request has been submitted. This session cannot submit it. Ask a Deal
+                Lead or another authorized requester to open this deal and select “Request IC
+                approval” in this section.
+              </p>
+              {approval.canConfigure ? (
+                <Link
+                  className="inline-flex text-brand-fg underline underline-offset-4"
+                  href="/team"
+                >
+                  Find a Deal Lead in Team
+                </Link>
+              ) : null}
+            </div>
           ) : null}
           {approval.canRequest ? (
             <div className="mt-4">

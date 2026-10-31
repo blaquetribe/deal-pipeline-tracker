@@ -83,7 +83,7 @@ describe('ApprovalsInbox', () => {
 
     expect(
       await screen.findByText(
-        'No request yet. A Deal Lead or another authorized requester must submit it from the deal.',
+        'No request yet. Ask a Deal Lead or authorized requester to open the deal and select “Request IC approval” in its IC approval section.',
       ),
     ).toBeVisible();
   });
@@ -108,7 +108,9 @@ describe('ApprovalsInbox', () => {
     render(<ApprovalsInbox />);
 
     expect(
-      await screen.findByText('No request yet. Open the deal to request IC approval.'),
+      await screen.findByText(
+        'No request yet. Open the deal and select “Request IC approval” in its IC approval section.',
+      ),
     ).toBeVisible();
   });
 
