@@ -906,6 +906,20 @@ export function DealsDashboard() {
                 Update the core details used across your pipeline and reports.
               </p>
             </header>
+            {editingDeal.stage === 'ic_review' ? (
+              <aside className="rounded-control border border-line bg-surface-raised p-3">
+                <p className="text-sm text-fg-muted">
+                  Need to request an IC decision? Approval requests are managed in the deal’s IC
+                  approval section.
+                </p>
+                <Link
+                  className="mt-2 inline-block text-sm font-medium text-brand-fg underline underline-offset-4 focus-visible:outline-2"
+                  href={`/deals/${editingDeal.id}#approval-title`}
+                >
+                  Open IC approval
+                </Link>
+              </aside>
+            ) : null}
             <div className="deal-edit-fields">
               <label htmlFor={`${editId}-name`}>
                 <span>Deal name</span>

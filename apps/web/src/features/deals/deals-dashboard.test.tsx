@@ -96,6 +96,22 @@ describe('DealsDashboard', () => {
     expect(guidance).toHaveTextContent('Passed: use this outcome when a deal exits the pipeline.');
   });
 
+  it('links IC Review deal editing to the approval request section', async () => {
+    stubFetch({ total: 1, items: [{ ...deal, stage: 'ic_review' }] });
+    const user = userEvent.setup();
+    render(<DealsDashboard />);
+
+    await screen.findByRole('row', { name: /Northstar Systems/ });
+    await user.click(screen.getByRole('button', { name: 'Edit Northstar Systems' }));
+
+    const dialog = screen.getByRole('dialog', { name: 'Edit Northstar Systems' });
+    expect(dialog).toHaveTextContent('Need to request an IC decision?');
+    expect(within(dialog).getByRole('link', { name: 'Open IC approval' })).toHaveAttribute(
+      'href',
+      `/deals/${deal.id}#approval-title`,
+    );
+  });
+
   it('filters the deal list when a pipeline stage count is selected', async () => {
     const fetch = stubFetch({ total: 1, items: [deal] });
     const user = userEvent.setup();

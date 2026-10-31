@@ -320,7 +320,7 @@ Running log feeding the README reflection required by the brief. Add an entry pe
 
 
 ### 2026-10-31 / IC approval request discoverability
-- **What Codex did:** made the approval request path explicit from Pipeline: stage guidance now says to open an IC Review deal and request approval in its IC approval section; each IC Review row links directly to that section. The role-gated deal-page action is labelled “Request IC approval” and now explains who receives it and which quorum applies.
+- **What Codex did:** made the approval request path explicit from Pipeline: stage guidance now says to open an IC Review deal and request approval in its IC approval section; each IC Review row and the IC Review edit dialog link directly to that section. The role-gated deal-page action is labelled “Request IC approval” and now explains who receives it and which quorum applies.
 - **What the human decided or corrected:** pointed out that the UI described quorum-driven signing but gave no visible request path, and challenged the lack of approval request in the edit experience.
-- **How it was verified:** component coverage checks the row link target, guidance copy, role-gated request button, and API submission path. Existing Postgres and API authorization remain unchanged.
+- **How it was verified:** component coverage checks the row and edit-dialog link targets, guidance copy, role-gated request button, and API submission path. Existing Postgres and API authorization remain unchanged.
 - **What went wrong or was surprising:** the request action already existed on the deal detail page, but the pipeline never connected its IC Review guidance to that action; the label “Submit for approval” also did not match the language used elsewhere.
