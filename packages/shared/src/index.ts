@@ -15,6 +15,9 @@ export { daysUntil, formatCloseCountdown } from './countdown';
 export { dealFilesResponseSchema, fileUploadResponseSchema } from './files';
 export {
   dashboardSummarySchema,
+  myWorkDealSchema,
+  myWorkQuerySchema,
+  myWorkResponseSchema,
   approvalAbsenceBodySchema,
   approvalAbsencesResponseSchema,
   approvalDecisionBodySchema,
@@ -44,6 +47,9 @@ export {
 } from './deals';
 export type {
   DashboardSummary,
+  MyWorkDeal,
+  MyWorkQuery,
+  MyWorkResponse,
   ApprovalAbsence,
   ApprovalDelegation,
   ApprovalReassignmentOptions,
@@ -62,6 +68,8 @@ export type {
 } from './deals';
 export {
   authSessionResponseSchema,
+  assignableRoleSchema,
+  assignableRolesResponseSchema,
   loginBodySchema,
   invitationAcceptBodySchema,
   invitationPreviewBodySchema,
@@ -69,6 +77,7 @@ export {
   invitationRegistrationBodySchema,
   invitationRegistrationResponseSchema,
   inviteMemberBodySchema,
+  memberRoleBodySchema,
   onboardingStateResponseSchema,
   defaultsBodySchema,
   organisationBodySchema,
@@ -83,6 +92,8 @@ export {
   tenantSelectionBodySchema,
   tenantChoicesResponseSchema,
   pendingInvitationsResponseSchema,
+  teamMemberSchema,
+  teamMembersResponseSchema,
   tokenSchema,
   verifyBodySchema,
 } from './auth';
@@ -95,11 +106,15 @@ export {
   tenantRolesCatalogResponseSchema,
 } from './roles';
 export type { CustomRoleBody, Permission, TenantRole, TenantRolesCatalogResponse } from './roles';
+export type { AssignableRole } from './auth';
 export type {
   InvitationPreviewResponse,
   LoginBody,
   OnboardingStateResponse,
   PendingInvitationsResponse,
+  TeamMember,
+  TeamMembersResponse,
+  MemberRoleBody,
   SignupBody,
   TenantChoicesResponse,
 } from './auth';

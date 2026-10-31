@@ -157,13 +157,16 @@ export function RoleManagement() {
       {catalog && (
         <ul className="grid gap-3 sm:grid-cols-2" aria-label="Roles">
           {catalog.roles.map((role) => (
-            <li className="material-card flex flex-col gap-3 p-4" key={role.id}>
+            <li className="role-card material-card flex flex-col gap-3 p-4" key={role.id}>
               <div className="flex items-start justify-between gap-3">
                 <div>
                   <h3 className="font-semibold">{role.name}</h3>
-                  <p className="text-sm text-fg-muted">
-                    {role.isSystem ? 'System role' : 'Custom role'} · {roleDescription(role)}
-                  </p>
+                  <div className="mt-2 flex flex-wrap items-center gap-2">
+                    <span className="role-kind-badge">
+                      {role.isSystem ? 'System role' : 'Custom role'}
+                    </span>
+                    <span className="text-sm text-fg-muted">{roleDescription(role)}</span>
+                  </div>
                 </div>
                 {!role.isSystem && catalog.canManageRoles && (
                   <Button

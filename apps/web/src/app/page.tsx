@@ -1,14 +1,14 @@
-import { DealsDashboard } from '../features/deals';
+import { MyWorkDashboard } from '../features/deals';
 import { AppShell, PageHeading } from '../features/shell';
 
 export default function HomePage() {
   return (
-    <AppShell currentPage="pipeline">
+    <AppShell currentPage="my-work">
       <PageHeading
-        title="Deal pipeline"
-        description="A clear view of opportunities across your organisation."
+        title="My workspace"
+        description="Your assigned work, decisions, and updates in one place."
       />
-      <DealsDashboard />
+      <MyWorkDashboard />
     </AppShell>
   );
 }

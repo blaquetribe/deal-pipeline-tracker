@@ -5,7 +5,7 @@ import type {
   Stage,
   UpdateDealBody,
 } from '@dpt/shared';
-import { act, render, screen, waitFor } from '@testing-library/react';
+import { act, render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
@@ -85,12 +85,14 @@ describe('DealsDashboard interactions', () => {
     await screen.findByRole('row', { name: /Northstar Systems/ });
 
     await user.selectOptions(
-      screen.getByRole('combobox', { name: 'Move Northstar Systems to stage' }),
+      screen.getByRole('combobox', { name: 'Next stage for Northstar Systems' }),
       'screening',
     );
 
-    expect(screen.getByText('Required fields missing: amount, sector.')).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'Move' })).toBeDisabled();
+    expect(
+      screen.getByText('Add deal size and sector before moving to Screening.'),
+    ).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Move to Screening' })).toBeDisabled();
     expect(api.moveDealStage).not.toHaveBeenCalled();
   });
 
@@ -101,7 +103,7 @@ describe('DealsDashboard interactions', () => {
     await screen.findByRole('row', { name: /Northstar Systems/ });
 
     expect(screen.getByText('Final stage')).toBeVisible();
-    expect(screen.queryByRole('button', { name: 'Move' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /Move to/ })).not.toBeInTheDocument();
   });
 
   it('creates a deal with omitted optional fields and refreshes the list', async () => {
@@ -205,12 +207,14 @@ describe('DealsDashboard interactions', () => {
     await screen.findByRole('row', { name: /Northstar Systems/ });
 
     await user.selectOptions(
-      screen.getByRole('combobox', { name: 'Move Northstar Systems to stage' }),
+      screen.getByRole('combobox', { name: 'Next stage for Northstar Systems' }),
       'screening',
     );
-    await user.click(screen.getByRole('button', { name: 'Move' }));
+    await user.click(screen.getByRole('button', { name: 'Move to Screening' }));
 
-    expect(await screen.findByText('The transition is no longer available.')).toBeVisible();
+    expect(await screen.findByRole('alert')).toHaveTextContent(
+      'The transition is no longer available.',
+    );
     expect(screen.getByRole('row', { name: /Northstar Systems/ })).toBeVisible();
   });
 
@@ -220,12 +224,18 @@ describe('DealsDashboard interactions', () => {
     render(<DealsDashboard />);
     await screen.findByRole('row', { name: /Northstar Systems/ });
 
-    await user.click(screen.getByText('Edit deal'));
-    await user.clear(screen.getByRole('textbox', { name: 'Name' }));
-    await user.type(screen.getByRole('textbox', { name: 'Name' }), 'Northstar Updated');
+    await user.click(screen.getByRole('button', { name: 'Edit Northstar Systems' }));
+    const dialog = screen.getByRole('dialog', { name: 'Edit Northstar Systems' });
+    await user.clear(within(dialog).getByRole('textbox', { name: 'Deal name' }));
+    await user.type(
+      within(dialog).getByRole('textbox', { name: 'Deal name' }),
+      'Northstar Updated',
+    );
     await user.click(screen.getByRole('button', { name: 'Save changes' }));
 
-    expect(await screen.findByText('The deal changed. Reload and try again.')).toBeVisible();
+    expect(await screen.findByRole('alert')).toHaveTextContent(
+      'The deal changed. Reload and try again.',
+    );
     expect(api.updateDeal).toHaveBeenCalledWith(
       deal.id,
       expect.objectContaining({ expectedVersion: deal.version, name: 'Northstar Updated' }),

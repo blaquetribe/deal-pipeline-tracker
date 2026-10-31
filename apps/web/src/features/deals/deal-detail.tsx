@@ -331,7 +331,10 @@ export function DealDetail({ dealId }: DealDetailProps) {
     <div className="space-y-8">
       <PageHeading
         eyebrow={
-          <Link className="text-sm text-fg-muted underline focus-visible:outline-2" href="/">
+          <Link
+            className="text-sm text-fg-muted underline focus-visible:outline-2"
+            href="/pipeline"
+          >
             Back to deals
           </Link>
         }
@@ -340,7 +343,7 @@ export function DealDetail({ dealId }: DealDetailProps) {
         action={<StageBadge stage={deal.stage} />}
       />
 
-      <section aria-labelledby="overview-title" className="material-card p-5">
+      <section aria-labelledby="overview-title" className="deal-overview material-card p-5">
         <h2 className="text-xl font-semibold" id="overview-title">
           Overview
         </h2>

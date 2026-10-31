@@ -18,6 +18,8 @@ import {
   dealActivityResponseSchema,
   dealListQuerySchema,
   dealListResponseSchema,
+  myWorkQuerySchema,
+  myWorkResponseSchema,
   setDealAssigneesBodySchema,
   updateDealBodySchema,
 } from './deals';
@@ -260,6 +262,36 @@ describe('deal list schemas', () => {
     expect(() => dealListQuerySchema.parse({ stage: 'unknown' })).toThrow(/Invalid option/);
     expect(() => dealListQuerySchema.parse({ tenantId: userA })).toThrow(/tenantId/);
     expect(() => dealListQuerySchema.parse({ limit: '101' })).toThrow(/100/);
+  });
+
+  it('validates bounded personal-work paging and exact assigned-deal fields', () => {
+    expect(myWorkQuerySchema.parse({ limit: '20' })).toEqual({ limit: 20, offset: 0 });
+    expect(() => myWorkQuerySchema.parse({ tenantId: userA })).toThrow(/tenantId/);
+    expect(() => myWorkQuerySchema.parse({ offset: '-1' })).toThrow(/offset/);
+    expect(
+      myWorkResponseSchema.parse({
+        total: 1,
+        activeCount: 1,
+        items: [
+          {
+            id: userA,
+            name: 'Northstar',
+            stage: 'due_diligence',
+            version: 2,
+            sector: 'Technology',
+            amount: '12500',
+            currency: 'ZAR',
+            expected_close_date: '2027-03-31',
+            expected_close_time: null,
+            created_at: '2026-10-31T10:00:00+00:00',
+            assignment_role: 'lead',
+          },
+        ],
+      }).items[0]?.assignment_role,
+    ).toBe('lead');
+    expect(() => myWorkResponseSchema.parse({ total: 1, activeCount: 1, items: null })).toThrow(
+      /items/,
+    );
   });
 
   it('preserves money as integer text and validates close dates and times', () => {

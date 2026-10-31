@@ -69,7 +69,7 @@ describe('role routes', () => {
       { method: 'PUT', path: '/roles/:roleId', access: 'session' },
     ]);
     expect(routes.map(({ permission }) => permission)).toEqual([
-      undefined,
+      'role.manage',
       'role.manage',
       'role.manage',
     ]);

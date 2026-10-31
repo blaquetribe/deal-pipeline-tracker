@@ -1,15 +1,21 @@
 -- Feature 04: tenant role definitions are manageable only through guarded, audited functions.
 begin;
-select plan(24);
+select plan(30);
 
 select has_function('public', 'tenant_roles_catalog', array['uuid'],
-  'members can read the role catalog for their active tenant');
+  'Owners can read the role catalog for their active tenant');
+select has_function('public', 'tenant_invitable_roles', array['uuid'],
+  'member managers receive a limited assignable-role list');
 select has_function('public', 'save_custom_role', array['uuid', 'uuid', 'text', 'text[]'],
   'role managers have a transactional custom-role save function');
 select ok(
   has_function_privilege('authenticated', 'public.tenant_roles_catalog(uuid)', 'EXECUTE')
+  and has_function_privilege('authenticated', 'public.tenant_invitable_roles(uuid)', 'EXECUTE')
   and has_function_privilege('authenticated', 'public.save_custom_role(uuid,uuid,text,text[])', 'EXECUTE')
   and not has_function_privilege('anon', 'public.tenant_roles_catalog(uuid)', 'EXECUTE')
+  and not has_function_privilege('service_role', 'public.tenant_roles_catalog(uuid)', 'EXECUTE')
+  and not has_function_privilege('anon', 'public.tenant_invitable_roles(uuid)', 'EXECUTE')
+  and not has_function_privilege('service_role', 'public.tenant_invitable_roles(uuid)', 'EXECUTE')
   and not has_function_privilege('anon', 'public.save_custom_role(uuid,uuid,text,text[])', 'EXECUTE')
   and not has_function_privilege('service_role', 'public.save_custom_role(uuid,uuid,text,text[])', 'EXECUTE')
   and not has_function_privilege('public', 'public.save_custom_role(uuid,uuid,text,text[])', 'EXECUTE'),
@@ -41,6 +47,10 @@ insert into public.membership_roles (tenant_id, membership_id, role_id)
 select m.tenant_id, m.id, r.id from public.memberships m
 join public.roles r on r.tenant_id = m.tenant_id and r.key = 'deal_lead'
 where m.user_id = '28282828-0000-4000-8000-000000000002' and m.tenant_id = '28282828-0000-4000-8000-00000000000a';
+insert into public.membership_roles (tenant_id, membership_id, role_id)
+select m.tenant_id, m.id, r.id from public.memberships m
+join public.roles r on r.tenant_id = m.tenant_id and r.key = 'admin'
+where m.user_id = '28282828-0000-4000-8000-000000000002' and m.tenant_id = '28282828-0000-4000-8000-00000000000a';
 
 create temporary table custom_role_test_ids (name text primary key, id uuid);
 grant all on custom_role_test_ids to public;
@@ -52,6 +62,8 @@ select is((public.tenant_roles_catalog('28282828-0000-4000-8000-00000000000a')->
   true, 'role catalog reports that an Owner can manage roles');
 select is(jsonb_array_length(public.tenant_roles_catalog('28282828-0000-4000-8000-00000000000a')->'roles'),
   6, 'catalog lists the tenant system roles');
+select ok(jsonb_path_exists(public.tenant_invitable_roles('28282828-0000-4000-8000-00000000000a'),
+  '$.roles[*] ? (@.key == "owner")'), 'Owner can manage invitations using the Owner role catalog');
 select throws_ok($$select public.tenant_roles_catalog('28282828-0000-4000-8000-00000000000b')$$,
   '42501', 'permission denied', 'cross-tenant catalog access is denied');
 insert into custom_role_test_ids
@@ -105,8 +117,17 @@ select throws_ok($$select public.save_custom_role('28282828-0000-4000-8000-00000
   '42501', 'permission denied', 'role manager cannot create roles in another tenant');
 
 select set_config('request.jwt.claims', '{"sub":"28282828-0000-4000-8000-000000000002"}', true);
-select is((public.tenant_roles_catalog('28282828-0000-4000-8000-00000000000a')->>'canManageRoles')::boolean,
-  false, 'ordinary member cannot manage roles');
+select throws_ok($$select public.tenant_roles_catalog('28282828-0000-4000-8000-00000000000a')$$,
+  '42501', 'permission denied', 'member manager cannot read the full permission catalog');
+select is((public.tenant_invitable_roles('28282828-0000-4000-8000-00000000000a')->>'canManageRoles')::boolean,
+  false, 'member manager receives assignable roles without role-management access');
+select ok(not jsonb_path_exists(public.tenant_invitable_roles('28282828-0000-4000-8000-00000000000a'),
+  '$.roles[*] ? (@.key == "owner" || @.key == "admin")'),
+  'member manager receives no Owner or Admin role choices');
+select ok(not jsonb_path_exists(public.tenant_invitable_roles('28282828-0000-4000-8000-00000000000a'),
+  '$.roles[*].permissions'), 'assignable role response does not disclose permission definitions');
+select throws_ok($$select public.tenant_invitable_roles('28282828-0000-4000-8000-00000000000b')$$,
+  '42501', 'permission denied', 'assignable-role lookup remains tenant scoped');
 select throws_ok($$select public.save_custom_role('28282828-0000-4000-8000-00000000000a', null, 'Member Role', array['deal.view'])$$,
   '42501', 'permission denied', 'ordinary member cannot create custom roles');
 

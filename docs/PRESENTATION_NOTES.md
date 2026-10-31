@@ -2,6 +2,10 @@
 
 Source material for the team presentation. Each item: the problem, the resolution, where it is enforced, how we prove it, and the trade-off. "Verify" marks claims that must be confirmed by a spike or test before we present them as fact.
 
+## Current walkthrough deck
+
+The final 20-slide walkthrough is [deal-pipeline-tracker-walkthrough.pptx](presentation/deal-pipeline-tracker-walkthrough.pptx). It includes current-build UI captures for Team, Approvals, and My Work, identity and deal flows, architecture, security model, realtime, storage and the upload fix, responsive UI decisions, verification results, documented limits, and a step-by-step live demo path. Presenter notes on each slide carry the talk track and source files. The deck is validated and staged in the repository; it still needs the closeout commit and PR.
+
 ## Suggested talk track
 1. The brief in one slide: what was asked, what was deliberately left open.
 2. Architecture: UI -> gateway -> Hono -> Supabase; why the UI knows nothing of Supabase.

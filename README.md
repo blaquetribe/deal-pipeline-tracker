@@ -4,42 +4,138 @@ A multi-tenant, authentication-gated investment pipeline for a small financial t
 
 This is a local take-home project. It contains fictional companies and synthetic identities only; it is not affiliated with CVC Capital Partners and is not configured for production use.
 
-## Run locally
+## Run the local development stack
 
-Prerequisites: Docker Desktop or Docker Engine with the Compose plugin, `curl`, and a browser. The first run builds the app images and pulls the database, auth, mail, and gateway images. Allow several minutes and a few gigabytes of free disk; allocating about 8 GB of memory to Docker is a practical starting point for the full stack.
+Follow these steps from the repository root. The Compose stack runs the web app, API, database, authentication service, realtime service, gateway, Mailpit, migrations, and demo seed. Only the gateway is exposed to your host. The first build downloads images and compiles the app; allow several minutes and a few gigabytes of free disk. About 8 GB of memory is a practical starting point for the complete stack.
+
+### 1. Start Docker or Podman
+
+On macOS, open Docker Desktop and wait until its engine reports that it is running. If you use Podman, start its virtual machine when it is stopped:
 
 ```sh
-docker compose up --build
+podman machine list
+podman machine start
+podman compose version
 ```
 
-Open <http://localhost:8080> and sign in with one of the demo accounts:
+On Linux with Docker Engine, confirm Compose is available:
 
-| Tenant | Email | Role |
-| --- | --- | --- |
-| Asteron Capital | `owner@asteron.example.test` | Owner |
-| Asteron Capital | `admin@asteron.example.test` | Admin |
-| Asteron Capital | `lead@asteron.example.test` | Deal Lead |
-| Asteron Capital | `member@asteron.example.test` | Deal Team Member |
-| Asteron Capital | `ic@asteron.example.test` | IC Member |
-| Asteron Capital | `observer@asteron.example.test` | Observer / Compliance |
-| Imbali Growth Partners | `owner@imbali.example.test` | Owner |
-| Imbali Growth Partners | `admin@imbali.example.test` | Admin |
-| Imbali Growth Partners | `lead@imbali.example.test` | Deal Lead |
-| Imbali Growth Partners | `member@imbali.example.test` | Deal Team Member |
-| Imbali Growth Partners | `ic@imbali.example.test` | IC Member |
-| Imbali Growth Partners | `observer@imbali.example.test` | Observer / Compliance |
+```sh
+docker compose version
+```
 
-The local-only password for all demo accounts is `Dev-only-demo-password-change-me`. Override it by setting `SEED_DEMO_PASSWORD` in an untracked `.env` before startup. The seed job resets these fixed demo account passwords on each run. To start without sample accounts, set `SEED_DEV_DATA=false` in `.env`; public sign-up remains disabled in this compose environment.
+Use the same Compose command in every step below: `docker compose` for Docker Desktop/Engine or `podman compose` for Podman. Compose includes development-only defaults, so a fresh checkout does not require a `.env` file. If you prefer per-machine generated secrets, run `make env` before startup; this writes only to the ignored `.env` file.
 
-The sample data has ten fictional deals across both tenants and several pipeline stages. Dates are generated relative to the day the seed runs, so closing-soon examples remain useful. The local Mailpit inbox is available at <http://localhost:8080/mail/>.
+### 2. (Optional) Set a private local demo password
 
-To stop the stack, press `Ctrl-C`. To remove containers and erase the local database volume, run:
+All seeded users share a development-only password by default. To use a different one, create or edit the ignored `.env` file in the repository root **before the first startup** and add:
+
+```dotenv
+SEED_DEMO_PASSWORD=choose-a-local-password-at-least-12-characters
+```
+
+The seed job sets this password on each run. To apply a changed password to an already-created local stack, recreate only that job:
+
+```sh
+docker compose up --force-recreate demo-seed
+```
+
+Replace `docker compose` with `podman compose` when using Podman. Keep `.env` private and never use the demo password outside local development.
+
+### 3. Build and start the application
+
+Start the stack in the background:
+
+```sh
+docker compose up --build -d
+```
+
+Use `podman compose up --build -d` for Podman. The first start applies every migration, creates the demo accounts and sample deals, then starts the API and gateway. Wait for the gateway, web, API, and Mailpit services to report healthy; `migrate` and `demo-seed` should show as completed successfully:
+
+```sh
+docker compose ps
+curl --fail --show-error http://localhost:8080/api/health
+```
+
+If port 8080 is already in use, start on another port. For example:
+
+```sh
+GATEWAY_PORT=8081 docker compose up --build -d
+```
+
+Then use `http://localhost:8081` and `http://localhost:8081/mail/` in the remaining steps. The gateway is the only service that publishes a host port.
+
+### 4. Sign in and choose an organisation
+
+Open <http://localhost:8080> (or the port you selected), enter one account from the table below, and use the shared local password `Dev-only-demo-password-change-me`. On the first sign-in, choose the account’s organisation in the **Organisation** selector. Accounts belong to one tenant each; use an Asteron account for Asteron Capital or an Imbali account for Imbali Growth Partners. The selector appears in the top bar when more than one organisation is available to that account. Sign-in opens **My Work**, the personalized dashboard. Select **Pipeline** for the organisation-wide deal view.
+
+The seeded accounts are confirmed development users, so they do not need an email verification step. Public sign-up is disabled in the local Compose environment. To inspect verification and invitation email flows, open the local Mailpit inbox at <http://localhost:8080/mail/>.
+
+Use the **Dark mode** or **Light mode** button in the top bar to switch themes; your choice is saved in a browser cookie. The account menu also provides **Change photo**. Select a PNG, JPEG, or WebP file smaller than 5 MB and wait for **Profile photo updated**. To test deal files, open a deal, select **View attachments**, then **Add PDF** (PDF files up to 20 MB). Both upload types pass through the API and are stored privately for the active organisation.
+
+### 5. Choose a test account
+
+| Organisation | Account email | Role | Useful checks |
+| --- | --- | --- | --- |
+| Asteron Capital | `owner@asteron.example.test` | Owner | Manage invitations, custom roles, organisation settings, and deals |
+| Asteron Capital | `admin@asteron.example.test` | Admin | Manage invitations and review tenant settings without IC approval rights by default |
+| Asteron Capital | `lead@asteron.example.test` | Deal Lead | Create and update pipeline deals, assignments, and stage movement |
+| Asteron Capital | `member@asteron.example.test` | Deal Team Member | Review assigned work and deal activity |
+| Asteron Capital | `ic@asteron.example.test` | IC Member | Review and decide IC approval requests |
+| Asteron Capital | `observer@asteron.example.test` | Observer / Compliance | Verify read-only pipeline and audit activity access |
+| Imbali Growth Partners | `owner@imbali.example.test` | Owner | Manage invitations, custom roles, organisation settings, and deals |
+| Imbali Growth Partners | `admin@imbali.example.test` | Admin | Manage invitations and review tenant settings without IC approval rights by default |
+| Imbali Growth Partners | `lead@imbali.example.test` | Deal Lead | Create and update pipeline deals, assignments, and stage movement |
+| Imbali Growth Partners | `member@imbali.example.test` | Deal Team Member | Review assigned work and deal activity |
+| Imbali Growth Partners | `ic@imbali.example.test` | IC Member | Review and decide IC approval requests |
+| Imbali Growth Partners | `observer@imbali.example.test` | Observer / Compliance | Verify read-only pipeline and audit activity access |
+
+The account names and roles come from the development seed. Permissions are enforced by Postgres, so a role may see controls that are disabled or absent when it lacks the required permission. Use the Owner for the complete walkthrough, then sign out and try the Deal Lead, IC Member, and Observer accounts to compare their personalized assignments, edit access, pending approvals, and read-only access. Login is limited to five submissions per client IP in a 15-minute window (and five per account); rapid role switching in one browser can reach that limit, so space the sign-ins during a live demo. The seed creates ten fictional deals across both organisations; close dates are relative to the seed date.
+
+### 6. Walk through My Work, team access, and IC approvals
+
+**My Work** opens after sign-in. It shows your assigned deals with your responsibility on each, a stage progress indicator, any IC decisions awaiting your vote, and your recent notifications. Assignment is a responsibility label; it does not change tenant-wide deal visibility. Passed is shown as an outcome, while Closed is the completed end of the stage indicator. Use **Pipeline** for all organisation deals, filters, and Board/List views.
+
+After signing in as an Owner or Admin, select **Team** in the workspace navigation. Enter a teammate's work email, choose the role they should receive after accepting, and select **Send invitation**. The same page lists pending invitations and allows an authorized manager to revoke them. To exercise acceptance, use a separate browser session for the invited address and follow the link in Mailpit at <http://localhost:8080/mail/>. Invitation links expire after seven days. **Roles** is the separate place to review system permissions and create or edit custom roles.
+
+Select **Approvals** to see deals in **IC Review**, their quorum/decision state, and a link to open each deal's review controls. The final approval request and approve/reject decisions are made on the deal page. The development seed intentionally does not create a live approval request or decision, because those actions write immutable audit records. To see the full approval cycle, use an IC Review deal and submit a request as its Deal Lead; then sign in as an eligible IC Member to review it. **Team** lists accepted and deactivated members, their organisation roles, and outstanding invitations. Owners/Admins can invite a teammate with an eligible role; Owners can grant privileged roles. From the roster, managers can add/remove roles or confirm account deactivation. Self-role changes are disabled, and Postgres enforces tenant permissions, separation of duties, and last-Owner protection. Deactivated accounts remain listed for audit context; to restore access, send the person a new invitation.
+
+### 7. Stop, restart, or reset the stack
+
+Stop containers while preserving the local database and uploaded files:
+
+```sh
+docker compose down
+```
+
+Restart the existing data without rebuilding:
+
+```sh
+docker compose up -d
+```
+
+Rebuild web/API images after changing source code:
+
+```sh
+docker compose up --build -d web api gateway
+```
+
+To erase the local database, demo accounts, and uploaded files and start from a clean database, remove the volumes and then start again:
 
 ```sh
 docker compose down -v
+docker compose up --build -d
 ```
 
-Only the gateway publishes a host port. Set `GATEWAY_PORT` if port 8080 is already in use. Compose includes clearly marked development defaults so a fresh clone needs no `.env`; `make env` can generate machine-specific local values. Never reuse these development credentials or secrets in a deployed environment.
+**The `down -v` command permanently deletes this checkout’s local database and file-storage volumes.** It does not affect any remote environment. Replace `docker compose` with `podman compose` for Podman.
+
+For container logs while investigating a local issue:
+
+```sh
+docker compose logs --tail=100 web api gateway
+```
+
+To run without sample accounts, set `SEED_DEV_DATA=false` in `.env` before startup. The application still has no public sign-up in this local stack.
 
 ## Architecture
 
@@ -80,14 +176,18 @@ The smoke test builds a fresh stack, signs in through the gateway as a seeded us
 
 GitHub Actions runs the quality, database, image, security-scan, and Compose smoke checks. The repository is private, but branch protection is unavailable on its current GitHub plan, so a green workflow is not mechanically required before merging. Recent PRs encountered the account billing/spending limit before Actions job steps started; those runs are not green and provide no code-level diagnostics. Local verification results and the affected PRs are recorded in `docs/HANDOFF.md` and `docs/PROGRESS.md`.
 
-## What I would do next
+## Project completion and follow-ups
 
-- Feature 04 custom role editing is implemented and merged. Database/API delegation is tenant opt-in, time-bounded, and preserves the original approver slot; the UI lets approvers schedule and revoke their own delegation. Unavailable slots without an eligible replacement intentionally block signing. Unreachable quorum now produces an hourly in-app alert to the request creator and active Owner/Admin members.
-- Decide how to handle the rare duplicate email after SMTP succeeds but outbox completion persistence fails. Presence remains deferred.
-- Run a real Cloudflare R2 smoke test with a dedicated bucket-scoped token; Feature 08's S3-compatible driver, local file store, BFF file routes, avatar upload, and initials fallback are implemented. Virus scanning and presigned URLs remain out of scope.
-- Finish final visual QA for the project-wide UI pass using Doorsprint as a visual reference. The shared button system and native input/select/textarea baseline are in place, and auth, onboarding, tenant-switcher, deal, delegation, and role forms now use shared React control wrappers. These preserve native semantics and use the existing tokens; no new dependency was needed. Evaluate shadcn components for complex interactions where they add value. Activity events now use human-readable stage labels, assignment summaries, and closing-alert copy. Baseline Board and deal activity screenshots are in `docs/evidence/ui/`; refresh them before preparing the full feature walkthrough presentation, which remains the final project task.
-- Optional stretch: document extraction. IC approval SLA escalation is implemented as a one-time in-app alert after 24 hours; approval gates at other stages are outside the agreed workflow.
-- Measure memory and disk use on Docker Desktop and verify the stack on both amd64 and arm64 hosts; local container verification to date has primarily used Podman on arm64.
+The core features and owner-approved extended scope are implemented. Project closeout remains in progress until the live approval-cycle walkthrough and final PR checks are complete. The refreshed [20-slide feature walkthrough and decision rationale](docs/presentation/deal-pipeline-tracker-walkthrough.pptx) covers product flows, architecture, safeguards, trade-offs, verification, and a step-by-step live demo path. Current-build UI evidence is indexed in [`docs/evidence/ui/`](docs/evidence/ui/README.md).
+
+Environment-dependent follow-ups:
+
+- Verify a production SMTP relay and certificate chain. A rare duplicate email remains possible if SMTP accepts a message and the outbox completion write then fails. Session refresh has a separate documented crash window between GoTrue token rotation and persistence.
+- Run a real Cloudflare R2 smoke test with a dedicated bucket-scoped token. The S3-compatible driver, local file store, BFF file routes, avatar upload, and initials fallback are implemented. Virus scanning and presigned URLs remain out of scope.
+- Verify memory use and behavior on Docker Desktop and amd64 hosts. The full local CI recipe passed on this Apple Silicon Podman environment.
+- GitHub Actions on recent PRs could not start because of the repository account billing/spending limit; those runs are not green. The current local `make ci-local` recipe passed. Live AI PR review also needs the owner's Cloudflare secrets and `ai-review` label.
+
+Optional stretch work remains document extraction and realtime presence. Approval gates beyond IC Review, FX conversion, per-deal information barriers, hosted deployment, and legal sign-off on POPIA retention remain outside the agreed scope.
 
 The deals page offers List and Board views. Board drag-and-drop uses the same allowed stage transitions and version checks as the keyboard-accessible List controls. Both views share server-side filters and pagination; the board displays the current page of results. Reduced-motion preferences disable its transition effects.
 

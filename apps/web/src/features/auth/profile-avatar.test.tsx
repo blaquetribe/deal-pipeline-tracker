@@ -32,9 +32,11 @@ describe('ProfileAvatar', () => {
     vi.stubGlobal('fetch', fetch);
     render(<ProfileAvatar />);
     expect(await screen.findByText('TE')).toBeVisible();
-    const fileInput = screen.getByLabelText('Update photo');
-    expect(fileInput).toHaveClass('ui-file-input');
-    expect(fileInput.closest('label')).toHaveClass('ui-file-trigger');
+    const trigger = screen.getByRole('button', { name: 'Change photo' });
+    expect(trigger).toHaveAttribute('data-size', 'small');
+    expect(trigger).toHaveAttribute('data-variant', 'quiet');
+    const fileInput = screen.getByLabelText('Choose profile photo');
+    expect(fileInput).toHaveClass('sr-only');
     const image = new File(['image bytes'], 'avatar.png', { type: 'image/png' });
     fireEvent.change(fileInput, { target: { files: [image] } });
     await waitFor(() =>
@@ -47,5 +49,14 @@ describe('ProfileAvatar', () => {
       ),
     );
     expect(await screen.findByText('Profile photo updated.')).toBeVisible();
+  });
+
+  it('disables photo selection until an organisation is selected', async () => {
+    mocks.read.mockResolvedValueOnce({ ...session, tenantId: null });
+    render(<ProfileAvatar />);
+    const fileInput = await screen.findByLabelText('Choose profile photo');
+    expect(fileInput).toBeDisabled();
+    expect(screen.getByRole('button', { name: 'Change photo' })).toBeDisabled();
+    expect(screen.getByText('Choose an organisation before changing your photo.')).toBeVisible();
   });
 });

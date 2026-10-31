@@ -1,11 +1,16 @@
 # 02 Auth and onboarding: progress
 
-Status: implemented; refresh-token rotation is coordinated through Postgres across API instances. Production SMTP relay behavior and the refresh crash window remain documented limitations.
+Status: done; refresh-token rotation is coordinated through Postgres across API instances. Production SMTP relay behavior and the refresh crash window remain documented operating limitations.
 Owner/branch: feat/02-api-auth (continues the feature 02 database work)
 Depends on: 01
 
 ## Goal
 Sign-up with verification, sessions, tenant switcher, invitations, Mailer. Covers GOTCHAS rows 1, 5, 14, 18, 21, 24, 28, 29, 31, 41.
+
+## Current UI follow-up
+- Shared authentication cards are vertically centered within the available viewport, with responsive height compensation for the root layout padding.
+- Owner sign-in and Asteron workspace navigation were visually reviewed on the rebuilt Compose app. Screenshot evidence should be recaptured after the remaining owner walkthrough fixes.
+- The full permission catalog is restricted to `role.manage`; team managers receive only role identifiers and names permitted by the existing guarded invitation and member-management rules. Roles is removed from shared navigation and its owner-only link appears in Team.
 
 ## Scope
 - In: sign-up, email verification, login, **password reset** (token flow; the mockup shows "Forgot password?" but nothing designs it), server-side sessions with in-process and database-coordinated refresh, tenant switcher, invitations, Mailer and Mailpit, rate limits, nonce-based CSP in Next `proxy.ts` (headers only; mechanism confirmed in the installed Next docs, proven by a test here), signed-out route sweep, and the registration onboarding flow (owner and invitee) designed in `onboarding-flow.md`. No SSO, no magic link.
@@ -56,6 +61,7 @@ What is covered, where it lives, how to run it.
 Historical Feature 02 verification passed 337 pgTAP assertions across 16 files, 405 Vitest tests across 28 files, and the full compose smoke. On 2026-10-29, the complete current pgTAP suite passes 596 assertions across 30 files, including the new refresh-lease tests.
 
 ## Log
+- 2026-10-31: added a persistent Team page with invitation creation, role selection from the tenant catalog, pending-invitation management, accepted-member roster, role changes, and confirmed deactivation. The roster uses a new caller-JWT `tenant_members` RPC gated by `member.manage`; role mutations reuse the existing guarded database functions. Admin role choices exclude privileged roles, self-role actions are hidden, and database invariants protect SoD and the last Owner. Acceptance of a new invitation after deactivation clears stale role grants before applying the newly invited role. See ADR 0027. The refreshed Team screenshot is evidence 11. Local pgTAP covers same-tenant identity, roles, deactivated members, cross-tenant isolation, anonymous denial, and reactivation role reset; the full 655-assertion/35-file suite passes.
 - 2026-10-30: Standardized the avatar upload trigger with the shared secondary control styling. The real file input remains label-accessible and now exposes a visible keyboard focus ring. Component test, stylelint, full suite, build, and live app visual review pass; no API or database changes.
 - 2026-10-30: Fixed tenant-switch refresh behavior. After `/auth/tenant` accepts a new active tenant, the browser reloads so mount-only tenant data requests rerun under the server-selected tenant. Added a component regression assertion; full Vitest, typecheck, lint, stylelint, formatting, and production build pass. Seeded browser verification showed all five Asteron deals immediately after switching. No DB changes were needed.
 - 2026-10-26: ADR 0015. Slice A written test-first (red: role missing), migration, green. pgTAP lives in the `extensions` schema, so the test grants `api_service` usage on it inside its own rolled-back transaction; production does not. Real PostgREST check: role switching and `app.uid()` work. Smoke script extended (not sabotage-tested; `shellcheck` not installed locally, CI runs it).

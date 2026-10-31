@@ -6,7 +6,7 @@ import {
   type TenantRolesCatalogResponse,
 } from '@dpt/shared';
 
-import { sessionRead, sessionRequest } from '../auth';
+import { sessionRead, sessionRequest } from '../auth/api';
 
 export async function readRoleCatalog(): Promise<TenantRolesCatalogResponse> {
   return tenantRolesCatalogResponseSchema.parse(await sessionRead('/roles'));

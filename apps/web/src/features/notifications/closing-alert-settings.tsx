@@ -110,7 +110,10 @@ export function ClosingAlertSettingsForm() {
       ) : null}
       {message ? <output className="text-sm text-success-fg">{message}</output> : null}
 
-      <section className="material-card space-y-5 p-5" aria-labelledby={`${id}-thresholds-heading`}>
+      <section
+        className="settings-panel material-card space-y-5 p-5"
+        aria-labelledby={`${id}-thresholds-heading`}
+      >
         <div>
           <h2 className="text-lg font-semibold" id={`${id}-thresholds-heading`}>
             Pre-close reminders
@@ -185,7 +188,10 @@ export function ClosingAlertSettingsForm() {
         </Button>
       </section>
 
-      <section className="material-card space-y-5 p-5" aria-labelledby={`${id}-recipients-heading`}>
+      <section
+        className="settings-panel material-card space-y-5 p-5"
+        aria-labelledby={`${id}-recipients-heading`}
+      >
         <div>
           <h2 className="text-lg font-semibold" id={`${id}-recipients-heading`}>
             Who receives alerts?

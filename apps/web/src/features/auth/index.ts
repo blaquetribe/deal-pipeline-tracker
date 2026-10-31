@@ -10,6 +10,17 @@ export { SignOutButton } from './sign-out-button';
 export { SignupForm } from './signup-form';
 export { TenantSwitcher } from './tenant-switcher';
 export { ProfileAvatar } from './profile-avatar';
+export { TeamManagement } from './team-management';
 export { VerifyEmail } from './verify-email';
-export { authRequest, sessionRead, sessionRequest } from './api';
+export {
+  authRequest,
+  readAssignableRoles,
+  deactivateTeamMember,
+  grantTeamMemberRole,
+  readTeamMembers,
+  sessionRead,
+  sessionRequest,
+  revokeTeamMemberRole,
+} from './api';
+export { readAuthSession } from './api';
 export { ApiClientError } from './api';

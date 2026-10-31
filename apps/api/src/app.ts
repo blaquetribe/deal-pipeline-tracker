@@ -5,6 +5,7 @@ import { mountAuthRoutes, type AuthServiceOptions } from './auth/service';
 import { mountApprovalRoutes } from './features/approvals/routes';
 import { mountDealRoutes } from './features/deals/routes';
 import { createFileRoutes } from './features/files/routes';
+import { mountMemberRoutes } from './features/members/routes';
 import { mountNotificationRoutes } from './features/notifications/routes';
 import { mountRealtimeRoutes, type RealtimeRoutesOptions } from './features/realtime/routes';
 import { mountRoleRoutes } from './features/roles/routes';
@@ -55,6 +56,7 @@ export function createApp(options?: AppOptions): Hono {
     mountDealRoutes(app, httpDeps, { userRpc: options.auth.userRpc });
     mountApprovalRoutes(app, httpDeps, { userRpc: options.auth.userRpc });
     mountNotificationRoutes(app, httpDeps, { userRpc: options.auth.userRpc });
+    mountMemberRoutes(app, httpDeps, { userRpc: options.auth.userRpc });
     mountRoleRoutes(app, httpDeps, { userRpc: options.auth.userRpc });
     if (options.files) {
       for (const route of createFileRoutes(options.files)) route.mount(app, httpDeps);

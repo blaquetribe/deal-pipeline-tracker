@@ -9,6 +9,8 @@ import {
   dealListQuerySchema,
   dealListResponseSchema,
   moveDealStageBodySchema,
+  myWorkQuerySchema,
+  myWorkResponseSchema,
   setDealAssigneesBodySchema,
   updateDealBodySchema,
 } from '@dpt/shared';
@@ -114,6 +116,43 @@ export function createDealRoutes({ userRpc }: DealRoutesOptions): Route[] {
               p_tenant: session.tenantId,
               p_stage: parsed.data.stage ?? null,
               p_search: parsed.data.search ?? null,
+              p_limit: parsed.data.limit,
+              p_offset: parsed.data.offset,
+            },
+            session.accessToken,
+          ),
+        ),
+      };
+    },
+  });
+
+  const myWork = sessionRoute({
+    method: 'GET',
+    path: '/deals/my-work',
+    body: noBody,
+    permission: 'deal.view',
+    handler: async ({ query, session }) => {
+      if (!session.tenantId) {
+        throw new HttpError(409, 'tenant_required', 'Choose an organisation to view your work.');
+      }
+      const entries = [...query.entries()];
+      if (new Set(entries.map(([key]) => key)).size !== entries.length) {
+        throw new HttpError(
+          400,
+          'invalid_request',
+          'Each paging option can be supplied only once.',
+        );
+      }
+      const parsed = myWorkQuerySchema.safeParse(Object.fromEntries(entries));
+      if (!parsed.success) {
+        throw new HttpError(400, 'invalid_request', 'Check the work list paging options.');
+      }
+      return {
+        body: myWorkResponseSchema.parse(
+          await userRpc.call(
+            'list_my_deal_work',
+            {
+              p_tenant: session.tenantId,
               p_limit: parsed.data.limit,
               p_offset: parsed.data.offset,
             },
@@ -363,6 +402,7 @@ export function createDealRoutes({ userRpc }: DealRoutesOptions): Route[] {
   return [
     create,
     list,
+    myWork,
     dashboardSummary,
     detail,
     update,

@@ -8,6 +8,7 @@ import { Button } from '../ui/button';
 import { markNotificationRead, readNotifications } from './api';
 
 const MAX_NOTIFICATIONS = 50;
+const PENDING_READ_AT = 'pending';
 
 function socketUrl(): string {
   return `${window.location.protocol === 'https:' ? 'wss:' : 'ws:'}//${window.location.host}/ws`;
@@ -57,6 +58,7 @@ export function NotificationBell() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [open, setOpen] = useState(false);
+  const [filter, setFilter] = useState<'unread' | 'all'>('unread');
   const [announcement, setAnnouncement] = useState('');
   const [toast, setToast] = useState<Notification | null>(null);
   const [connected, setConnected] = useState(false);
@@ -135,22 +137,42 @@ export function NotificationBell() {
   }, [refresh]);
 
   const unreadCount = notifications.filter((item) => item.read_at === null).length;
-  const onNotificationOpen = async (notification: Notification) => {
+  const visibleNotifications =
+    filter === 'unread' ? notifications.filter((item) => item.read_at === null) : notifications;
+
+  const markAsRead = async (notification: Notification) => {
     if (notification.read_at !== null) return;
     setNotifications((current) =>
       current.map((item) =>
-        item.id === notification.id ? { ...item, read_at: new Date().toISOString() } : item,
+        item.id === notification.id ? { ...item, read_at: PENDING_READ_AT } : item,
       ),
     );
     try {
       await markNotificationRead(notification.id);
+      await refresh();
     } catch {
+      setError('This notification could not be marked as read. Try again.');
+      void refresh();
+    }
+  };
+
+  const markAllAsRead = async () => {
+    const unread = notifications.filter((item) => item.read_at === null);
+    if (unread.length === 0) return;
+    setNotifications((current) =>
+      current.map((item) => (item.read_at === null ? { ...item, read_at: PENDING_READ_AT } : item)),
+    );
+    try {
+      await Promise.all(unread.map((item) => markNotificationRead(item.id)));
+      await refresh();
+    } catch {
+      setError('Some notifications could not be marked as read. Try again.');
       void refresh();
     }
   };
 
   return (
-    <div className="relative">
+    <div className="notification-bell relative inline-flex shrink-0">
       <Button
         type="button"
         aria-label={`Notifications${unreadCount > 0 ? `, ${unreadCount} unread` : ''}`}
@@ -201,7 +223,7 @@ export function NotificationBell() {
         <section
           id="notification-panel"
           aria-label="Notifications"
-          className="material-glass-strong absolute start-0 end-0 z-20 mt-2 w-[min(24rem,calc(100vw-3rem))] rounded-panel p-4 sm:start-auto"
+          className="notification-panel material-glass-strong rounded-panel p-4"
         >
           <div className="flex items-center justify-between gap-3">
             <h2 className="text-lg font-semibold">Notifications</h2>
@@ -215,30 +237,86 @@ export function NotificationBell() {
               Refresh
             </Button>
           </div>
+          <div className="mt-3 flex flex-wrap items-center justify-between gap-2">
+            <fieldset className="flex gap-1">
+              <legend className="sr-only">Notification filter</legend>
+              <Button
+                aria-pressed={filter === 'unread'}
+                onClick={() => setFilter('unread')}
+                size="small"
+                type="button"
+                variant={filter === 'unread' ? 'primary' : 'quiet'}
+              >
+                Unread ({unreadCount})
+              </Button>
+              <Button
+                aria-pressed={filter === 'all'}
+                onClick={() => setFilter('all')}
+                size="small"
+                type="button"
+                variant={filter === 'all' ? 'primary' : 'quiet'}
+              >
+                All
+              </Button>
+            </fieldset>
+            {unreadCount > 1 ? (
+              <Button
+                onClick={() => void markAllAsRead()}
+                size="small"
+                type="button"
+                variant="quiet"
+              >
+                Mark all read
+              </Button>
+            ) : null}
+          </div>
           {loading ? <p className="mt-4 text-sm text-fg-muted">Loading notifications…</p> : null}
           {error ? (
             <p role="alert" className="mt-4 text-sm text-danger">
               {error}
             </p>
           ) : null}
-          {!loading && !error && notifications.length === 0 ? (
-            <p className="mt-4 text-sm text-fg-muted">You’re all caught up.</p>
+          {!loading && !error && visibleNotifications.length === 0 ? (
+            <p className="mt-4 text-sm text-fg-muted">
+              {filter === 'unread'
+                ? 'You’re all caught up. Switch to All to see earlier notifications.'
+                : 'No notifications yet.'}
+            </p>
           ) : null}
           <ul className="mt-3 max-h-96 space-y-2 overflow-y-auto">
-            {notifications.map((notification) => (
+            {visibleNotifications.map((notification) => (
               <li key={notification.id}>
-                <Link
-                  href={notification.payload.href}
-                  onClick={() => void onNotificationOpen(notification)}
-                  className={`block rounded-control p-3 hover:bg-surface-subtle focus-visible:outline-2 focus-visible:outline-accent ${notification.read_at === null ? 'border-s-2 border-accent' : ''}`}
+                <article
+                  className={`rounded-control border border-line p-3 ${notification.read_at === null ? 'border-s-2 border-s-accent' : 'bg-surface-subtle'}`}
                 >
-                  <span className="block font-medium">{notification.payload.dealName}</span>
-                  <span className="block text-sm text-fg-muted">
+                  <p className="font-medium">{notification.payload.dealName}</p>
+                  <p className="mt-1 text-sm text-fg-muted">
                     {notification.kind === 'closing_soon'
                       ? `${notification.payload.overdue ? 'Closing date passed' : `Closing in ${notification.payload.thresholdDays} days`} · ${notification.payload.closeDate}`
                       : notification.payload.message}
-                  </span>
-                </Link>
+                  </p>
+                  <div className="mt-3 flex flex-wrap items-center justify-between gap-2">
+                    <Link
+                      href={notification.payload.href}
+                      onClick={() => void markAsRead(notification)}
+                      className="text-sm font-semibold text-brand-fg underline underline-offset-4 focus-visible:outline-2"
+                    >
+                      Open deal
+                    </Link>
+                    {notification.read_at === null ? (
+                      <Button
+                        onClick={() => void markAsRead(notification)}
+                        size="small"
+                        type="button"
+                        variant="secondary"
+                      >
+                        Mark as read
+                      </Button>
+                    ) : (
+                      <span className="text-xs text-fg-muted">Read</span>
+                    )}
+                  </div>
+                </article>
               </li>
             ))}
           </ul>

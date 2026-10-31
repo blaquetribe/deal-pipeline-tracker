@@ -1,4 +1,4 @@
-import { mkdtemp, rm } from 'node:fs/promises';
+import { mkdtemp, readdir, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { resolve } from 'node:path';
 import { Readable } from 'node:stream';
@@ -32,7 +32,8 @@ afterEach(async () => {
 
 describe('filesystem ObjectStore', () => {
   it('writes immutable objects and streams them back under the configured prefix', async () => {
-    const store = createObjectStore(await config());
+    const storeConfig = await config();
+    const store = createObjectStore(storeConfig);
     const payload = Buffer.from('private file');
     await store.put(
       'users/user-1/avatar/file-1',
@@ -48,6 +49,7 @@ describe('filesystem ObjectStore', () => {
     expect((await store.list()).map((object) => object.key)).toEqual([
       'users/user-1/avatar/file-1',
     ]);
+    expect(await readdir(storeConfig.directory)).toContain('.staging');
     await expect(
       store.put('users/user-1/avatar/file-1', Readable.from(payload), payload.length, 'image/webp'),
     ).rejects.toMatchObject({ code: 'EEXIST' });

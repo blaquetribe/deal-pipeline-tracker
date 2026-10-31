@@ -160,6 +160,21 @@ export const dealListResponseSchema = z.strictObject({
   items: z.array(dealSchema),
 });
 
+export const myWorkQuerySchema = z.strictObject({
+  limit: z.coerce.number().int().min(1).max(100).default(25),
+  offset: z.coerce.number().int().min(0).max(10_000).default(0),
+});
+
+export const myWorkDealSchema = dealSchema.extend({
+  assignment_role: dealAssigneeRoleSchema,
+});
+
+export const myWorkResponseSchema = z.strictObject({
+  total: z.number().int().nonnegative(),
+  activeCount: z.number().int().nonnegative(),
+  items: z.array(myWorkDealSchema),
+});
+
 export const dealActivityQuerySchema = z.strictObject({
   limit: z.coerce.number().int().min(1).max(100).default(50),
   beforeSeq: z.string().regex(/^\d+$/).optional(),
@@ -308,6 +323,9 @@ export type SetDealAssigneesBody = z.infer<typeof setDealAssigneesBodySchema>;
 export type DealAssigneesResponse = z.infer<typeof dealAssigneesResponseSchema>;
 export type DealListQuery = z.infer<typeof dealListQuerySchema>;
 export type DealListResponse = z.infer<typeof dealListResponseSchema>;
+export type MyWorkQuery = z.infer<typeof myWorkQuerySchema>;
+export type MyWorkDeal = z.infer<typeof myWorkDealSchema>;
+export type MyWorkResponse = z.infer<typeof myWorkResponseSchema>;
 export type DealApprovalStatus = z.infer<typeof dealApprovalStatusSchema>;
 export type ApprovalAbsence = z.infer<typeof approvalAbsencesResponseSchema>[number];
 export type ApprovalDelegation = z.infer<typeof approvalDelegationsResponseSchema>[number];

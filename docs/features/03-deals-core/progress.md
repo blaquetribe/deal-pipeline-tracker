@@ -1,6 +1,6 @@
 # 03 Deals core: progress
 
-Status: done (core deal flows, closing-soon dashboard, and server-side alerts are implemented)
+Status: done (core deal flows, closing-soon dashboard, server-side alerts, and user-context work dashboard are implemented)
 Owner/branch: main
 Depends on: 01, 02
 
@@ -9,6 +9,7 @@ Deal CRUD, stage state machine, notes UI, pipeline overview, closing soon. Cover
 
 ## Scope
 - In: deals CRUD with `expected_close_date` and an **optional `expected_close_time`**, **deal assignees (owner, lead, members; not access control)**, stage machine with required fields per stage, notes/decisions via the ledger, Dashboard (KPI row, pipeline overview, **Closing soon list with a live countdown (days, and hours and minutes on the final day), 60-day window**, per-currency totals), Deals list (stage tabs, filters, server-side pagination), Deal detail (Overview, Activity with integrity cue). Countdown and alerts: `closing-soon.md` (ADR 0011). UI direction: ADR 0009 and `docs/design/mockup-review.md`.
+- The signed-in landing page is now My Work: assigned deals and their progress, IC requests for which the caller can decide, and personal notifications (ADR 0026). `/pipeline` remains the organisation-wide view; List/Board behavior is recorded in ADR 0025.
 - Out (and where it goes):
 
 ## Design notes
@@ -19,6 +20,7 @@ Key decisions, schema/API shape, links to ADRs.
 - API routes use the authenticated user JWT and Postgres remains the authorization boundary. No browser Supabase client was added.
 
 ## Tasks
+- [x] Add caller-scoped My Work RPC and tests; display the user's assigned deals, pending IC decisions, unread alerts, and canonical stage progress.
 - [x] Database security tests for assignments and deal list, including cross-tenant, permission, anonymous, stale-version and null-parameter cases.
 - [x] Additive migrations for assignees, assignment reads, deal list, fail-closed null guards, tenant-authorized detail/activity reads, exact bigint cursors, and dashboard summary (`20261107000000` through `20261114000000`).
 - [x] Session-gated API for deal list and assignment reads/replacement.
@@ -35,9 +37,8 @@ Key decisions, schema/API shape, links to ADRs.
 
 ## Tests
 What is covered, where it lives, how to run it.
-- `pnpm test`: 34 files and 450 tests pass. Focused route, dashboard, detail, countdown and shared-schema tests pass.
-- `pnpm typecheck`, `pnpm lint`, `pnpm stylelint`, `pnpm format:check`, `pnpm build`, `make COMPOSE='podman compose' test-db` (408 assertions across 21 files), and full Podman compose smoke pass. `pnpm test:coverage` runs all 450 tests but fails repository thresholds (68.15% global statements; 86.95% statements for `apps/api/src`; required floors are 90% and 95%). GitHub CI skips build after the coverage failure. Most uncovered paths are in auth/onboarding code already included in this branch; see `docs/HANDOFF.md` before treating CI as green.
-- Current authenticated UI evidence: [deal board](../../evidence/ui/01-deal-board.png) and [deal activity](../../evidence/ui/02-deal-activity.png), captured from the seeded Asteron demo after PR #35. The activity capture shows the readable system closing-alert event; assignment formatting is covered by tests but still needs live visual confirmation. The expected-close date formatting was changed after this capture and also needs a refreshed screenshot. These are baseline captures for the remaining DoorSprint-informed UI pass.
+- At the original Feature 03 implementation slice, `pnpm test` passed 450 tests, pgTAP passed 408 assertions across 21 files, and the Podman Compose smoke passed. That snapshot's coverage command failed the then-current repository thresholds; later project-wide coverage and CI follow-ups are recorded in `docs/HANDOFF.md` and `docs/PROGRESS.md`.
+- Current authenticated UI evidence: [organisation pipeline](../../evidence/ui/14-pipeline-dashboard.png), [personal My Work dashboard](../../evidence/ui/13-my-work-dashboard.png), [mobile My Work](../../evidence/ui/15-mobile-my-work.png), [deal board](../../evidence/ui/04-deal-board-current.png), and [deal activity](../../evidence/ui/05-deal-activity-current.png). Captured from the rebuilt local seeded app on 2026-10-31. My Work includes caller-assigned deals, per-deal stage progress, actionable IC decisions, and personal updates; Passed is terminal, and the six active stage values include Closed as the completed endpoint.
 
 ## Security checklist (from SECURITY_STANDARDS.md)
 - [x] The new assignment table has `tenant_id`, forced RLS, role tests and cross-tenant tests.
@@ -45,8 +46,8 @@ What is covered, where it lives, how to run it.
 - [x] Deal create/list and assignment APIs derive tenant and author context from the active session/database; no client-supplied tenant/author/role/timestamp is trusted.
 - [x] Deal notes use the append-only event ledger and expose no edit/delete action; pgTAP verifies activity reads and ledger integrity.
 - [x] Assignment and list inputs are schema-validated; errors do not expose database details.
-- [ ] No secrets, tokens, or PII in logs.
-- [ ] Web still has no Supabase dependency.
+- [x] No secrets, tokens, or PII in logs (the final repository gitleaks scan passed).
+- [x] Web still has no Supabase dependency (the enforced workspace boundary and full local validation passed).
 
 ## Log
 Dated notes: what changed, what was learned, problems.
@@ -56,11 +57,16 @@ Dated notes: what changed, what was learned, problems.
 ## Deviations / debt
 Anything that differs from the plan or is deferred (also mirror in README "next steps").
 
+- 2026-10-31: replaced the table-row inline deal editor with a native modal dialog using responsive field columns, clear optional-field labels, focused initial input, and persistent Cancel/Save actions. The edit API, exact decimal parsing, and optimistic version check are unchanged. Added regression coverage; rebuilt Compose review confirmed the dialog and compact table in light mode. Refreshed screenshot evidence remains open. See ADR 0028.
+
 - 2026-10-28 (later): Added strict optimistic deal updates, SQL NULL guards for stage/update version checks, tenant-scoped deal detail and activity reads, session-gated APIs, and a detail page with exact money display, integrity cue, ordered event timeline, append-only note composer and bounded older-event pagination. Preserved the applied migration checksum by moving exact bigint cursor serialization to migration 13. Vitest passes 445 tests; typecheck, lint, stylelint, format check, build, pgTAP (396 assertions/20 files) and compose smoke pass. Captured the authenticated detail page with a saved test note. Kanban drag-and-drop remains deferred; keep the keyboard move control and target smooth 60 fps if implemented.
 - 2026-10-28 (later): Added a database-authorized dashboard summary for per-stage counts, per-currency open pipeline totals and tenant-local closing dates. The browser shows a 60-day closing-soon list, timezone-aware countdown chips, and minute/midnight-aligned updates using the API's server clock. Vitest passes 450 tests; typecheck, lint, stylelint, format check and build pass; pgTAP passes 408 assertions across 21 files. Server alert delivery remains with feature 02/05 dependencies.
 - 2026-10-29: Feature 05 delivered the hourly closing-soon scan, idempotent in-app alerts, realtime delivery, and grouped email digest. PR #15 merged after all required CI checks passed. Alert recipient preferences, absence/delegation handling, and presence remain documented follow-up scope.
 - 2026-10-28 (later): Coverage follow-up adds API route, dashboard, detail and money edge-state tests without changing the deal UI or database. The suite now passes 502 tests and global branch coverage meets the gate at 85.04%. Existing dashboard evidence remains applicable because this follow-up only changes tests and API error mapping.
 - 2026-10-29: PR #34 added the seven-stage Board/List switch, valid-transition drop targets and keyboard-accessible list controls; PR #35 made legacy assignment events readable. Both merged after all required CI checks passed. Live local UI review found and fixed a system-authored closing-alert event contract mismatch that hid deal details. Full Vitest coverage passes (656 passed, 1 skipped; 85.06% branch coverage), along with typecheck, lint, stylelint, format check, and production build. Authenticated baseline screenshots are captured; final live verification and broader visual review continue under the project UI pass.
 - 2026-10-29: PR #36 merged as `6d6647e` after every required CI check passed. It accepts system-authored `closing_soon_alert` events in API/shared schemas, formats alert and legacy assignment activity for people, formats expected-close dates, refines the Board/List segmented control, and removes the global page max-width. CI passed full coverage (656 tests, 1 skipped; 85.06% branches), pgTAP, quality/build, all three image builds/scans, Compose smoke, secret scan, and advisory review. Baseline screenshots remain under `docs/evidence/ui/`; recapture after local Podman and the authenticated seeded browser are restored to verify the latest date format and full assignment feed.
+- 2026-10-31: the board now groups the six progression stages separately from Passed as an outcome and explains invalid drag targets, including the IC approval prerequisite for Signed and the Signed-to-Closed path. The List and Board views show stage rules before the user acts; a rejected drag announces the reason in the existing accessible toast. The live seeded board confirmed Passed renders after Closed. Deal stage ordering and approval authority remain unchanged.
+- 2026-10-30: completed current-build review of the pipeline, Board, deal activity, and shared controls after rebuilding the local app from merged main. Saved refreshed evidence as `03-deal-pipeline-dashboard.png`, `04-deal-board-current.png`, and `05-deal-activity-current.png`. The activity screen shows human-readable stage, alert, and assignment summaries; no deal or ledger data was changed for the screenshots. The project-wide UI pass is complete.
 - 2026-10-29: the ongoing project UI pass now uses shared token-backed native controls in deal dashboard/detail and approval-delegation forms. This presentation consistency change leaves stage, assignment, and approval behavior unchanged. The wrapper test, full Vitest (657 passed, 1 skipped), typecheck, lint, stylelint, format, and production build pass. Current-build authenticated visual evidence is still pending.
 - 2026-10-30: live mobile review of Asterion's seeded activity feed found raw stage keys and a machine-style `stage change` title. The UI now maps event kinds to reader-facing labels and stage identifiers to the canonical shared labels, with a safe fallback for malformed stage events. Approval quorum reasons receive human copy; other audit reasons remain visible as text. No database or ledger data changed. Targeted tests pass (22); full Vitest passes (660 passed, 1 skipped), along with typecheck, lint, stylelint, format check, and production build. The rebuilt seeded app shows transitions such as “Moved from Due Diligence to IC Review.”
+- 2026-10-31: replaced the organisation-only landing page with My Work and kept the tenant-wide pipeline at `/pipeline`. The new `list_my_deal_work` RPC scopes results to `app.uid()`, active tenant membership, and `deal.view`; gotcha 101 records the assignment/access distinction and terminal-outcome rendering. The page shows the user's assigned deals, canonical stage progress, pending IC decisions that the user can decide, and recent notifications. No active tenant yields a clear prompt to select an organisation instead of false zeroes. The app was rebuilt and reviewed with the seeded Owner account: 5 assigned deals, 4 active stage indicators, 1 Passed terminal item; 390 px mobile page has no horizontal overflow. Full Vitest: 699 passed, 1 skipped; pgTAP: 655 assertions across 35 files; typecheck, lint, stylelint, format, and web production image build pass. New screenshots 13–15 are read-only evidence. The project-wide UI review is still open, and the walkthrough deck must be refreshed after that review.
