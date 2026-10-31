@@ -324,3 +324,10 @@ Running log feeding the README reflection required by the brief. Add an entry pe
 - **What the human decided or corrected:** pointed out that the UI described quorum-driven signing but gave no visible request path, and challenged the lack of approval request in the edit experience.
 - **How it was verified:** component coverage checks the row and edit-dialog link targets, guidance copy, role-gated request button, and API submission path. Existing Postgres and API authorization remain unchanged.
 - **What went wrong or was surprising:** the request action already existed on the deal detail page, but the pipeline never connected its IC Review guidance to that action; the label “Submit for approval” also did not match the language used elsewhere.
+
+
+### 2026-10-31 / Compact deal activity timeline
+- **What Codex did:** changed the deal activity feed from oversized individual cards to a compact vertical timeline with smaller type, actor/time metadata, and a bounded scroll region. Older events remain cursor-paginated and are loaded on demand inside the history panel.
+- **What the human decided or corrected:** called out that the event cards were oversized and would make users scroll endlessly as the audit history grows.
+- **How it was verified:** component coverage checks the labelled history region and ordered event list; focused detail tests and repository checks pass.
+- **What went wrong or was surprising:** the feed already used cursor pagination, but its full-width cards still dominated the page and every fetched page expanded the document height.

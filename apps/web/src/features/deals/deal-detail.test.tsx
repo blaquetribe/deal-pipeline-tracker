@@ -1,5 +1,5 @@
 import type { DealApprovalStatus } from '@dpt/shared';
-import { fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
@@ -74,6 +74,8 @@ describe('DealDetail', () => {
     expect(await screen.findByRole('heading', { name: 'Northstar Systems' })).toBeVisible();
     expect(screen.getByText('Activity integrity verified')).toBeVisible();
     expect(screen.getByText('Initial diligence started.')).toBeVisible();
+    const history = screen.getByRole('region', { name: 'Deal activity history' });
+    expect(within(history).getByRole('list')).toBeVisible();
     expect(screen.getByText(/R 1 250 000,75/)).toBeVisible();
     expect(screen.getByText('31 Mar 2027 at 15:30')).toBeVisible();
     expect(screen.getByText(/cannot be edited or deleted/)).toBeVisible();

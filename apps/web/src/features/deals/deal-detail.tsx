@@ -661,36 +661,46 @@ export function DealDetail({ dealId }: DealDetailProps) {
         {activity.events.length === 0 ? (
           <p className="mt-4 text-fg-muted">No activity yet.</p>
         ) : (
-          <ol className="mt-4 space-y-3">
-            {activity.events.map((item) => (
-              <li className="material-card p-4" key={item.id}>
-                <p className="font-medium">{formatActivityKind(item.kind)}</p>
-                <p className="mt-2 whitespace-pre-wrap">
-                  {formatActivityBody(item.kind, item.body)}
-                </p>
-                <p className="mt-3 text-sm text-fg-muted">
-                  {item.actorName ?? item.actorEmail} ·{' '}
-                  <time dateTime={item.createdAt}>{formatDate(item.createdAt)}</time>
-                </p>
-              </li>
-            ))}
-          </ol>
+          <section
+            aria-label="Deal activity history"
+            className="rounded-material mt-4 max-h-[32rem] overflow-y-auto overscroll-contain border border-line bg-surface p-4"
+          >
+            <ol className="ml-1 border-l border-line pl-5">
+              {activity.events.map((item) => (
+                <li className="relative pb-4 last:pb-0" key={item.id}>
+                  <span
+                    aria-hidden="true"
+                    className="absolute top-1 -left-[1.58rem] size-2.5 rounded-full border-2 border-brand bg-surface"
+                  />
+                  <p className="text-sm font-semibold">{formatActivityKind(item.kind)}</p>
+                  <p className="mt-0.5 text-sm break-words whitespace-pre-wrap text-fg-muted">
+                    {formatActivityBody(item.kind, item.body)}
+                  </p>
+                  <p className="mt-1.5 text-xs text-fg-muted">
+                    {item.actorName ?? item.actorEmail} ·{' '}
+                    <time dateTime={item.createdAt}>{formatDate(item.createdAt)}</time>
+                  </p>
+                </li>
+              ))}
+            </ol>
+            {activity.hasMore ? (
+              <Button
+                className="mt-4 ml-5"
+                disabled={loadingOlder}
+                onClick={() => void loadOlderActivity()}
+                size="small"
+                type="button"
+                variant="secondary"
+              >
+                {loadingOlder ? 'Loading…' : 'Load older activity'}
+              </Button>
+            ) : null}
+          </section>
         )}
         {activityError ? (
           <p className="mt-3 text-danger" role="alert">
             {activityError}
           </p>
-        ) : null}
-        {activity.hasMore ? (
-          <Button
-            className="mt-4"
-            disabled={loadingOlder}
-            onClick={() => void loadOlderActivity()}
-            variant="secondary"
-            type="button"
-          >
-            {loadingOlder ? 'Loading…' : 'Load older activity'}
-          </Button>
         ) : null}
       </section>
     </div>
