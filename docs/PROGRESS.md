@@ -3,7 +3,7 @@
 Status: `not started` | `in progress` | `blocked` | `done` | `cut`
 Tier: **core** (must ship), **extended** (ship if time allows, else README note), **stretch**.
 
-**Overall status:** core and owner-approved application scope is implemented. Project closeout remains in progress: persistent Team/Approvals destinations, a user-context dashboard with deal progress, role-gated management, clearer stage transitions, and actionable notifications are implemented. The final light-theme UI fixes were rebuilt and visually reviewed. Screenshots 11–15 document the current seeded Team, Approvals, My Work, Pipeline, and mobile flows. The 20-slide walkthrough is refreshed and validated. Remaining closeout gates are a live Deal Lead/IC Member approval-cycle walkthrough, final diff review/commit, and PR checks. Feature 07 document extraction remains optional stretch work. Production SMTP/R2 and cross-platform deployment checks remain environment-dependent follow-ups, not unimplemented local application features.
+**Overall status:** core and owner-approved application scope is implemented. PR #47 is merged as `de8435f`. The isolated live Deal Lead/IC Member approval cycle and a scoped Cloudflare R2 object round trip are verified. Screenshots 11–15 and the validated 20-slide walkthrough are checked in; the separate latest light-theme edit dialog and Team role-navigation screenshots were reviewed but are not saved in the repo. Remaining verification limits: two-session `move_stage` contention test; production SMTP (no relay config present); Docker Desktop/amd64 (Podman service unavailable on this arm64 host); and GitHub Actions (blocked before steps by account billing). Feature 07 extraction and realtime presence are stretch/cut-list; per-deal information barriers and FX conversion are outside agreed scope.
 
 | # | Feature | Folder | Tier | Depends on | Status |
 |---|---|---|---|---|---|
@@ -15,7 +15,7 @@ Tier: **core** (must ship), **extended** (ship if time allows, else README note)
 | 05 | Realtime: WebSocket relay, live cache updates, presence | `docs/features/05-realtime` | core (user requirement) | 03 | done (PR #44 merged; presence remains cut-list scope) |
 | 06 | Seed and polish: two tenants, all roles, sample deals, README | `docs/features/06-seed-polish` | core | 03-05 | done (PR #16 merged to main after all required checks passed) |
 | 07 | Stretch: document extraction | `docs/features/07-stretch-extraction` | stretch | 03, 08 | not started |
-| 08 | Storage and avatars: ObjectStore port (fs + R2), files table, BFF-proxied files, avatars | `docs/features/08-storage-avatars` | extended | 02, 03 | done (PR #17 merged after all required CI checks passed; real R2 smoke needs bucket-scoped credentials) |
+| 08 | Storage and avatars: ObjectStore port (fs + R2), files table, BFF-proxied files, avatars | `docs/features/08-storage-avatars` | extended | 02, 03 | done (PR #17 merged; local RustFS contract and 2026-10-31 scoped real R2 smoke passed) |
 
 ## Current closeout gates
 - [x] Persistent Team invitations with role selection and pending invitations.
@@ -30,9 +30,10 @@ Tier: **core** (must ship), **extended** (ship if time allows, else README note)
 - [x] Review role-management visibility and the deal edit dialog in the rebuilt light-theme Owner session.
 - [x] Complete Owner walkthrough of My Work, Pipeline, Team, and Approvals; screenshots 11–15 record the seeded read-only views.
 - [ ] Save a dedicated screenshot of the final light-theme edit dialog and role-gated navigation; these states were reviewed live but are not in the repository evidence set.
-- [ ] Walk through the approval cycle using Deal Lead and IC Member accounts; the Owner-only walkthrough seed currently has no live approval request.
+- [x] Walk through the approval cycle using Deal Lead and IC Member accounts in isolated demo data; verified quorum, decision ledger entry, and automatic move to Signed.
 - [x] Refresh and validate the 20-slide walkthrough presentation after UI review; include it in the closeout commit.
-- [ ] Prepare a scoped commit/PR after the approval-path walkthrough and final review; only merge if required checks pass.
+- [ ] Save dedicated current light-theme edit-dialog and manager-gated role-navigation screenshots.
+- [ ] Commit and open a focused closeout documentation PR; do not merge with required GitHub checks blocked.
 
 CSP and security headers are **core** security work, scheduled in 00 (gateway, Hono headers) and 02 (nonce CSP in Next middleware); they are not on the cut list.
 
@@ -107,3 +108,12 @@ Anything cut must be written in the README "what I'd do next" section.
 - 2026-10-30: final local verification passed `make ci-local`: 675 Vitest tests passed and 1 skipped, 630 pgTAP assertions across 32 files, typecheck/lint/stylelint/format/build, shell and action linting, advisory-review offline tests, secret scan, image scans, and clean Compose smoke. The initial sandboxed loopback test attempt failed with `EPERM`; the full rerun with the repository's required loopback access passed. Recent GitHub Actions remain blocked before runner startup by the account billing/spending limit; `gh run list` could not reach `api.github.com` during this session, so no new remote workflow result is claimed. The project is complete for core and owner-approved extended scope; Feature 07 remains optional, and production SMTP/R2 and platform validation remain documented follow-ups.
 
 - 2026-10-30: final walkthrough pass repaired image/PDF upload staging (same-filesystem private staging; API reports malformed images separately from storage failures), refreshed shared navigation, surfaces and controls, added saved dark/light theme selection and mobile overflow handling, and captured current desktop/mobile/upload evidence. README now gives ordered local startup, sign-in, role-account, stop/restart/reset steps. Updated the 16-slide project walkthrough. Full `make ci-local` passes: 679 Vitest passed, 1 skipped; pgTAP 630 assertions across 32 files; typecheck, lint, stylelint, format, production build, shell/action checks, advisory offline tests, secret scan, image scans, and clean Compose smoke. The pgTAP storage-cleanup assertions now scope expected counts to their test tenant, so local demo uploads do not contaminate the suite. Recent GitHub Actions have not been reported green; account billing/spending blocks prevented runner startup on earlier PRs.
+
+
+## Closeout verification — 2026-10-31
+- PR #47 merged by owner instruction as `de8435f`; GitHub CI, Secret scan, and advisory review did not start because of the account billing/spending-limit block. No green status is claimed.
+- Live isolated approval cycle passed: Owner set a 1-of-1 quorum; Deal Lead submitted the request; IC Member approved; deal transitioned IC Review → Signed and the activity ledger recorded the decision and transition.
+- Owner light-theme pipeline edit dialog and manager-only role-management entry from Team were visually reviewed. The CUA interface returned image previews but did not provide a file-persistence route, so the dedicated two screenshots are still outstanding.
+- Cloudflare R2 round trip passed for a unique temporary object in the documented project bucket and configured object prefix: PUT, GET byte comparison, DELETE, then absence check. App runtime remains configured with `OBJECT_STORE_DRIVER=fs`; credentials were not printed or changed.
+- Production SMTP remains unverified because no SMTP relay configuration is present. Docker Desktop and amd64 validation remain unverified: host is macOS arm64, Docker Buildx is unavailable, and the Podman service cannot be reached.
+- Two-session `move_stage` contention coverage remains a test limitation; row-lock and optimistic-version checks plus single-session stale-write tests remain in place. Document extraction and presence are stretch/cut-list scope; per-deal information barriers and FX conversion remain outside agreed scope.

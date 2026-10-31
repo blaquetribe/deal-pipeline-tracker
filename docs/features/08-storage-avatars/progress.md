@@ -1,6 +1,6 @@
 # 08 Storage and avatars: progress
 
-Status: done (merged in PR #17; a real Cloudflare R2 smoke remains a credential-dependent follow-up)
+Status: done (merged in PR #17; real Cloudflare R2 object round trip verified 2026-10-31)
 Owner/branch: main
 Depends on: 02, 03
 
@@ -50,4 +50,6 @@ Dated notes: what changed, what was learned, problems.
 
 ## Deviations / debt
 Anything that differs from the plan or is deferred (also mirror in README "next steps").
-- The CI S3 contract test uses RustFS; a real Cloudflare R2 smoke still needs a dedicated bucket-scoped token. The project UI pass also reviewed avatar and PDF upload controls, though the saved screenshot set focuses on dashboard, Board, activity, alert settings, and roles.
+- The CI S3 contract test uses RustFS. A real Cloudflare R2 object round trip passed on 2026-10-31 using a unique object under the configured prefix in the documented project bucket. The app runtime remains configured for filesystem storage. The project UI pass also reviewed avatar and PDF upload controls; the saved screenshot set focuses on dashboard, Board, activity, alert settings, and roles.
+
+- 2026-10-31: ran a scoped Cloudflare R2 smoke against the documented `deal-pipeline-tracker` bucket with a unique temporary object under the configured object prefix; PUT, GET byte comparison, DELETE, and post-delete absence all passed. No credentials were printed or modified. Runtime remains on the filesystem driver.

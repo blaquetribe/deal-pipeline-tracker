@@ -178,16 +178,16 @@ GitHub Actions runs the quality, database, image, security-scan, and Compose smo
 
 ## Project completion and follow-ups
 
-The core features and owner-approved extended scope are implemented. Project closeout remains in progress until the live approval-cycle walkthrough and final PR checks are complete. The refreshed [20-slide feature walkthrough and decision rationale](docs/presentation/deal-pipeline-tracker-walkthrough.pptx) covers product flows, architecture, safeguards, trade-offs, verification, and a step-by-step live demo path. Current-build UI evidence is indexed in [`docs/evidence/ui/`](docs/evidence/ui/README.md).
+The core features and owner-approved extended scope are implemented. PR #47 has merged. The live approval-cycle walkthrough and a scoped real R2 object round trip are complete. Closeout evidence and environment verification remain in progress: dedicated screenshots of the latest light-theme edit dialog and role-gated Team navigation are not yet saved; production SMTP and Docker Desktop/amd64 checks cannot be run in the current environment; the two-session `move_stage` concurrency test remains documented; and recent GitHub workflows are blocked before job startup by the account billing/spending limit. The refreshed [20-slide feature walkthrough and decision rationale](docs/presentation/deal-pipeline-tracker-walkthrough.pptx) covers product flows, architecture, safeguards, trade-offs, verification, and a step-by-step live demo path. Current-build UI evidence is indexed in [`docs/evidence/ui/`](docs/evidence/ui/README.md).
 
 Environment-dependent follow-ups:
 
 - Verify a production SMTP relay and certificate chain. A rare duplicate email remains possible if SMTP accepts a message and the outbox completion write then fails. Session refresh has a separate documented crash window between GoTrue token rotation and persistence.
-- Run a real Cloudflare R2 smoke test with a dedicated bucket-scoped token. The S3-compatible driver, local file store, BFF file routes, avatar upload, and initials fallback are implemented. Virus scanning and presigned URLs remain out of scope.
+- Real Cloudflare R2 PUT/GET/DELETE/absence smoke passed on 31 October 2026 using a unique temporary object under the configured prefix in the documented project bucket. The app runtime remains configured for filesystem storage. The S3-compatible driver, local file store, BFF file routes, avatar upload, and initials fallback are implemented. Virus scanning and presigned URLs remain out of scope.
 - Verify memory use and behavior on Docker Desktop and amd64 hosts. The full local CI recipe passed on this Apple Silicon Podman environment.
 - GitHub Actions on recent PRs could not start because of the repository account billing/spending limit; those runs are not green. The current local `make ci-local` recipe passed. Live AI PR review also needs the owner's Cloudflare secrets and `ai-review` label.
 
-Optional stretch work remains document extraction and realtime presence. Approval gates beyond IC Review, FX conversion, per-deal information barriers, hosted deployment, and legal sign-off on POPIA retention remain outside the agreed scope.
+Optional stretch work remains document extraction and realtime presence. Approval gates beyond IC Review, FX conversion, per-deal information barriers, hosted deployment, and legal sign-off on POPIA retention remain outside the agreed scope. Two-session `move_stage` contention coverage is a documented test limitation; row locking and optimistic version rejection are implemented and single-session tests cover stale writes.
 
 The deals page offers List and Board views. Board drag-and-drop uses the same allowed stage transitions and version checks as the keyboard-accessible List controls. Both views share server-side filters and pagination; the board displays the current page of results. Reduced-motion preferences disable its transition effects.
 
