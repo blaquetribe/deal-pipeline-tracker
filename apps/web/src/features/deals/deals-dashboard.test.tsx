@@ -85,10 +85,33 @@ describe('DealsDashboard', () => {
 
     const guidance = await screen.findByRole('complementary', { name: 'Stage movement rules' });
     expect(guidance).toHaveTextContent(
-      'IC approval quorum moves an approved deal to Signed automatically.',
+      'open an IC Review deal and request approval from its IC approval section.',
+    );
+    expect(guidance).toHaveTextContent('The quorum moves approved deals to Signed automatically.');
+    expect(screen.getByRole('link', { name: 'Open IC approval' })).toHaveAttribute(
+      'href',
+      `/deals/${deal.id}#approval-title`,
     );
     expect(guidance).toHaveTextContent('Deal size, sector, and expected close date are required.');
     expect(guidance).toHaveTextContent('Passed: use this outcome when a deal exits the pipeline.');
+  });
+
+  it('links IC Review deal editing to the approval request section', async () => {
+    stubFetch({ total: 1, items: [{ ...deal, stage: 'ic_review' }] });
+    const user = userEvent.setup();
+    render(<DealsDashboard />);
+
+    await screen.findByRole('row', { name: /Northstar Systems/ });
+    await user.click(screen.getByRole('button', { name: 'Edit Northstar Systems' }));
+
+    const dialog = screen.getByRole('dialog', { name: 'Edit Northstar Systems' });
+    expect(dialog).toHaveTextContent(
+      'IC approval requests are made in the approval section. A Deal Lead or another user with approval-request access can submit one there.',
+    );
+    expect(within(dialog).getByRole('link', { name: 'Open IC approval' })).toHaveAttribute(
+      'href',
+      `/deals/${deal.id}#approval-title`,
+    );
   });
 
   it('filters the deal list when a pipeline stage count is selected', async () => {
@@ -361,10 +384,7 @@ describe('DealsDashboard', () => {
     render(<DealsDashboard />);
     await screen.findByRole('row', { name: /Northstar Systems/ });
 
-    await user.selectOptions(
-      screen.getByRole('combobox', { name: 'Next stage for Northstar Systems' }),
-      'screening',
-    );
+    await user.click(screen.getByRole('button', { name: 'Move to…' }));
     await user.click(screen.getByRole('button', { name: 'Move to Screening' }));
 
     expect(await screen.findByRole('status')).toHaveTextContent(

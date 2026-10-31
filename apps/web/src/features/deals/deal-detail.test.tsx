@@ -1,5 +1,5 @@
 import type { DealApprovalStatus } from '@dpt/shared';
-import { fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
@@ -74,9 +74,44 @@ describe('DealDetail', () => {
     expect(await screen.findByRole('heading', { name: 'Northstar Systems' })).toBeVisible();
     expect(screen.getByText('Activity integrity verified')).toBeVisible();
     expect(screen.getByText('Initial diligence started.')).toBeVisible();
+    const history = screen.getByRole('region', { name: 'Deal activity history' });
+    expect(within(history).getByRole('list')).toBeVisible();
     expect(screen.getByText(/R 1 250 000,75/)).toBeVisible();
     expect(screen.getByText('31 Mar 2027 at 15:30')).toBeVisible();
     expect(screen.getByText(/cannot be edited or deleted/)).toBeVisible();
+  });
+
+  it('explains who must request IC approval when the current user lacks access', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn<(...args: [RequestInfo | URL]) => Promise<Response>>(async (input) => {
+        const url = input instanceof Request ? input.url : String(input);
+        const response = url.endsWith('/activity')
+          ? activity
+          : url.endsWith('/approval')
+            ? { ...approvalStatus, canConfigure: true }
+            : url.endsWith('/approval-policy')
+              ? { requiredApprovals: 1, delegationEnabled: false }
+              : { ...deal, stage: 'ic_review' };
+        return new Response(JSON.stringify(response), {
+          status: 200,
+          headers: { 'Content-Type': 'application/json' },
+        });
+      }),
+    );
+
+    render(<DealDetail dealId={dealId} />);
+
+    expect(
+      await screen.findByText(
+        'No IC approval request has been submitted. This session cannot submit it. Ask a Deal Lead or another authorized requester to open this deal and select “Request IC approval” in this section.',
+      ),
+    ).toBeVisible();
+    expect(screen.queryByRole('button', { name: 'Request IC approval' })).not.toBeInTheDocument();
+    expect(screen.getByRole('link', { name: 'Find a Deal Lead in Team' })).toHaveAttribute(
+      'href',
+      '/team',
+    );
   });
 
   it('posts a note, then refreshes the authoritative activity timeline', async () => {
@@ -227,7 +262,10 @@ describe('DealDetail', () => {
     const user = userEvent.setup();
 
     render(<DealDetail dealId={dealId} />);
-    await user.click(await screen.findByRole('button', { name: 'Submit for approval' }));
+    expect(
+      await screen.findByText(/Send this deal to the eligible IC members for a decision/),
+    ).toBeVisible();
+    await user.click(await screen.findByRole('button', { name: 'Request IC approval' }));
 
     expect(await screen.findByText(/Required approvals: 2/)).toBeVisible();
     expect(fetch).toHaveBeenCalledWith(
@@ -519,7 +557,7 @@ describe('DealDetail', () => {
       await screen.findByText('No approval quorum is configured for this organisation.'),
     ).toBeVisible();
     expect(screen.getByRole('spinbutton', { name: 'Required approvals' })).toHaveValue(1);
-    expect(screen.queryByRole('button', { name: 'Submit for approval' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Request IC approval' })).not.toBeInTheDocument();
   });
 
   it('lets an assigned IC member approve without a rejection reason', async () => {

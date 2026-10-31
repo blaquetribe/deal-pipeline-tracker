@@ -310,3 +310,32 @@ Running log feeding the README reflection required by the brief. Add an entry pe
 - **What the human decided or corrected:** reported that notifications were not actionable and persisted in the active view after being read, then pointed out that movement rules were invisible until after attempting a drag. The fix preserves notification history while clearing handled items from the default queue, and exposes movement rules before action.
 - **How it was verified:** focused notification tests (7) and List/Board tests (16) pass, including individual/bulk read behavior, upfront stage guidance, and toast callback for rejected drops. Full Vitest passes (707 passed/1 skipped); typecheck, lint, stylelint, format check, and production build pass. Rebuilt the web container and visually checked the stage rules and notification panel in the seeded Owner session. No database changes were made.
 - **What went wrong or was surprising:** the previous UI loaded notifications without separating unread from read, so a successful read mutation changed only the badge and left the item visually present.
+
+
+### 2026-10-31 / Compact pipeline stage actions
+- **What Codex did:** replaced each List row's tall select-plus-disabled-button stack with a compact “Move to…” disclosure. The action list contains only stage-machine destinations; unmet required fields are shown beside disabled options; selecting a valid destination calls the existing versioned API and toast path. Updated README usage guidance and regression tests.
+- **What the human decided or corrected:** called out the repeated stage controls as unintuitive and asked for a better UI idea.
+- **How it was verified:** focused dashboard tests cover available/blocked destinations, the IC Review → Signed approval rule, successful moves, and API rejection feedback.
+- **What went wrong or was surprising:** initial focused tests found that `stageSchema` also validates the page-level filter, so its import must remain after removing the per-row select.
+
+
+### 2026-10-31 / IC approval request discoverability
+- **What Codex did:** made the approval request path explicit from Pipeline: stage guidance now says to open an IC Review deal and request approval in its IC approval section; each IC Review row and the IC Review edit dialog link directly to that section. The role-gated deal-page action is labelled “Request IC approval” and now explains who receives it and which quorum applies.
+- **What the human decided or corrected:** pointed out that the UI described quorum-driven signing but gave no visible request path, and challenged the lack of approval request in the edit experience.
+- **How it was verified:** component coverage checks the row and edit-dialog link targets, guidance copy, role-gated request button, and API submission path. Existing Postgres and API authorization remain unchanged.
+- **What went wrong or was surprising:** the request action already existed on the deal detail page, but the pipeline never connected its IC Review guidance to that action; the label “Submit for approval” also did not match the language used elsewhere.
+
+
+### 2026-10-31 / Compact deal activity timeline
+- **What Codex did:** changed the deal activity feed from oversized individual cards to a compact vertical timeline with smaller type, actor/time metadata, and a bounded scroll region. Older events remain cursor-paginated and are loaded on demand inside the history panel.
+- **What the human decided or corrected:** called out that the event cards were oversized and would make users scroll endlessly as the audit history grows.
+- **How it was verified:** component coverage checks the labelled history region and ordered event list; focused detail tests and repository checks pass.
+- **What went wrong or was surprising:** the feed already used cursor pagination, but its full-width cards still dominated the page and every fetched page expanded the document height.
+
+
+### 2026-10-31 / Reconcile IC approval guidance with role permissions
+- **What Codex did:** made the Approvals inbox and deal detail explain who can submit an unrequested IC approval. The copy uses the existing API `canRequest` flag; the built-in Deal Lead can request, Owners configure quorum, and IC Members decide. Updated README, handoff, project/feature progress, and tests to match the database role grants.
+- **What the human decided or corrected:** during the Owner walkthrough, the user noticed the queue said to open a deal to submit a request even though no request button appeared for the Owner.
+- **How it was verified:** focused tests cover requester and non-requester queue states and the Owner-facing deal detail message. Full suite and quality/build checks are recorded after execution in the current handoff and PR.
+- **What went wrong or was surprising:** the database permission model was correct; the queue's static copy ignored the same `canRequest` signal already controlling the deal-page action. The retained 8081 audit timeline also showed a completed Deal Lead request, IC approval, and Signed transition despite the older handoff saying no vote had been written; handoff/progress notes now match the persisted events.
+- **Follow-up:** the Owner correctly pointed out that identifying a Deal Lead still did not reveal the exact UI action. Both the queue and deal detail now name **Request IC approval** and the **IC approval** section; the Owner detail links to Team to find a Deal Lead. Focused tests verify the action wording and Owner navigation.

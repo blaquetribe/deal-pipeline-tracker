@@ -85,7 +85,7 @@ export function DealsDashboard() {
   const [createError, setCreateError] = useState<string | null>(null);
   const [createMessage, setCreateMessage] = useState<string | null>(null);
   const [creating, setCreating] = useState(false);
-  const [moveTargets, setMoveTargets] = useState<Record<string, Stage | ''>>({});
+  const [openMoveMenu, setOpenMoveMenu] = useState<string | null>(null);
   const [movingDeal, setMovingDeal] = useState<string | null>(null);
   const [updatingDeal, setUpdatingDeal] = useState<string | null>(null);
   const [actionToast, setActionToast] = useState<ActionToast | null>(null);
@@ -248,11 +248,11 @@ export function DealsDashboard() {
     }
   }
 
-  async function moveStage(dealId: string, requestedTarget?: Stage) {
+  async function moveStage(dealId: string, toStage: Stage) {
     const deal = result?.items.find((item) => item.id === dealId);
-    const toStage = requestedTarget ?? moveTargets[dealId];
-    if (!deal || !toStage) return;
+    if (!deal) return;
     setActionToast(null);
+    setOpenMoveMenu(null);
     setMovingDeal(dealId);
     try {
       await moveDealStage(deal.id, toStage, deal.version);
@@ -262,7 +262,6 @@ export function DealsDashboard() {
       const refreshed = await readDeals(query);
       setResult(refreshed);
       void refreshSummary();
-      setMoveTargets((current) => ({ ...current, [dealId]: '' }));
       setActionToast({
         kind: 'success',
         message: `${deal.name} moved to ${STAGE_LABELS[toStage]}.`,
@@ -671,8 +670,9 @@ export function DealsDashboard() {
             <h3 className="font-semibold">How deal stages work</h3>
             <ul className="mt-2 grid gap-2 text-fg-muted md:grid-cols-3">
               <li>
-                <strong className="text-fg">IC Review → Signed:</strong> IC approval quorum moves an
-                approved deal to Signed automatically.
+                <strong className="text-fg">IC Review → Signed:</strong> open an IC Review deal and
+                request approval from its IC approval section. The quorum moves approved deals to
+                Signed automatically.
               </li>
               <li>
                 <strong className="text-fg">Signed → Closed:</strong> after signing, move it to
@@ -750,7 +750,7 @@ export function DealsDashboard() {
                     Expected close
                   </th>
                   <th className="px-4 py-3 font-medium" scope="col">
-                    Stage action
+                    Move
                   </th>
                   <th className="px-4 py-3 font-medium" scope="col">
                     Deal actions
@@ -783,84 +783,80 @@ export function DealsDashboard() {
                         const destinations = STAGE_TRANSITIONS.filter(
                           ([from]) => from === deal.stage,
                         ).map(([, to]) => to);
-                        const selected = moveTargets[deal.id] ?? '';
-                        const check = selected
-                          ? evaluateMove(deal.stage, selected, [
-                              ...(deal.sector ? ['sector'] : []),
-                              ...(deal.amount !== null ? ['amount'] : []),
-                              ...(deal.expected_close_date ? ['expected_close_date'] : []),
-                            ])
-                          : null;
-                        const missingFields =
-                          check && !check.ok && check.code === 'missing_fields'
-                            ? check.fields.map((field) => {
-                                switch (field) {
-                                  case 'amount':
-                                    return 'deal size';
-                                  case 'sector':
-                                    return 'sector';
-                                  case 'expected_close_date':
-                                    return 'expected close date';
-                                  default:
-                                    return field;
-                                }
-                              })
-                            : [];
-                        const moveHelpId = `move-help-${deal.id}`;
                         return destinations.length === 0 ? (
                           <span className="text-fg-muted">Final stage</span>
                         ) : (
-                          <div className="flex min-w-56 flex-col items-start gap-2">
-                            <label className="sr-only" htmlFor={`move-stage-${deal.id}`}>
-                              Next stage for {deal.name}
-                            </label>
-                            <SelectControl
-                              aria-describedby={selected ? moveHelpId : undefined}
-                              className="w-full"
-                              disabled={movingDeal === deal.id || loading}
-                              id={`move-stage-${deal.id}`}
-                              onChange={(event) => {
-                                const parsed = stageSchema.safeParse(event.currentTarget.value);
-                                const targetStage = parsed.success ? parsed.data : '';
-                                setMoveTargets((current) => ({
-                                  ...current,
-                                  [deal.id]: targetStage,
-                                }));
-                              }}
-                              value={selected}
-                            >
-                              <option value="">Choose next stage…</option>
-                              {destinations.map((destination) => (
-                                <option key={destination} value={destination}>
-                                  {STAGE_LABELS[destination]}
-                                </option>
-                              ))}
-                            </SelectControl>
+                          <div className="min-w-36">
+                            {deal.stage === 'ic_review' ? (
+                              <Link
+                                className="mb-2 inline-block text-sm font-medium text-brand-fg underline underline-offset-4 focus-visible:outline-2"
+                                href={`/deals/${deal.id}#approval-title`}
+                              >
+                                Open IC approval
+                              </Link>
+                            ) : null}
                             <Button
-                              className="w-full"
-                              disabled={
-                                !selected ||
-                                missingFields.length > 0 ||
-                                movingDeal === deal.id ||
-                                loading
+                              aria-expanded={openMoveMenu === deal.id}
+                              className="w-full justify-between"
+                              disabled={movingDeal === deal.id || loading}
+                              onClick={() =>
+                                setOpenMoveMenu((current) => (current === deal.id ? null : deal.id))
                               }
-                              onClick={() => void moveStage(deal.id)}
                               size="small"
                               type="button"
-                              variant="primary"
+                              variant="secondary"
                             >
-                              {movingDeal === deal.id
-                                ? 'Moving deal…'
-                                : selected
-                                  ? `Move to ${STAGE_LABELS[selected]}`
-                                  : 'Choose a stage'}
+                              <span>{movingDeal === deal.id ? 'Moving…' : 'Move to…'}</span>
+                              <span aria-hidden="true">{openMoveMenu === deal.id ? '▴' : '▾'}</span>
                             </Button>
-                            {selected ? (
-                              <p className="text-xs text-fg-muted" id={moveHelpId}>
-                                {missingFields.length > 0
-                                  ? `Add ${missingFields.join(' and ')} before moving to ${STAGE_LABELS[selected]}.`
-                                  : `Move from ${STAGE_LABELS[deal.stage]} to ${STAGE_LABELS[selected]}.`}
-                              </p>
+                            {openMoveMenu === deal.id ? (
+                              <fieldset className="mt-2 space-y-1 rounded-control border border-line bg-surface-raised p-2">
+                                <legend className="sr-only">Available moves for {deal.name}</legend>
+                                <p className="px-2 pb-1 text-xs text-fg-muted">
+                                  Move from {STAGE_LABELS[deal.stage]}
+                                </p>
+                                {destinations.map((destination) => {
+                                  const check = evaluateMove(deal.stage, destination, [
+                                    ...(deal.sector ? ['sector'] : []),
+                                    ...(deal.amount !== null ? ['amount'] : []),
+                                    ...(deal.expected_close_date ? ['expected_close_date'] : []),
+                                  ]);
+                                  const missingFields =
+                                    !check.ok && check.code === 'missing_fields'
+                                      ? check.fields.map((field) => {
+                                          switch (field) {
+                                            case 'amount':
+                                              return 'deal size';
+                                            case 'sector':
+                                              return 'sector';
+                                            case 'expected_close_date':
+                                              return 'expected close date';
+                                            default:
+                                              return field;
+                                          }
+                                        })
+                                      : [];
+                                  return (
+                                    <div key={destination}>
+                                      <Button
+                                        className="w-full justify-start"
+                                        disabled={missingFields.length > 0 || loading}
+                                        onClick={() => void moveStage(deal.id, destination)}
+                                        size="small"
+                                        type="button"
+                                        variant="quiet"
+                                      >
+                                        Move to {STAGE_LABELS[destination]}
+                                      </Button>
+                                      {missingFields.length > 0 ? (
+                                        <p className="px-2 pb-1 text-xs text-fg-muted">
+                                          Requires {missingFields.join(' and ')}
+                                        </p>
+                                      ) : null}
+                                    </div>
+                                  );
+                                })}
+                              </fieldset>
                             ) : null}
                           </div>
                         );
@@ -910,6 +906,20 @@ export function DealsDashboard() {
                 Update the core details used across your pipeline and reports.
               </p>
             </header>
+            {editingDeal.stage === 'ic_review' ? (
+              <aside className="rounded-control border border-line bg-surface-raised p-3">
+                <p className="text-sm text-fg-muted">
+                  IC approval requests are made in the approval section. A Deal Lead or another user
+                  with approval-request access can submit one there.
+                </p>
+                <Link
+                  className="mt-2 inline-block text-sm font-medium text-brand-fg underline underline-offset-4 focus-visible:outline-2"
+                  href={`/deals/${editingDeal.id}#approval-title`}
+                >
+                  Open IC approval
+                </Link>
+              </aside>
+            ) : null}
             <div className="deal-edit-fields">
               <label htmlFor={`${editId}-name`}>
                 <span>Deal name</span>

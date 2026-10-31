@@ -431,16 +431,39 @@ export function DealDetail({ dealId }: DealDetailProps) {
               </Button>
             </form>
           ) : null}
+          {deal.stage === 'ic_review' && !approval.requestId && !approval.canRequest ? (
+            <div className="mt-4 space-y-2 text-sm text-fg-muted">
+              <p>
+                No IC approval request has been submitted. This session cannot submit it. Ask a Deal
+                Lead or another authorized requester to open this deal and select “Request IC
+                approval” in this section.
+              </p>
+              {approval.canConfigure ? (
+                <Link
+                  className="inline-flex text-brand-fg underline underline-offset-4"
+                  href="/team"
+                >
+                  Find a Deal Lead in Team
+                </Link>
+              ) : null}
+            </div>
+          ) : null}
           {approval.canRequest ? (
-            <Button
-              className="mt-4"
-              disabled={approvalBusy}
-              onClick={() => void submitApprovalRequest()}
-              type="button"
-              variant="primary"
-            >
-              {approvalBusy ? 'Submitting…' : 'Submit for approval'}
-            </Button>
+            <div className="mt-4">
+              <p className="text-sm text-fg-muted">
+                Send this deal to the eligible IC members for a decision. The request uses the
+                organisation’s current approval quorum.
+              </p>
+              <Button
+                className="mt-3"
+                disabled={approvalBusy}
+                onClick={() => void submitApprovalRequest()}
+                type="button"
+                variant="primary"
+              >
+                {approvalBusy ? 'Requesting…' : 'Request IC approval'}
+              </Button>
+            </div>
           ) : null}
           {approval.canDecide ? (
             <div className="mt-4 space-y-3">
@@ -655,36 +678,46 @@ export function DealDetail({ dealId }: DealDetailProps) {
         {activity.events.length === 0 ? (
           <p className="mt-4 text-fg-muted">No activity yet.</p>
         ) : (
-          <ol className="mt-4 space-y-3">
-            {activity.events.map((item) => (
-              <li className="material-card p-4" key={item.id}>
-                <p className="font-medium">{formatActivityKind(item.kind)}</p>
-                <p className="mt-2 whitespace-pre-wrap">
-                  {formatActivityBody(item.kind, item.body)}
-                </p>
-                <p className="mt-3 text-sm text-fg-muted">
-                  {item.actorName ?? item.actorEmail} ·{' '}
-                  <time dateTime={item.createdAt}>{formatDate(item.createdAt)}</time>
-                </p>
-              </li>
-            ))}
-          </ol>
+          <section
+            aria-label="Deal activity history"
+            className="rounded-material mt-4 max-h-[32rem] overflow-y-auto overscroll-contain border border-line bg-surface p-4"
+          >
+            <ol className="ml-1 border-l border-line pl-5">
+              {activity.events.map((item) => (
+                <li className="relative pb-4 last:pb-0" key={item.id}>
+                  <span
+                    aria-hidden="true"
+                    className="absolute top-1 -left-[1.58rem] size-2.5 rounded-full border-2 border-brand bg-surface"
+                  />
+                  <p className="text-sm font-semibold">{formatActivityKind(item.kind)}</p>
+                  <p className="mt-0.5 text-sm break-words whitespace-pre-wrap text-fg-muted">
+                    {formatActivityBody(item.kind, item.body)}
+                  </p>
+                  <p className="mt-1.5 text-xs text-fg-muted">
+                    {item.actorName ?? item.actorEmail} ·{' '}
+                    <time dateTime={item.createdAt}>{formatDate(item.createdAt)}</time>
+                  </p>
+                </li>
+              ))}
+            </ol>
+            {activity.hasMore ? (
+              <Button
+                className="mt-4 ml-5"
+                disabled={loadingOlder}
+                onClick={() => void loadOlderActivity()}
+                size="small"
+                type="button"
+                variant="secondary"
+              >
+                {loadingOlder ? 'Loading…' : 'Load older activity'}
+              </Button>
+            ) : null}
+          </section>
         )}
         {activityError ? (
           <p className="mt-3 text-danger" role="alert">
             {activityError}
           </p>
-        ) : null}
-        {activity.hasMore ? (
-          <Button
-            className="mt-4"
-            disabled={loadingOlder}
-            onClick={() => void loadOlderActivity()}
-            variant="secondary"
-            type="button"
-          >
-            {loadingOlder ? 'Loading…' : 'Load older activity'}
-          </Button>
         ) : null}
       </section>
     </div>
