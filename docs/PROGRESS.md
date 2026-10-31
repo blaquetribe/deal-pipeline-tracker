@@ -33,7 +33,7 @@ Tier: **core** (must ship), **extended** (ship if time allows, else README note)
 - [x] Walk through the approval cycle using Deal Lead and IC Member accounts in isolated demo data; verified quorum, decision ledger entry, and automatic move to Signed.
 - [x] Refresh and validate the 20-slide walkthrough presentation after UI review; include it in the closeout commit.
 - [ ] Save dedicated current light-theme edit-dialog and manager-gated role-navigation screenshots.
-- [ ] Commit and open a focused closeout documentation PR; do not merge with required GitHub checks blocked.
+- [x] Commit and open closeout documentation PR #48; do not merge while its required GitHub checks are blocked.
 
 CSP and security headers are **core** security work, scheduled in 00 (gateway, Hono headers) and 02 (nonce CSP in Next middleware); they are not on the cut list.
 
@@ -111,7 +111,7 @@ Anything cut must be written in the README "what I'd do next" section.
 
 
 ## Closeout verification — 2026-10-31
-- PR #47 merged by owner instruction as `de8435f`; GitHub CI, Secret scan, and advisory review did not start because of the account billing/spending-limit block. No green status is claimed.
+- PR #47 merged by owner instruction as `de8435f`; GitHub CI, Secret scan, and advisory review did not start because of the account billing/spending-limit block. PR #48 records this closeout. Its CI and Secret scan also failed before any job steps; Docker, pgTAP, and Compose smoke were skipped. No green status is claimed.
 - Live isolated approval cycle passed: Owner set a 1-of-1 quorum; Deal Lead submitted the request; IC Member approved; deal transitioned IC Review → Signed and the activity ledger recorded the decision and transition.
 - Owner light-theme pipeline edit dialog and manager-only role-management entry from Team were visually reviewed. The CUA interface returned image previews but did not provide a file-persistence route, so the dedicated two screenshots are still outstanding.
 - Cloudflare R2 round trip passed for a unique temporary object in the documented project bucket and configured object prefix: PUT, GET byte comparison, DELETE, then absence check. App runtime remains configured with `OBJECT_STORE_DRIVER=fs`; credentials were not printed or changed.
