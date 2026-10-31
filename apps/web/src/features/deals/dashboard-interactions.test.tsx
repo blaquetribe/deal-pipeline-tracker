@@ -84,16 +84,33 @@ describe('DealsDashboard interactions', () => {
     render(<DealsDashboard />);
     await screen.findByRole('row', { name: /Northstar Systems/ });
 
-    await user.selectOptions(
-      screen.getByRole('combobox', { name: 'Next stage for Northstar Systems' }),
-      'screening',
+    expect(screen.getByRole('button', { name: 'Move to…' })).toHaveAttribute(
+      'aria-expanded',
+      'false',
     );
+    expect(screen.queryByRole('button', { name: 'Move to Screening' })).not.toBeInTheDocument();
+    await user.click(screen.getByRole('button', { name: 'Move to…' }));
 
-    expect(
-      screen.getByText('Add deal size and sector before moving to Screening.'),
-    ).toBeInTheDocument();
+    expect(screen.getByText('Requires deal size and sector')).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Move to Screening' })).toBeDisabled();
+    expect(screen.getByRole('button', { name: 'Move to Passed' })).toBeEnabled();
     expect(api.moveDealStage).not.toHaveBeenCalled();
+  });
+
+  it('shows only legal moves and keeps approval-controlled Signed automatic', async () => {
+    api.readDeals.mockResolvedValue({
+      total: 1,
+      items: [{ ...deal, stage: 'ic_review' }],
+    });
+    const user = userEvent.setup();
+    render(<DealsDashboard />);
+    await screen.findByRole('row', { name: /Northstar Systems/ });
+
+    await user.click(screen.getByRole('button', { name: 'Move to…' }));
+
+    expect(screen.getByRole('button', { name: 'Move to Due Diligence' })).toBeEnabled();
+    expect(screen.getByRole('button', { name: 'Move to Passed' })).toBeEnabled();
+    expect(screen.queryByRole('button', { name: 'Move to Signed' })).not.toBeInTheDocument();
   });
 
   it('shows terminal stages without offering an invalid move', async () => {
@@ -206,10 +223,7 @@ describe('DealsDashboard interactions', () => {
     render(<DealsDashboard />);
     await screen.findByRole('row', { name: /Northstar Systems/ });
 
-    await user.selectOptions(
-      screen.getByRole('combobox', { name: 'Next stage for Northstar Systems' }),
-      'screening',
-    );
+    await user.click(screen.getByRole('button', { name: 'Move to…' }));
     await user.click(screen.getByRole('button', { name: 'Move to Screening' }));
 
     expect(await screen.findByRole('alert')).toHaveTextContent(

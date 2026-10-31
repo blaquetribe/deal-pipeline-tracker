@@ -227,7 +227,10 @@ describe('DealDetail', () => {
     const user = userEvent.setup();
 
     render(<DealDetail dealId={dealId} />);
-    await user.click(await screen.findByRole('button', { name: 'Submit for approval' }));
+    expect(
+      await screen.findByText(/Send this deal to the eligible IC members for a decision/),
+    ).toBeVisible();
+    await user.click(await screen.findByRole('button', { name: 'Request IC approval' }));
 
     expect(await screen.findByText(/Required approvals: 2/)).toBeVisible();
     expect(fetch).toHaveBeenCalledWith(
@@ -519,7 +522,7 @@ describe('DealDetail', () => {
       await screen.findByText('No approval quorum is configured for this organisation.'),
     ).toBeVisible();
     expect(screen.getByRole('spinbutton', { name: 'Required approvals' })).toHaveValue(1);
-    expect(screen.queryByRole('button', { name: 'Submit for approval' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Request IC approval' })).not.toBeInTheDocument();
   });
 
   it('lets an assigned IC member approve without a rejection reason', async () => {

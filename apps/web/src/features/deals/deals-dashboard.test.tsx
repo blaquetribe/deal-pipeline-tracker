@@ -85,7 +85,12 @@ describe('DealsDashboard', () => {
 
     const guidance = await screen.findByRole('complementary', { name: 'Stage movement rules' });
     expect(guidance).toHaveTextContent(
-      'IC approval quorum moves an approved deal to Signed automatically.',
+      'open an IC Review deal and request approval from its IC approval section.',
+    );
+    expect(guidance).toHaveTextContent('The quorum moves approved deals to Signed automatically.');
+    expect(screen.getByRole('link', { name: 'Open IC approval' })).toHaveAttribute(
+      'href',
+      `/deals/${deal.id}#approval-title`,
     );
     expect(guidance).toHaveTextContent('Deal size, sector, and expected close date are required.');
     expect(guidance).toHaveTextContent('Passed: use this outcome when a deal exits the pipeline.');
@@ -361,10 +366,7 @@ describe('DealsDashboard', () => {
     render(<DealsDashboard />);
     await screen.findByRole('row', { name: /Northstar Systems/ });
 
-    await user.selectOptions(
-      screen.getByRole('combobox', { name: 'Next stage for Northstar Systems' }),
-      'screening',
-    );
+    await user.click(screen.getByRole('button', { name: 'Move to…' }));
     await user.click(screen.getByRole('button', { name: 'Move to Screening' }));
 
     expect(await screen.findByRole('status')).toHaveTextContent(

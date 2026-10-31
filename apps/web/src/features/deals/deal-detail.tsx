@@ -432,15 +432,21 @@ export function DealDetail({ dealId }: DealDetailProps) {
             </form>
           ) : null}
           {approval.canRequest ? (
-            <Button
-              className="mt-4"
-              disabled={approvalBusy}
-              onClick={() => void submitApprovalRequest()}
-              type="button"
-              variant="primary"
-            >
-              {approvalBusy ? 'Submitting…' : 'Submit for approval'}
-            </Button>
+            <div className="mt-4">
+              <p className="text-sm text-fg-muted">
+                Send this deal to the eligible IC members for a decision. The request uses the
+                organisation’s current approval quorum.
+              </p>
+              <Button
+                className="mt-3"
+                disabled={approvalBusy}
+                onClick={() => void submitApprovalRequest()}
+                type="button"
+                variant="primary"
+              >
+                {approvalBusy ? 'Requesting…' : 'Request IC approval'}
+              </Button>
+            </div>
           ) : null}
           {approval.canDecide ? (
             <div className="mt-4 space-y-3">
