@@ -81,6 +81,33 @@ describe('DealDetail', () => {
     expect(screen.getByText(/cannot be edited or deleted/)).toBeVisible();
   });
 
+  it('explains who must request IC approval when the current user lacks access', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn<(...args: [RequestInfo | URL]) => Promise<Response>>(async (input) => {
+        const url = input instanceof Request ? input.url : String(input);
+        const response = url.endsWith('/activity')
+          ? activity
+          : url.endsWith('/approval')
+            ? approvalStatus
+            : { ...deal, stage: 'ic_review' };
+        return new Response(JSON.stringify(response), {
+          status: 200,
+          headers: { 'Content-Type': 'application/json' },
+        });
+      }),
+    );
+
+    render(<DealDetail dealId={dealId} />);
+
+    expect(
+      await screen.findByText(
+        'No IC approval request has been submitted. A Deal Lead or another user with approval-request access must submit it from this section.',
+      ),
+    ).toBeVisible();
+    expect(screen.queryByRole('button', { name: 'Request IC approval' })).not.toBeInTheDocument();
+  });
+
   it('posts a note, then refreshes the authoritative activity timeline', async () => {
     const fetch = vi.fn<(input: RequestInfo | URL, init?: RequestInit) => Promise<Response>>(
       async (input, init) => {

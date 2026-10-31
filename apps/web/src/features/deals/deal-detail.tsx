@@ -431,6 +431,12 @@ export function DealDetail({ dealId }: DealDetailProps) {
               </Button>
             </form>
           ) : null}
+          {deal.stage === 'ic_review' && !approval.requestId && !approval.canRequest ? (
+            <p className="mt-4 text-sm text-fg-muted">
+              No IC approval request has been submitted. A Deal Lead or another user with
+              approval-request access must submit it from this section.
+            </p>
+          ) : null}
           {approval.canRequest ? (
             <div className="mt-4">
               <p className="text-sm text-fg-muted">

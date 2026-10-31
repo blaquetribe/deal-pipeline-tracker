@@ -909,8 +909,8 @@ export function DealsDashboard() {
             {editingDeal.stage === 'ic_review' ? (
               <aside className="rounded-control border border-line bg-surface-raised p-3">
                 <p className="text-sm text-fg-muted">
-                  Need to request an IC decision? Approval requests are managed in the deal’s IC
-                  approval section.
+                  IC approval requests are made in the approval section. A Deal Lead or another user
+                  with approval-request access can submit one there.
                 </p>
                 <Link
                   className="mt-2 inline-block text-sm font-medium text-brand-fg underline underline-offset-4 focus-visible:outline-2"

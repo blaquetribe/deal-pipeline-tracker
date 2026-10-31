@@ -105,7 +105,9 @@ describe('DealsDashboard', () => {
     await user.click(screen.getByRole('button', { name: 'Edit Northstar Systems' }));
 
     const dialog = screen.getByRole('dialog', { name: 'Edit Northstar Systems' });
-    expect(dialog).toHaveTextContent('Need to request an IC decision?');
+    expect(dialog).toHaveTextContent(
+      'IC approval requests are made in the approval section. A Deal Lead or another user with approval-request access can submit one there.',
+    );
     expect(within(dialog).getByRole('link', { name: 'Open IC approval' })).toHaveAttribute(
       'href',
       `/deals/${deal.id}#approval-title`,

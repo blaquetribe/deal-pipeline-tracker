@@ -60,8 +60,8 @@ export function ApprovalsInbox() {
       <section className="material-card p-5">
         <h2 className="font-semibold">No deals awaiting IC review</h2>
         <p className="mt-1 text-sm text-fg-muted">
-          Deals appear here when they reach the IC Review stage. Open a deal to submit or decide its
-          approval request.
+          Deals appear here when they reach the IC Review stage. Open a deal to see the approval
+          status and actions available to your role.
         </p>
         <Link
           className="mt-4 inline-flex text-sm font-semibold text-brand-fg underline"
@@ -88,7 +88,9 @@ export function ApprovalsInbox() {
             <p className="mt-1 text-sm text-fg-muted">
               {approval.requestId
                 ? `${approval.approvedCount} approved · ${approval.pendingCount} pending · ${approval.rejectedCount} rejected`
-                : 'Open the deal to submit an IC approval request.'}
+                : approval.canRequest
+                  ? 'No request yet. Open the deal to request IC approval.'
+                  : 'No request yet. A Deal Lead or another authorized requester must submit it from the deal.'}
               {approval.requiredApprovals ? ` · ${approval.requiredApprovals} required` : ''}
             </p>
           </div>

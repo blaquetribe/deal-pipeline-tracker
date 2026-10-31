@@ -331,3 +331,10 @@ Running log feeding the README reflection required by the brief. Add an entry pe
 - **What the human decided or corrected:** called out that the event cards were oversized and would make users scroll endlessly as the audit history grows.
 - **How it was verified:** component coverage checks the labelled history region and ordered event list; focused detail tests and repository checks pass.
 - **What went wrong or was surprising:** the feed already used cursor pagination, but its full-width cards still dominated the page and every fetched page expanded the document height.
+
+
+### 2026-10-31 / Reconcile IC approval guidance with role permissions
+- **What Codex did:** made the Approvals inbox and deal detail explain who can submit an unrequested IC approval. The copy uses the existing API `canRequest` flag; the built-in Deal Lead can request, Owners configure quorum, and IC Members decide. Updated README, handoff, project/feature progress, and tests to match the database role grants.
+- **What the human decided or corrected:** during the Owner walkthrough, the user noticed the queue said to open a deal to submit a request even though no request button appeared for the Owner.
+- **How it was verified:** focused tests cover requester and non-requester queue states and the Owner-facing deal detail message. Full suite and quality/build checks are recorded after execution in the current handoff and PR.
+- **What went wrong or was surprising:** the database permission model was correct; the queue's static copy ignored the same `canRequest` signal already controlling the deal-page action. The retained 8081 audit timeline also showed a completed Deal Lead request, IC approval, and Signed transition despite the older handoff saying no vote had been written; handoff/progress notes now match the persisted events.

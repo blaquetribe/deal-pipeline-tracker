@@ -62,12 +62,63 @@ describe('ApprovalsInbox', () => {
     expect(query?.get('stage')).toBe('ic_review');
   });
 
+  it('explains that an authorized requester must start an unrequested deal', async () => {
+    mocks.readStatus.mockResolvedValueOnce({
+      requestId: null,
+      status: null,
+      requiredApprovals: null,
+      configuredApprovals: 1,
+      approvedCount: 0,
+      pendingCount: 0,
+      rejectedCount: 0,
+      currentUserDecision: null,
+      delegatedSlots: [],
+      canRequest: false,
+      canDecide: false,
+      canConfigure: true,
+      canManageAbsence: false,
+      canReassign: false,
+    });
+    render(<ApprovalsInbox />);
+
+    expect(
+      await screen.findByText(
+        'No request yet. A Deal Lead or another authorized requester must submit it from the deal.',
+      ),
+    ).toBeVisible();
+  });
+
+  it('tells an authorized requester they can start approval from the deal', async () => {
+    mocks.readStatus.mockResolvedValueOnce({
+      requestId: null,
+      status: null,
+      requiredApprovals: null,
+      configuredApprovals: 1,
+      approvedCount: 0,
+      pendingCount: 0,
+      rejectedCount: 0,
+      currentUserDecision: null,
+      delegatedSlots: [],
+      canRequest: true,
+      canDecide: false,
+      canConfigure: false,
+      canManageAbsence: false,
+      canReassign: false,
+    });
+    render(<ApprovalsInbox />);
+
+    expect(
+      await screen.findByText('No request yet. Open the deal to request IC approval.'),
+    ).toBeVisible();
+  });
+
   it('explains when there are no deals in IC Review', async () => {
     mocks.readDeals.mockResolvedValueOnce({ total: 0, items: [] });
     render(<ApprovalsInbox />);
     expect(
       await screen.findByRole('heading', { name: 'No deals awaiting IC review' }),
     ).toBeVisible();
+    expect(screen.getByText(/actions available to your role/)).toBeVisible();
   });
 
   it('shows a useful error when the queue cannot be loaded', async () => {
