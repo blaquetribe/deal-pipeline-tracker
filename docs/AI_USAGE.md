@@ -402,3 +402,10 @@ Running log feeding the README reflection required by the brief. Add an entry pe
 - **What the human decided or corrected:** requested continuation through completion and has repeatedly required CI to pass before merging.
 - **How it was verified:** the full coverage suite passes (749 tests passed, 1 skipped; 85.27% branch coverage, above the 85% floor). Typecheck, lint, stylelint, format check, and full workspace build pass. The PR follow-up CI run still needs to complete before merge.
 - **What went wrong or was surprising:** the first PR CI run exposed a global branch-coverage regression despite all tests passing. The local test suite also requires localhost binding for realtime WebSocket tests; the run was repeated with the repository's permitted local-network environment.
+
+
+### 2026-11-02 / PR #50 merge and closeout reconciliation
+- **What Codex did:** merged PR #50 after all required GitHub Actions checks passed, fast-forwarded local `main`, and reconciled the handoff, progress, README, UI evidence index, and storage verification notes. Preserved the already-recorded approval and R2 verification results while correcting stale statements about the UI, presentation, and CI status.
+- **What the human decided or corrected:** directed that all open PRs be merged and the work continue from clean `main`, with the standing requirement that PR checks pass before merge.
+- **How it was verified:** GitHub reports success for typecheck/lint/test/build, coverage, secret scan, pgTAP, Docker web/API/gateway builds and scans, and Compose smoke. The publish job was skipped as designed for a pull request. The retained audit ledger records the request, approval, and stage transition; the scoped R2 smoke verified PUT, byte-identical GET, DELETE, and object absence. Local main was fast-forwarded to the merge commit.
+- **What remains open:** refreshed mobile screenshot evidence, production SMTP and Docker Desktop/amd64 validation, and two-session `move_stage` contention coverage remain outstanding. At the time of this note, the closeout documentation was being reconciled in PR #48; its refreshed checks must pass before merge.

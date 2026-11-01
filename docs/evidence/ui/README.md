@@ -12,6 +12,8 @@ These screenshots were captured on 1 November 2026 from the local Compose applic
 
 The evidence is from the current local build and uses fictional seed data. The responsive layout and mobile navigation were previously reviewed, but a refreshed mobile screenshot is not included here; screenshots 10 and 15 below are historical and predate the redesign.
 
+The updated desktop screenshots are committed with PR #50. The missing mobile capture is the only screenshot refresh still outstanding.
+
 ## Historical evidence
 
 Screenshots 01–15 were captured between 30 and 31 October 2026 before the 1 November system redesign. They remain useful for specific earlier workflows, successful uploads, and seed data, but they do not represent the current visual system. Do not use them to judge current typography, navigation, spacing, deal editing, or theme styling.
