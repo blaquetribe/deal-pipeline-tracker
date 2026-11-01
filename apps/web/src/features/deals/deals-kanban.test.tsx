@@ -51,6 +51,9 @@ describe('DealsKanban', () => {
     ]);
     expect(screen.getByRole('heading', { name: 'Passed · outcome' })).toBeInTheDocument();
     expect(
+      screen.getByRole('region', { name: /Scroll horizontally to see every stage/ }),
+    ).toHaveAttribute('tabindex', '0');
+    expect(
       within(screen.getByRole('region', { name: 'IC Review stage, 1 deals' })).getByText(
         'Northstar Systems',
       ),

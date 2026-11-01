@@ -127,7 +127,7 @@ describe('TeamManagement', () => {
       screen.queryByRole('button', { name: /Remove Owner from Tara Owner/ }),
     ).not.toBeInTheDocument();
 
-    await user.selectOptions(within(row!).getByLabelText('Add role'), 'deal_lead');
+    await user.selectOptions(within(row!).getByLabelText('Add role to Mina Member'), 'deal_lead');
     await user.click(within(row!).getByRole('button', { name: 'Add role' }));
     await waitFor(() =>
       expect(mocks.grantRole).toHaveBeenCalledWith('member-id', { roleKey: 'deal_lead' }),

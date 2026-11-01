@@ -4,6 +4,7 @@ import type { AssignableRole, TeamMember } from '@dpt/shared';
 import { useEffect, useId, useState, type FormEvent } from 'react';
 
 import { Button } from '../ui/button';
+import { Icon } from '../ui/icon';
 import { SelectControl } from '../ui/select-control';
 import {
   deactivateTeamMember,
@@ -15,6 +16,15 @@ import {
 
 function memberName(member: TeamMember): string {
   return member.fullName || member.email || 'Invited teammate';
+}
+
+function memberInitials(member: TeamMember): string {
+  return memberName(member)
+    .trim()
+    .split(/\s+/)
+    .slice(0, 2)
+    .map((part) => part[0]?.toLocaleUpperCase() ?? '')
+    .join('');
 }
 
 export function TeamRoster({
@@ -104,14 +114,13 @@ export function TeamRoster({
   }
 
   return (
-    <section aria-labelledby="team-roster-heading" className="material-card space-y-4 p-5">
-      <div>
+    <section aria-labelledby="team-roster-heading" className="material-card space-y-3 p-4">
+      <div className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1">
         <h2 className="text-lg font-semibold" id="team-roster-heading">
           Active and deactivated members
         </h2>
-        <p className="mt-1 text-sm text-fg-muted">
-          Review organisation roles, adjust access, or deactivate an account. Your own roles cannot
-          be changed here.
+        <p className="text-xs text-fg-muted">
+          Update roles or remove organisation access. Your own roles are protected.
         </p>
       </div>
       {error ? (
@@ -123,7 +132,7 @@ export function TeamRoster({
       {!loading && members.length === 0 && !error ? (
         <p className="text-sm text-fg-muted">No organisation members were found.</p>
       ) : null}
-      <ul className="grid gap-3">
+      <ul className="grid gap-1.5">
         {members.map((member) => {
           const isSelf = member.userId === currentUserId;
           const isDeactivated = member.deactivatedAt !== null;
@@ -135,24 +144,39 @@ export function TeamRoster({
           const rowId = `${id}-${member.userId}`;
           return (
             <li
-              className="rounded-control border border-line bg-surface-subtle p-4"
+              className="grid gap-x-4 gap-y-2.5 rounded-control border border-line bg-surface-subtle p-2.5 md:grid-cols-[minmax(0,1fr)_minmax(0,1.15fr)] md:items-center xl:grid-cols-[minmax(14rem,1.2fr)_minmax(13rem,1fr)_minmax(20rem,1.6fr)]"
               key={member.userId}
             >
-              <div className="flex flex-wrap items-start justify-between gap-3">
+              <div className="flex min-w-0 items-center gap-2.5">
+                <span
+                  aria-hidden="true"
+                  className="grid size-8 shrink-0 place-items-center rounded-full bg-brand-soft text-xs font-semibold text-brand-fg"
+                >
+                  {memberInitials(member)}
+                </span>
                 <div className="min-w-0">
-                  <h3 className="truncate font-semibold text-fg">{memberName(member)}</h3>
+                  <div className="flex min-w-0 flex-wrap items-center gap-x-2 gap-y-1">
+                    <h3 className="truncate text-sm font-semibold text-fg">{memberName(member)}</h3>
+                    <span
+                      className={`rounded-full px-1.5 py-0.5 text-[0.65rem] leading-tight font-medium ${isDeactivated ? 'bg-danger-soft text-danger-fg' : isSelf ? 'bg-brand-soft text-brand-fg' : 'bg-surface-muted text-fg-muted'}`}
+                    >
+                      {isDeactivated ? 'Deactivated' : isSelf ? 'You' : 'Active'}
+                    </span>
+                  </div>
                   {member.email ? (
-                    <p className="mt-1 text-sm break-all text-fg-muted">{member.email}</p>
+                    <p className="truncate text-xs text-fg-muted" title={member.email}>
+                      {member.email}
+                    </p>
                   ) : null}
                 </div>
-                <span className="rounded-full border border-line px-3 py-1 text-xs font-medium">
-                  {isDeactivated ? 'Deactivated' : isSelf ? 'You' : 'Active'}
-                </span>
               </div>
-              <ul aria-label={`${memberName(member)} roles`} className="mt-3 flex flex-wrap gap-2">
+              <ul
+                aria-label={`${memberName(member)} roles`}
+                className="flex min-w-0 flex-wrap items-center gap-1.5 md:justify-end xl:justify-start"
+              >
                 {member.roles.map((role) => (
                   <li
-                    className="inline-flex items-center gap-2 rounded-full border border-line px-3 py-1 text-sm"
+                    className="inline-flex items-center gap-1 rounded-full border border-line bg-surface px-2 py-0.5 text-xs font-medium"
                     key={role.key}
                   >
                     {role.name}
@@ -162,13 +186,14 @@ export function TeamRoster({
                     (canManageRoles || !isPrivilegedRole(role.key)) ? (
                       <Button
                         aria-label={`Remove ${role.name} from ${memberName(member)}`}
+                        className="team-role-remove"
                         disabled={pendingUserId !== null}
                         onClick={() => void revoke(member, role.key)}
                         size="small"
                         type="button"
                         variant="secondary"
                       >
-                        Remove
+                        <Icon className="size-3.5" name="remove" />
                       </Button>
                     ) : null}
                   </li>
@@ -178,25 +203,23 @@ export function TeamRoster({
                 ) : null}
               </ul>
               {!isSelf && !isDeactivated && canManageMember ? (
-                <div className="mt-4 flex flex-wrap items-end justify-between gap-3">
+                <div className="flex min-w-0 flex-wrap items-center justify-between gap-2 md:col-span-2 xl:col-span-1 xl:justify-end">
                   {assignable.length > 0 ? (
                     <form
-                      className="flex flex-wrap items-end gap-2"
+                      className="flex min-w-0 flex-wrap items-center gap-1.5"
                       onSubmit={(event) => void grant(event, member)}
                     >
-                      <div>
-                        <label className="mb-1 block text-xs font-medium" htmlFor={rowId}>
-                          Add role
-                        </label>
-                        <SelectControl className="min-w-48" id={rowId} name="roleKey" required>
-                          <option value="">Choose a role</option>
-                          {assignable.map((role) => (
-                            <option key={role.key} value={role.key}>
-                              {role.name}
-                            </option>
-                          ))}
-                        </SelectControl>
-                      </div>
+                      <label className="sr-only" htmlFor={rowId}>
+                        Add role to {memberName(member)}
+                      </label>
+                      <SelectControl className="w-40 max-w-full" id={rowId} name="roleKey" required>
+                        <option value="">Add role…</option>
+                        {assignable.map((role) => (
+                          <option key={role.key} value={role.key}>
+                            {role.name}
+                          </option>
+                        ))}
+                      </SelectControl>
                       <Button
                         disabled={pendingUserId !== null}
                         size="small"
@@ -207,12 +230,12 @@ export function TeamRoster({
                       </Button>
                     </form>
                   ) : (
-                    <p className="text-sm text-fg-muted">No additional roles available.</p>
+                    <p className="text-xs text-fg-muted">No additional roles available.</p>
                   )}
                   {confirmDeactivateId === member.userId ? (
                     <div className="flex flex-wrap items-center gap-2">
-                      <span className="text-sm text-fg-muted">
-                        Remove this member’s organisation access?
+                      <span className="text-xs text-danger-fg">
+                        This will remove their organisation access.
                       </span>
                       <Button
                         disabled={pendingUserId !== null}
@@ -247,7 +270,7 @@ export function TeamRoster({
                 </div>
               ) : null}
               {!isSelf && !isDeactivated && !canManageMember ? (
-                <p className="mt-3 text-sm text-fg-muted">
+                <p className="text-xs text-fg-muted md:col-span-2 xl:col-span-3">
                   Only an Owner can change access for a member with privileged roles.
                 </p>
               ) : null}

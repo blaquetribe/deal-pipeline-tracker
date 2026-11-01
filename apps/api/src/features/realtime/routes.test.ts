@@ -11,6 +11,7 @@ import { mountRealtimeRoutes } from './routes';
 
 const feedState = vi.hoisted(() => ({
   onNotification: null as ((row: unknown) => void) | null,
+  onDealsChanged: null as (() => void) | null,
   onSubscribed: null as (() => void) | null,
   onUnavailable: null as ((status: string) => void) | null,
   closed: false,
@@ -24,6 +25,7 @@ const feedState = vi.hoisted(() => ({
 vi.mock('../../db/realtime', () => ({
   createRealtimeFeed: async (options: {
     onNotification: (row: unknown) => void;
+    onDealsChanged: () => void;
     onSubscribed: () => void;
     onUnavailable: (status: string) => void;
   }) => {
@@ -34,6 +36,7 @@ vi.mock('../../db/realtime', () => ({
       });
     }
     feedState.onNotification = options.onNotification;
+    feedState.onDealsChanged = options.onDealsChanged;
     feedState.onSubscribed = options.onSubscribed;
     feedState.onUnavailable = options.onUnavailable;
     return {
@@ -58,6 +61,10 @@ function publishNotification(row: unknown): void {
 
 function publishSubscribed(): void {
   feedState.onSubscribed?.();
+}
+
+function publishDealsChanged(): void {
+  feedState.onDealsChanged?.();
 }
 
 function publishUnavailable(): void {
@@ -179,6 +186,7 @@ describe('realtime websocket route', () => {
 
   it('relays a notification to an authenticated real websocket and closes the feed on disconnect', async () => {
     feedState.onNotification = null;
+    feedState.onDealsChanged = null;
     feedState.onUnavailable = null;
     feedState.closed = false;
     feedState.closeWaiter = null;
@@ -242,6 +250,10 @@ describe('realtime websocket route', () => {
         read_at: null,
       },
     });
+    const dealChange = once(client, 'message');
+    publishDealsChanged();
+    const [dealChangeData] = await dealChange;
+    expect(JSON.parse(String(dealChangeData))).toEqual({ type: 'deals_changed' });
     activeSession = null;
     const closed = once(client, 'close');
     const feedClosed = new Promise<void>((done) => {

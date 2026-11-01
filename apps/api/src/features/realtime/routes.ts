@@ -97,6 +97,9 @@ export function createRealtimeRoutes(options: RealtimeRoutesOptions): Route[] {
                 onNotification: (data) => {
                   if (!closed) socket.send(JSON.stringify({ type: 'notification', data }));
                 },
+                onDealsChanged: () => {
+                  if (!closed) socket.send(JSON.stringify({ type: 'deals_changed' }));
+                },
                 onUnavailable: (status) => {
                   deps.logger.error('realtime_subscription_unavailable', { status });
                   socket.close(CLOSE_UPSTREAM_ERROR, 'Realtime unavailable');

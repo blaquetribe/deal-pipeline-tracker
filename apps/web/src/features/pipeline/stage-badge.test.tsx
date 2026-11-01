@@ -13,5 +13,9 @@ describe('StageBadge', () => {
   it.each([...STAGES])('renders a visible label for %s', (stage) => {
     render(<StageBadge stage={stage} />);
     expect(screen.getByText(/\S/)).toBeVisible();
+    expect(screen.getByText(/\S/)).toHaveAttribute('data-stage', stage);
+    expect(screen.getByText(/\S/).className).toMatch(
+      /(?:brand|info|warning|accent|success|surface-subtle)/,
+    );
   });
 });

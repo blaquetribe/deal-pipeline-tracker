@@ -10,7 +10,10 @@ const mocks = vi.hoisted(() => ({
 }));
 
 vi.mock('../auth', () => ({ readAuthSession: mocks.readAuthSession }));
-vi.mock('../notifications', () => ({ readNotifications: mocks.readNotifications }));
+vi.mock('../notifications', () => ({
+  readNotifications: mocks.readNotifications,
+  subscribeToDealsChanged: () => () => undefined,
+}));
 vi.mock('./api', () => ({
   readMyWork: mocks.readMyWork,
   readDeals: mocks.readDeals,
@@ -91,9 +94,8 @@ describe('MyWorkDashboard', () => {
 
   it('personalizes the workspace with assigned work, stage progress, decisions, and updates', async () => {
     render(<MyWorkDashboard />);
-    const welcome = await screen.findByRole('heading', { name: 'Welcome back, Amara' });
-    expect(welcome).toBeVisible();
-    expect(welcome).toHaveClass('text-fg');
+    expect(await screen.findByRole('heading', { name: 'Assigned to you' })).toBeVisible();
+    expect(screen.queryByRole('heading', { name: 'Welcome back, Amara' })).not.toBeInTheDocument();
     expect(
       within(screen.getByRole('region', { name: 'Assigned to you' })).getByRole('heading', {
         name: 'Asterion Renewable Storage',
@@ -148,6 +150,6 @@ describe('MyWorkDashboard', () => {
       'Your assigned deals could not be loaded.',
     );
     expect(screen.queryByText('Database error detail')).not.toBeInTheDocument();
-    expect(screen.getByRole('heading', { name: 'Welcome back, Amara' })).toBeVisible();
+    expect(screen.getByRole('heading', { name: 'Assigned to you' })).toBeVisible();
   });
 });

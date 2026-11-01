@@ -5,7 +5,7 @@ import type {
   Stage,
   UpdateDealBody,
 } from '@dpt/shared';
-import { act, render, screen, waitFor, within } from '@testing-library/react';
+import { act, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
@@ -61,6 +61,7 @@ describe('DealsDashboard interactions', () => {
     api.readDeals.mockResolvedValue({ total: 30, items: [deal] });
     const user = userEvent.setup();
     render(<DealsDashboard />);
+    fireEvent.click(screen.getByRole('button', { name: 'List' }));
     await screen.findByRole('row', { name: /Northstar Systems/ });
 
     await user.click(screen.getByRole('button', { name: 'Next' }));
@@ -82,6 +83,7 @@ describe('DealsDashboard interactions', () => {
     });
     const user = userEvent.setup();
     render(<DealsDashboard />);
+    fireEvent.click(screen.getByRole('button', { name: 'List' }));
     await screen.findByRole('row', { name: /Northstar Systems/ });
 
     expect(screen.getByRole('button', { name: 'Move to…' })).toHaveAttribute(
@@ -104,6 +106,7 @@ describe('DealsDashboard interactions', () => {
     });
     const user = userEvent.setup();
     render(<DealsDashboard />);
+    fireEvent.click(screen.getByRole('button', { name: 'List' }));
     await screen.findByRole('row', { name: /Northstar Systems/ });
 
     await user.click(screen.getByRole('button', { name: 'Move to…' }));
@@ -117,6 +120,7 @@ describe('DealsDashboard interactions', () => {
     api.readDeals.mockResolvedValue({ total: 1, items: [{ ...deal, stage: 'closed' }] });
     render(<DealsDashboard />);
 
+    fireEvent.click(screen.getByRole('button', { name: 'List' }));
     await screen.findByRole('row', { name: /Northstar Systems/ });
 
     expect(screen.getByText('Final stage')).toBeVisible();
@@ -126,9 +130,10 @@ describe('DealsDashboard interactions', () => {
   it('creates a deal with omitted optional fields and refreshes the list', async () => {
     const user = userEvent.setup();
     render(<DealsDashboard />);
+    fireEvent.click(screen.getByRole('button', { name: 'List' }));
     await screen.findByRole('row', { name: /Northstar Systems/ });
 
-    await user.click(screen.getByText('New deal'));
+    await user.click(screen.getByRole('button', { name: 'Create deal' }));
     await user.type(screen.getByRole('textbox', { name: 'Deal name' }), 'New opportunity');
     const [createCurrency] = screen.getAllByRole('textbox', { name: 'Currency' });
     await user.clear(createCurrency!);
@@ -221,6 +226,7 @@ describe('DealsDashboard interactions', () => {
     api.moveDealStage.mockRejectedValue(new Error('The transition is no longer available.'));
     const user = userEvent.setup();
     render(<DealsDashboard />);
+    fireEvent.click(screen.getByRole('button', { name: 'List' }));
     await screen.findByRole('row', { name: /Northstar Systems/ });
 
     await user.click(screen.getByRole('button', { name: 'Move to…' }));
@@ -236,6 +242,7 @@ describe('DealsDashboard interactions', () => {
     api.updateDeal.mockRejectedValue(new Error('The deal changed. Reload and try again.'));
     const user = userEvent.setup();
     render(<DealsDashboard />);
+    fireEvent.click(screen.getByRole('button', { name: 'List' }));
     await screen.findByRole('row', { name: /Northstar Systems/ });
 
     await user.click(screen.getByRole('button', { name: 'Edit Northstar Systems' }));

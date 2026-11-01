@@ -44,16 +44,25 @@ export function TenantSwitcher() {
     }
   }
 
-  if (
-    !choices ||
-    choices.tenants.length === 0 ||
-    (choices.tenants.length < 2 && choices.activeTenantId)
-  ) {
+  if (!choices || choices.tenants.length === 0) {
     return error ? (
       <p className="text-sm text-danger-fg" role="alert">
         {error}
       </p>
     ) : null;
+  }
+
+  if (choices.tenants.length === 1 && choices.activeTenantId) {
+    const activeTenant = choices.tenants[0];
+    if (!activeTenant) return null;
+    return (
+      <div aria-label="Active organisation" className="flex min-w-0 items-baseline gap-2">
+        <p className="shrink-0 text-[0.65rem] font-semibold tracking-[0.1em] text-fg-subtle uppercase">
+          Organisation
+        </p>
+        <p className="max-w-56 truncate text-sm font-semibold text-fg">{activeTenant.tenantName}</p>
+      </div>
+    );
   }
 
   return (

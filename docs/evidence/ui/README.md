@@ -1,23 +1,31 @@
-# Current UI evidence
+# UI evidence
 
-Screenshots captured on 30 October and 31 October 2026 from the rebuilt local Compose app on the current project source. They use the fictional seeded Asteron tenant and the dark theme. The avatar and attachment screenshots show successful local upload flows; those demonstration actions updated only the disposable local development database and file volume. The Team, Approvals, My Work, and Pipeline captures are read-only and do not create invitations, approval audit records, or deal changes.
+## Current system redesign
 
-The final role-visibility and deal-edit dialog fixes were visually reviewed in the rebuilt light-theme app on 31 October. The repository evidence below records the seeded dark-theme product flows; the refreshed 20-slide walkthrough includes Team, Approvals, and My Work screens. There is not yet a separate saved screenshot of the final light-theme edit dialog. The live approval cycle remains a demo action rather than a pre-seeded record because approval decisions are immutable audit events.
+These screenshots were captured on 1 November 2026 from the local Compose application on port 8081, signed in as the fictional Asteron Capital Owner, in the light theme. Navigation was read-only; opening the edit dialog did not submit a change. The screen captures show the refreshed board-first Pipeline, focused deal editor, and Owner team controls. The connected indicator in the shared header was green during capture.
 
 | Screenshot | Screen |
 |---|---|
-| [03-deal-pipeline-dashboard.png](03-deal-pipeline-dashboard.png) | Pipeline overview and closing-soon list |
-| [04-deal-board-current.png](04-deal-board-current.png) | Seven-stage Board with seeded deals |
-| [05-deal-activity-current.png](05-deal-activity-current.png) | Deal activity with readable stage, alert, and assignment summaries |
-| [06-closing-alert-settings.png](06-closing-alert-settings.png) | Tenant closing-alert thresholds and recipient policy |
-| [07-role-management.png](07-role-management.png) | System role catalog and custom-role entry point |
-| [08-avatar-upload-success.png](08-avatar-upload-success.png) | Profile photo preview and successful save feedback |
-| [09-deal-attachment-upload-success.png](09-deal-attachment-upload-success.png) | Private PDF attached to a deal with a download action |
-| [10-mobile-dashboard.png](10-mobile-dashboard.png) | Full mobile dashboard and horizontally scrollable deal list |
-| [11-team-invitations.png](11-team-invitations.png) | Persistent Team page with invitation form, accepted member roster, names/emails, role controls, and current-user protection |
-| [12-ic-approvals.png](12-ic-approvals.png) | IC review inbox with status and link to the deal-level review controls |
-| [13-my-work-dashboard.png](13-my-work-dashboard.png) | Signed-in user's assigned deals, canonical stage progress, decision queue, and updates |
-| [14-pipeline-dashboard.png](14-pipeline-dashboard.png) | Organisation-wide Pipeline remains separate from personal My Work |
-| [15-mobile-my-work.png](15-mobile-my-work.png) | My Work at a 390 px viewport; all five assigned deals and the personal queues fit without horizontal page overflow |
+| [16-pipeline-board-redesign.png](16-pipeline-board-redesign.png) | Board-first pipeline, portfolio summary, distinct stage colors, and Passed outcome lane |
+| [17-deal-edit-light.png](17-deal-edit-light.png) | Light-theme deal edit dialog opened over Pipeline List; no values changed |
+| [18-team-owner-navigation.png](18-team-owner-navigation.png) | Owner-only team management controls and role creation entry point |
 
-The original Board and activity baselines remain as `01-deal-board.png` and `02-deal-activity.png`. The final walkthrough deck includes Team, Approvals, and My Work screenshots plus a step-by-step demo path. The phone-sized captures verify responsive navigation, dashboard cards, and usable deal lists without page-level horizontal overflow. Additional upload evidence is kept here for the avatar and PDF fix.
+The evidence is from the current local build and uses fictional seed data. The responsive layout and mobile navigation were previously reviewed, but a refreshed mobile screenshot is not included here; screenshots 10 and 15 below are historical and predate the redesign.
+
+## Historical evidence
+
+Screenshots 01–15 were captured between 30 and 31 October 2026 before the 1 November system redesign. They remain useful for specific earlier workflows, successful uploads, and seed data, but they do not represent the current visual system. Do not use them to judge current typography, navigation, spacing, deal editing, or theme styling.
+
+| Screenshot | Earlier screen or flow |
+|---|---|
+| [01-deal-board.png](01-deal-board.png), [04-deal-board-current.png](04-deal-board-current.png) | Earlier deal board |
+| [02-deal-activity.png](02-deal-activity.png), [05-deal-activity-current.png](05-deal-activity-current.png) | Earlier deal activity |
+| [03-deal-pipeline-dashboard.png](03-deal-pipeline-dashboard.png), [14-pipeline-dashboard.png](14-pipeline-dashboard.png) | Earlier Pipeline overview |
+| [06-closing-alert-settings.png](06-closing-alert-settings.png) | Closing alert settings |
+| [07-role-management.png](07-role-management.png) | Role catalog |
+| [08-avatar-upload-success.png](08-avatar-upload-success.png) | Successful avatar upload |
+| [09-deal-attachment-upload-success.png](09-deal-attachment-upload-success.png) | Successful private PDF attachment upload |
+| [10-mobile-dashboard.png](10-mobile-dashboard.png), [15-mobile-my-work.png](15-mobile-my-work.png) | Earlier mobile layouts |
+| [11-team-invitations.png](11-team-invitations.png) | Team invitations and role roster |
+| [12-ic-approvals.png](12-ic-approvals.png) | Earlier IC approval inbox |
+| [13-my-work-dashboard.png](13-my-work-dashboard.png) | Earlier My Work dashboard |

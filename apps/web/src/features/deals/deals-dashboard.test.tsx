@@ -66,7 +66,8 @@ describe('DealsDashboard', () => {
     const fetch = stubFetch({ total: 1, items: [deal] });
     render(<DealsDashboard />);
 
-    expect(screen.getByText('Loading deals…')).toBeVisible();
+    expect(screen.getByText('Loading…')).toBeVisible();
+    fireEvent.click(screen.getByRole('button', { name: 'List' }));
     expect(await screen.findByRole('row', { name: /Northstar Systems/ })).toBeVisible();
     expect(screen.getAllByText(/R 1 234 567 890 123,45/)).toHaveLength(2);
     expect(screen.getByText('31 Mar 2027')).toBeVisible();
@@ -79,11 +80,17 @@ describe('DealsDashboard', () => {
     );
   });
 
-  it('explains approval and outcome rules before a user moves a deal', async () => {
+  it('explains approval and outcome rules in an expandable guide', async () => {
     stubFetch({ total: 1, items: [{ ...deal, stage: 'ic_review' }] });
     render(<DealsDashboard />);
 
-    const guidance = await screen.findByRole('complementary', { name: 'Stage movement rules' });
+    fireEvent.click(screen.getByRole('button', { name: 'List' }));
+    const user = userEvent.setup();
+    const disclosure = await screen.findByText('How deal stages work');
+    expect(disclosure.closest('details')).not.toHaveAttribute('open');
+    await user.click(disclosure);
+    const guidance = disclosure.closest('details');
+    expect(guidance).not.toBeNull();
     expect(guidance).toHaveTextContent(
       'open an IC Review deal and request approval from its IC approval section.',
     );
@@ -101,6 +108,7 @@ describe('DealsDashboard', () => {
     const user = userEvent.setup();
     render(<DealsDashboard />);
 
+    fireEvent.click(screen.getByRole('button', { name: 'List' }));
     await screen.findByRole('row', { name: /Northstar Systems/ });
     await user.click(screen.getByRole('button', { name: 'Edit Northstar Systems' }));
 
@@ -118,6 +126,7 @@ describe('DealsDashboard', () => {
     const fetch = stubFetch({ total: 1, items: [deal] });
     const user = userEvent.setup();
     render(<DealsDashboard />);
+    fireEvent.click(screen.getByRole('button', { name: 'List' }));
     await screen.findByRole('row', { name: /Northstar Systems/ });
 
     await user.click(screen.getByRole('button', { name: 'Filter deals to Sourcing (1)' }));
@@ -135,6 +144,7 @@ describe('DealsDashboard', () => {
     const user = userEvent.setup();
     render(<DealsDashboard />);
 
+    fireEvent.click(screen.getByRole('button', { name: 'List' }));
     await screen.findByRole('row', { name: /Northstar Systems/ });
     await user.click(screen.getByRole('button', { name: 'Board' }));
     expect(screen.getByRole('region', { name: 'Sourcing stage, 1 deals' })).toBeVisible();
@@ -220,6 +230,7 @@ describe('DealsDashboard', () => {
 
     expect(await screen.findByRole('alert')).toHaveTextContent('Summary unavailable.');
     await user.click(screen.getByRole('button', { name: 'Retry summary' }));
+    await user.click(await screen.findByText('Stage counts and upcoming close dates'));
     expect(await screen.findByText('Deals by stage')).toBeVisible();
   });
 
@@ -234,6 +245,8 @@ describe('DealsDashboard', () => {
     render(<DealsDashboard />);
 
     expect(await screen.findByText('No valued open deals')).toBeVisible();
+    const user = userEvent.setup();
+    await user.click(screen.getByText('Stage counts and upcoming close dates'));
     expect(
       screen.getByText('No active deals have an expected close date in this window.'),
     ).toBeVisible();
@@ -246,12 +259,54 @@ describe('DealsDashboard', () => {
     render(<DealsDashboard />);
 
     await screen.findByText('No deals found');
-    await user.click(screen.getByText('New deal'));
+    await user.click(screen.getByRole('button', { name: 'Create deal' }));
     await user.type(screen.getByRole('textbox', { name: 'Deal name' }), 'Northstar Systems');
     await user.type(screen.getByRole('textbox', { name: 'Deal size' }), '1.2345');
     await user.click(screen.getByRole('button', { name: 'Create deal' }));
 
     expect(await screen.findByRole('alert')).toHaveTextContent(/non-negative amount/i);
+  });
+
+  it('uses one pipeline create action and lets the user close the inline form', async () => {
+    stubFetch({ total: 0, items: [] });
+    const user = userEvent.setup();
+    render(<DealsDashboard />);
+
+    await screen.findByText('No deals found');
+    expect(screen.getAllByRole('button', { name: 'Create deal' })).toHaveLength(1);
+    await user.click(screen.getByRole('button', { name: 'Create deal' }));
+    expect(await screen.findByRole('heading', { name: 'Create a deal' })).toBeVisible();
+    await user.click(screen.getByRole('button', { name: 'Cancel' }));
+    expect(screen.queryByRole('heading', { name: 'Create a deal' })).not.toBeInTheDocument();
+  });
+
+  it('refreshes pipeline deals and summary after a live deal change', async () => {
+    const fetch = stubFetch({ total: 1, items: [deal] });
+    render(<DealsDashboard />);
+    fireEvent.click(screen.getByRole('button', { name: 'List' }));
+    await screen.findByRole('row', { name: /Northstar Systems/ });
+    await waitFor(() =>
+      expect(
+        fetch.mock.calls.filter(
+          ([url]) => typeof url === 'string' && url.endsWith('/dashboard-summary'),
+        ),
+      ).toHaveLength(1),
+    );
+
+    window.dispatchEvent(new Event('dpt:deals-changed'));
+
+    await waitFor(() => {
+      expect(
+        fetch.mock.calls.filter(
+          ([url]) => typeof url === 'string' && url.includes('/deals?limit=25'),
+        ),
+      ).toHaveLength(2);
+      expect(
+        fetch.mock.calls.filter(
+          ([url]) => typeof url === 'string' && url.endsWith('/dashboard-summary'),
+        ),
+      ).toHaveLength(2);
+    });
   });
 
   it('renders the tenant currency totals and closing-soon countdown', async () => {
@@ -275,13 +330,16 @@ describe('DealsDashboard', () => {
     stubFetch({ total: 0, items: [] }, 200, summary);
     render(<DealsDashboard />);
 
+    const user = userEvent.setup();
+    await user.click(await screen.findByText('Stage counts and upcoming close dates'));
     expect(await screen.findByText('12 days left')).toBeVisible();
     expect(screen.getByRole('link', { name: 'Northstar Systems' })).toHaveAttribute(
       'href',
       `/deals/${deal.id}`,
     );
     expect(screen.getAllByText(/R 1 234 567 890 123,45/)).toHaveLength(1);
-    expect(screen.getAllByText('Closing soon')).toHaveLength(2);
+    expect(screen.getByText('Closing in 60 days')).toBeVisible();
+    expect(screen.getByRole('heading', { name: 'Upcoming close dates' })).toBeVisible();
   });
 
   it('creates a deal using exact minor units and refreshes the list', async () => {
@@ -323,7 +381,7 @@ describe('DealsDashboard', () => {
     render(<DealsDashboard />);
 
     await screen.findByText('No deals found');
-    await user.click(screen.getByText('New deal'));
+    await user.click(screen.getByRole('button', { name: 'Create deal' }));
     await user.type(screen.getByRole('textbox', { name: 'Deal name' }), 'Northstar Systems');
     await user.type(screen.getByRole('textbox', { name: 'Sector' }), 'Technology');
     await user.type(screen.getByRole('textbox', { name: 'Deal size' }), '1250000.75');
@@ -382,6 +440,7 @@ describe('DealsDashboard', () => {
     vi.stubGlobal('fetch', fetch);
     const user = userEvent.setup();
     render(<DealsDashboard />);
+    fireEvent.click(screen.getByRole('button', { name: 'List' }));
     await screen.findByRole('row', { name: /Northstar Systems/ });
 
     await user.click(screen.getByRole('button', { name: 'Move to…' }));
@@ -434,6 +493,7 @@ describe('DealsDashboard', () => {
     vi.stubGlobal('fetch', fetch);
     const user = userEvent.setup();
     render(<DealsDashboard />);
+    fireEvent.click(screen.getByRole('button', { name: 'List' }));
     await screen.findByRole('row', { name: /Northstar Systems/ });
     await user.click(screen.getByRole('button', { name: 'Edit Northstar Systems' }));
     expect(screen.getByRole('dialog', { name: 'Edit Northstar Systems' })).toBeVisible();
@@ -461,6 +521,7 @@ describe('DealsDashboard', () => {
     const fetch = stubFetch({ total: 1, items: [deal] });
     const user = userEvent.setup();
     render(<DealsDashboard />);
+    fireEvent.click(screen.getByRole('button', { name: 'List' }));
     await screen.findByRole('row', { name: /Northstar Systems/ });
     await user.click(screen.getByRole('button', { name: 'Edit Northstar Systems' }));
     await user.click(screen.getByRole('button', { name: 'Save changes' }));
