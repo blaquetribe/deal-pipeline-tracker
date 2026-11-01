@@ -3,6 +3,7 @@
 import { useSyncExternalStore } from 'react';
 
 import { Button } from '../ui/button';
+import { Icon } from '../ui/icon';
 
 function toggleTheme() {
   const nextDark = !document.documentElement.classList.contains('dark');
@@ -26,9 +27,12 @@ export function ThemeToggle() {
     <Button
       aria-label={`Switch to ${dark ? 'light' : 'dark'} mode`}
       onClick={toggleTheme}
+      className="account-menu-item"
+      size="small"
       type="button"
-      variant="secondary"
+      variant="quiet"
     >
+      <Icon className="size-4" name={dark ? 'sun' : 'moon'} />
       {dark ? 'Light mode' : 'Dark mode'}
     </Button>
   );

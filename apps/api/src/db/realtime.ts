@@ -17,6 +17,7 @@ export interface RealtimeFeedOptions {
   readonly accessToken: string;
   readonly onSubscribed: () => void;
   readonly onNotification: (row: unknown) => void;
+  readonly onDealsChanged: () => void;
   readonly onUnavailable: (status: string) => void;
 }
 
@@ -67,6 +68,16 @@ export async function createRealtimeFeed(options: RealtimeFeedOptions): Promise<
         });
         if (notification.success) options.onNotification(notification.data);
       },
+    )
+    .on(
+      'postgres_changes',
+      {
+        event: 'INSERT',
+        schema: 'public',
+        table: 'deal_events',
+        filter: `tenant_id=eq.${options.tenantId}`,
+      },
+      () => options.onDealsChanged(),
     )
     .subscribe((status) => {
       const value = status.toString();

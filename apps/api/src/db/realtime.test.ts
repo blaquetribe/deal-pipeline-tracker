@@ -6,6 +6,8 @@ const mockState = vi.hoisted(() => ({
   channelName: '',
   channelOptions: null as unknown,
   changeFilter: null as unknown,
+  changeFilters: [] as unknown[],
+  callbacks: [] as Array<(payload: { new: unknown }) => void>,
   clientOptions: null as unknown,
   setAuth: vi.fn<(token: string) => Promise<void>>(async () => undefined),
   removeChannel: vi.fn<() => Promise<string>>(async () => 'ok'),
@@ -24,6 +26,8 @@ vi.mock('@supabase/supabase-js', () => ({
         (_event: string, filter: unknown, callback: (payload: { new: unknown }) => void) => {
           mockState.changeFilter = filter;
           mockState.callback = callback;
+          mockState.changeFilters.push(filter);
+          mockState.callbacks.push(callback);
           return channel;
         },
       ),
@@ -53,6 +57,8 @@ describe('user-scoped Realtime feed', () => {
     mockState.channelName = '';
     mockState.channelOptions = null;
     mockState.changeFilter = null;
+    mockState.changeFilters = [];
+    mockState.callbacks = [];
     mockState.clientOptions = null;
     mockState.setAuth.mockClear();
     mockState.removeChannel.mockClear();
@@ -60,6 +66,7 @@ describe('user-scoped Realtime feed', () => {
 
   it('scopes the tenant feed, validates deliveries, refreshes JWT and closes cleanly', async () => {
     const onNotification = vi.fn<(row: unknown) => void>();
+    const onDealsChanged = vi.fn<() => void>();
     const onSubscribed = vi.fn<() => void>();
     const onUnavailable = vi.fn<(status: string) => void>();
     const feed = await createRealtimeFeed({
@@ -70,6 +77,7 @@ describe('user-scoped Realtime feed', () => {
       accessToken: 'jwt-a',
       onSubscribed,
       onNotification,
+      onDealsChanged,
       onUnavailable,
     });
     expect(mockState.channelName).toBe('notifications:user-a:tenant-a');
@@ -79,12 +87,20 @@ describe('user-scoped Realtime feed', () => {
     expect(mockState.channelOptions).toMatchObject({
       config: { postgres_changes_options: { wait: true } },
     });
-    expect(mockState.changeFilter).toEqual({
+    expect(mockState.changeFilters).toContainEqual({
       event: 'INSERT',
       schema: 'public',
       table: 'notifications',
       filter: 'tenant_id=eq.tenant-a',
     });
+    expect(mockState.changeFilters).toContainEqual({
+      event: 'INSERT',
+      schema: 'public',
+      table: 'deal_events',
+      filter: 'tenant_id=eq.tenant-a',
+    });
+    mockState.callbacks[1]?.({ new: { id: 'deal-private-row' } });
+    expect(onDealsChanged).toHaveBeenCalledOnce();
     mockState.status?.('SUBSCRIBED');
     expect(onSubscribed).toHaveBeenCalledOnce();
     expect(onUnavailable).not.toHaveBeenCalled();
@@ -110,8 +126,8 @@ describe('user-scoped Realtime feed', () => {
       created_at: '2026-10-28T10:00:00Z',
       read_at: null,
     };
-    mockState.callback?.({ new: row });
-    mockState.callback?.({ new: { ...row, payload: { invalid: true } } });
+    mockState.callbacks[0]?.({ new: row });
+    mockState.callbacks[0]?.({ new: { ...row, payload: { invalid: true } } });
     expect(onNotification).toHaveBeenCalledTimes(1);
     expect(onNotification).toHaveBeenCalledWith({
       id: row.id,
@@ -141,6 +157,7 @@ describe('user-scoped Realtime feed', () => {
       accessToken: 'jwt-a',
       onSubscribed: vi.fn<() => void>(),
       onNotification: vi.fn<(row: unknown) => void>(),
+      onDealsChanged: vi.fn<() => void>(),
       onUnavailable,
     });
     mockState.status?.('TIMED_OUT');

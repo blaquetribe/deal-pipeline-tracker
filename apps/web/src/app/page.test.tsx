@@ -9,7 +9,12 @@ vi.mock('../features/auth', () => ({
 }));
 vi.mock('../features/shell', () => ({
   AppShell: ({ children }: { children: ReactNode }) => <div>{children}</div>,
-  PageHeading: ({ title }: { title: string }) => <h1>{title}</h1>,
+  PageHeading: ({ title, action }: { title: string; action?: ReactNode }) => (
+    <header>
+      <h1>{title}</h1>
+      {action}
+    </header>
+  ),
 }));
 vi.mock('../features/deals', () => ({
   MyWorkDashboard: () => (
@@ -31,5 +36,9 @@ describe('HomePage', () => {
   it('opens the signed-in user workspace', () => {
     render(<HomePage />);
     expect(screen.getByRole('heading', { level: 2, name: 'My assigned work' })).toBeVisible();
+    expect(screen.getByRole('link', { name: 'Browse pipeline' })).toHaveAttribute(
+      'href',
+      '/pipeline',
+    );
   });
 });

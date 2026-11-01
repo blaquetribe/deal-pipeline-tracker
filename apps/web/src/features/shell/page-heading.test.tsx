@@ -9,7 +9,7 @@ describe('PageHeading', () => {
 
     expect(screen.getByRole('heading', { level: 1, name: 'Deal pipeline' })).toBeVisible();
     expect(container.querySelector('p')).not.toBeInTheDocument();
-    expect(container.querySelector('header')).toHaveClass('mb-8');
+    expect(container.querySelector('header')).toHaveClass('mb-5', 'pb-4');
   });
 
   it('renders the eyebrow, description, action, and compact spacing', () => {
@@ -26,6 +26,6 @@ describe('PageHeading', () => {
     expect(screen.getByText('Pipeline')).toBeVisible();
     expect(screen.getByText('Opportunities across the organisation.')).toBeVisible();
     expect(screen.getByRole('button', { name: 'New deal' })).toBeVisible();
-    expect(screen.getByRole('banner')).toHaveClass('mb-4');
+    expect(screen.getByRole('banner')).toHaveClass('mb-4', 'pb-4');
   });
 });

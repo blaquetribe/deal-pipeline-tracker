@@ -4,6 +4,7 @@ import { useRouter } from 'next/navigation';
 import { useState } from 'react';
 
 import { Button } from '../ui/button';
+import { Icon } from '../ui/icon';
 import { sessionRequest } from './api';
 
 export function SignOutButton() {
@@ -33,12 +34,14 @@ export function SignOutButton() {
         </p>
       )}
       <Button
-        className="text-sm"
+        className="account-menu-item text-sm"
         disabled={pending}
         onClick={() => void signOut()}
+        size="small"
         type="button"
         variant="quiet"
       >
+        <Icon className="size-4" name="logout" />
         {pending ? 'Signing out…' : 'Sign out'}
       </Button>
     </div>

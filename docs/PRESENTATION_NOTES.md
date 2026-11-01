@@ -4,7 +4,26 @@ Source material for the team presentation. Each item: the problem, the resolutio
 
 ## Current walkthrough deck
 
-The final 20-slide walkthrough is [deal-pipeline-tracker-walkthrough.pptx](presentation/deal-pipeline-tracker-walkthrough.pptx). It includes current-build UI captures for Team, Approvals, and My Work, identity and deal flows, architecture, security model, realtime, storage and the upload fix, responsive UI decisions, verification results, documented limits, and a step-by-step live demo path. Presenter notes on each slide carry the talk track and source files. The deck is validated and staged in the repository; it still needs the closeout commit and PR.
+The refreshed 14-slide product walkthrough is [deal-pipeline-tracker-walkthrough.pptx](presentation/deal-pipeline-tracker-walkthrough.pptx). It uses current light-theme screenshots for the board-first Pipeline, deal edit dialog, and Owner team controls. Other feature paths are presented with editable diagrams and concise workflow notes rather than screenshots from the superseded UI. The deck covers stage semantics, approval request and quorum ownership, My Work, realtime boundaries, audit history, architecture, security decisions, local verification, known limits, and a six-step live demo.
+
+The screenshots were captured read-only from the isolated 8081 local walkthrough using the fictional Asteron Owner account. Opening the deal editor did not submit a change. The deck was rendered to PNGs and reviewed slide by slide before it was saved.
+
+## Deck map
+
+1. Product purpose
+2. Board-first pipeline and the current interface
+3. Progression stages and the separate Passed outcome
+4. Deal editing and why the focused dialog is used
+5. IC request, quorum, decision, automatic Signed transition, and IC-only SLA escalation
+6. Team access and role-gated controls
+7. Personal My Work versus organisation Pipeline
+8. Tenant-scoped realtime and actionable notifications
+9. Readable, append-only activity history
+10. Browser, gateway, API, and Postgres responsibilities
+11. Product trade-offs and explicit scope limits
+12. Ordered live demo path
+13. Verification and environment-dependent checks
+14. Closing summary
 
 ## Suggested talk track
 1. The brief in one slide: what was asked, what was deliberately left open.

@@ -12,7 +12,7 @@ import Link from 'next/link';
 import { useEffect, useState } from 'react';
 
 import { readAuthSession } from '../auth';
-import { readNotifications } from '../notifications';
+import { readNotifications, subscribeToDealsChanged } from '../notifications';
 import { Button } from '../ui/button';
 import { readDealApprovalStatus, readDeals, readMyWork } from './api';
 
@@ -63,7 +63,6 @@ function notificationMessage(notification: Notification): string {
 }
 
 export function MyWorkDashboard() {
-  const [fullName, setFullName] = useState<string | null>(null);
   const [deals, setDeals] = useState<MyWorkDeal[]>([]);
   const [totalDeals, setTotalDeals] = useState(0);
   const [activeDeals, setActiveDeals] = useState(0);
@@ -73,7 +72,6 @@ export function MyWorkDashboard() {
   const [loading, setLoading] = useState(true);
   const [errors, setErrors] = useState<string[]>([]);
   const [needsOrganisation, setNeedsOrganisation] = useState(false);
-
   useEffect(() => {
     let active = true;
     const load = async () => {
@@ -81,7 +79,6 @@ export function MyWorkDashboard() {
       try {
         const session = await readAuthSession();
         if (!active) return;
-        setFullName(session.user.fullName);
         if (!session.tenantId) {
           setNeedsOrganisation(true);
           setDeals([]);
@@ -128,13 +125,18 @@ export function MyWorkDashboard() {
       }
     };
     void load();
+    const unsubscribe = subscribeToDealsChanged(() => {
+      setLoading(true);
+      setErrors([]);
+      void load();
+    });
     return () => {
       active = false;
+      unsubscribe();
     };
   }, [offset]);
 
   const unreadCount = notifications.filter((notification) => notification.read_at === null).length;
-  const firstName = fullName?.trim().split(/\s+/)[0];
   const changePage = (nextOffset: number) => {
     setLoading(true);
     setErrors([]);
@@ -143,26 +145,6 @@ export function MyWorkDashboard() {
 
   return (
     <div className="grid gap-6">
-      <section className="material-card grid gap-4 p-5 sm:grid-cols-[minmax(0,1fr)_auto] sm:items-center sm:p-6">
-        <div>
-          <p className="text-xs font-semibold tracking-[0.12em] text-brand-fg uppercase">
-            Your workspace
-          </p>
-          <h2 className="mt-2 text-2xl font-semibold tracking-tight text-fg">
-            {firstName ? `Welcome back, ${firstName}` : 'Welcome to your workspace'}
-          </h2>
-          <p className="mt-2 max-w-2xl text-sm leading-relaxed text-fg-muted">
-            Your assigned deal work, IC decisions, and updates for the selected organisation.
-          </p>
-        </div>
-        <Link
-          className="inline-flex min-h-10 items-center justify-center rounded-control border border-line px-3 font-semibold text-fg hover:border-accent focus-visible:outline-2 focus-visible:outline-accent"
-          href="/pipeline"
-        >
-          View full pipeline
-        </Link>
-      </section>
-
       {needsOrganisation ? (
         <output
           aria-labelledby="choose-workspace-organisation"
@@ -253,17 +235,20 @@ export function MyWorkDashboard() {
                 </Link>
               </div>
             ) : null}
-            <div className="grid gap-3">
+            <div className="grid gap-2">
               {deals.map((deal) => {
                 const step = progressStep(deal.stage);
                 return (
-                  <article className="material-card grid gap-3 p-4 sm:p-5" key={deal.id}>
-                    <div className="flex flex-wrap items-start justify-between gap-3">
+                  <article
+                    className="material-card grid gap-2.5 p-3 sm:grid-cols-[minmax(0,1fr)_minmax(15rem,0.9fr)] sm:items-center"
+                    key={deal.id}
+                  >
+                    <div className="flex min-w-0 flex-wrap items-center justify-between gap-2">
                       <div className="min-w-0">
-                        <p className="text-xs font-medium text-fg-muted">
+                        <p className="text-[0.6875rem] font-medium text-fg-muted">
                           {roleLabel(deal.assignment_role)}
                         </p>
-                        <h3 className="mt-1 truncate text-lg font-semibold text-fg">
+                        <h3 className="mt-0.5 truncate text-base font-semibold text-fg">
                           <Link
                             className="hover:text-brand-fg focus-visible:outline-2 focus-visible:outline-accent"
                             href={`/deals/${deal.id}`}
@@ -272,17 +257,17 @@ export function MyWorkDashboard() {
                           </Link>
                         </h3>
                       </div>
-                      <span className="rounded-full border border-line px-3 py-1 text-sm font-medium">
+                      <span className="rounded-full border border-line px-2 py-0.5 text-xs font-medium">
                         {STAGE_LABELS[deal.stage]}
                       </span>
                     </div>
                     {step === null ? (
-                      <p className="rounded-control bg-surface-subtle px-3 py-2 text-sm text-fg-muted">
+                      <p className="rounded-control bg-surface-subtle px-2.5 py-1.5 text-xs text-fg-muted sm:text-right">
                         Passed · this deal is no longer progressing.
                       </p>
                     ) : (
-                      <div className="grid gap-2">
-                        <div className="flex items-center justify-between gap-3 text-xs text-fg-muted">
+                      <div className="grid gap-1.5">
+                        <div className="flex flex-wrap items-center justify-between gap-x-3 gap-y-0.5 text-[0.6875rem] text-fg-muted">
                           <span>
                             Stage {step} of {ACTIVE_STAGES.length}
                           </span>
@@ -291,7 +276,7 @@ export function MyWorkDashboard() {
                         <progress
                           aria-label={`${deal.name} progress`}
                           aria-valuetext={`Stage ${step} of ${ACTIVE_STAGES.length}: ${STAGE_LABELS[deal.stage]}`}
-                          className="my-work-progress-track"
+                          className="my-work-progress-track h-1.5"
                           max={ACTIVE_STAGES.length}
                           value={step}
                         />

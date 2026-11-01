@@ -1,6 +1,6 @@
 -- Feature 05: notification storage is visible only to its recipient and cannot be written directly.
 begin;
-select plan(27);
+select plan(28);
 
 select has_table('public', 'notifications', 'notifications table exists');
 select ok((select relrowsecurity and relforcerowsecurity from pg_class where oid = 'public.notifications'::regclass),
@@ -9,6 +9,10 @@ select has_function('public', 'mark_notification_read', array['uuid'], 'recipien
 select has_function('public', 'list_notifications', array['uuid', 'integer'], 'notification list RPC exists');
 select has_function('public', 'scan_closing_soon', array['timestamp with time zone'], 'closing-soon scanner exists');
 select has_table('public', 'email_outbox', 'email outbox table exists');
+select ok(exists (
+  select 1 from pg_publication_tables
+  where pubname = 'supabase_realtime' and schemaname = 'public' and tablename = 'deal_events'
+), 'immutable deal events are published for RLS-filtered realtime refreshes');
 select ok((select relrowsecurity and relforcerowsecurity from pg_class where oid = 'public.email_outbox'::regclass),
   'email outbox enables and forces row-level security');
 select has_function('public', 'claim_closing_soon_emails', array['integer'], 'private email claim function exists');

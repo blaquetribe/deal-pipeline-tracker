@@ -11,6 +11,7 @@ import Link from 'next/link';
 import { useEffect, useId, useState } from 'react';
 import type { FormEvent } from 'react';
 
+import { subscribeToDealsChanged } from '../notifications';
 import { StageBadge } from '../pipeline';
 import { PageHeading } from '../shell/page-heading';
 import { Button } from '../ui/button';
@@ -98,26 +99,33 @@ export function DealDetail({ dealId }: DealDetailProps) {
   const [rejectionReason, setRejectionReason] = useState('');
   const [posting, setPosting] = useState(false);
   const [loadingOlder, setLoadingOlder] = useState(false);
-
   useEffect(() => {
     let active = true;
-    void loadDealData(dealId)
-      .then(([detail, events, approvalStatus, ownAbsences, options, policy]) => {
-        if (!active) return;
-        setDeal(detail);
-        setActivity(events);
-        setApproval(approvalStatus);
-        setAbsences(ownAbsences);
-        setReassignmentOptions(options);
-        setQuorum(String(approvalStatus.configuredApprovals ?? 1));
-        setDelegationEnabled(policy.delegationEnabled);
-      })
-      .catch((cause: unknown) => {
-        if (active)
-          setError(cause instanceof Error ? cause.message : 'Deal details could not be loaded.');
-      });
+    const refresh = () => {
+      void loadDealData(dealId)
+        .then(([detail, events, approvalStatus, ownAbsences, options, policy]) => {
+          if (!active) return;
+          setDeal(detail);
+          setActivity(events);
+          setApproval(approvalStatus);
+          setAbsences(ownAbsences);
+          setReassignmentOptions(options);
+          setQuorum(String(approvalStatus.configuredApprovals ?? 1));
+          setDelegationEnabled(policy.delegationEnabled);
+        })
+        .catch((cause: unknown) => {
+          if (active)
+            setError(cause instanceof Error ? cause.message : 'Deal details could not be loaded.');
+        });
+    };
+    refresh();
+    const unsubscribe = subscribeToDealsChanged(() => {
+      setError(null);
+      refresh();
+    });
     return () => {
       active = false;
+      unsubscribe();
     };
   }, [dealId]);
 

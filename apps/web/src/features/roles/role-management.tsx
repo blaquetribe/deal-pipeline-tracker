@@ -112,6 +112,23 @@ export function RoleManagement() {
 
   if (loading) return <output aria-busy="true">Loading roles…</output>;
 
+  if (catalog && !catalog.canManageRoles) {
+    return (
+      <section className="material-card max-w-2xl p-5" aria-labelledby="role-access-heading">
+        <p className="text-xs font-semibold tracking-wide text-brand-fg uppercase">
+          Restricted settings
+        </p>
+        <h2 className="mt-2 text-lg font-semibold" id="role-access-heading">
+          Role management is for organisation owners
+        </h2>
+        <p className="mt-1 text-sm leading-relaxed text-fg-muted">
+          Ask an Owner to review the role or permission you need. Your access to deals and approvals
+          continues to follow your assigned role.
+        </p>
+      </section>
+    );
+  }
+
   return (
     <section className="space-y-6">
       {error && (
@@ -123,13 +140,6 @@ export function RoleManagement() {
         </p>
       )}
       {message && <output className="text-sm text-success-fg">{message}</output>}
-
-      {catalog && !catalog.canManageRoles && (
-        <p className="rounded-control border border-line bg-surface-raised p-4 text-sm text-fg-muted">
-          You can view the roles in this organisation. An Owner with role management access can
-          create or edit custom roles.
-        </p>
-      )}
 
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>

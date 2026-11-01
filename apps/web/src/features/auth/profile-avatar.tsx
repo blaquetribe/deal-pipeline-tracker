@@ -2,9 +2,12 @@
 
 import { authSessionResponseSchema } from '@dpt/shared';
 import Image from 'next/image';
+import type { ReactNode } from 'react';
 import { useEffect, useId, useRef, useState } from 'react';
 
+import { subscribeToCloseAccountMenu } from '../shell/account-menu-events';
 import { Button } from '../ui/button';
+import { Icon } from '../ui/icon';
 import { sessionRead } from './api';
 
 function initials(name: string | null): string {
@@ -17,11 +20,23 @@ function initials(name: string | null): string {
   );
 }
 
-export function ProfileAvatar() {
+export function ProfileAvatar({
+  compact = false,
+  children,
+}: {
+  readonly compact?: boolean;
+  readonly children?: ReactNode;
+}) {
   const inputId = useId();
+  const panelId = useId();
+  const container = useRef<HTMLDivElement>(null);
   const input = useRef<HTMLInputElement>(null);
+  const trigger = useRef<HTMLButtonElement>(null);
+  const closeTimer = useRef<number | undefined>(undefined);
+  const [open, setOpen] = useState(false);
   const [user, setUser] = useState<{
     id: string;
+    email: string;
     fullName: string | null;
     tenantId: string | null;
   } | null>(null);
@@ -39,6 +54,7 @@ export function ProfileAvatar() {
         if (active)
           setUser({
             id: session.user.id,
+            email: session.user.email,
             fullName: session.user.fullName,
             tenantId: session.tenantId,
           });
@@ -55,6 +71,38 @@ export function ProfileAvatar() {
     if (!previewUrl) return undefined;
     return () => URL.revokeObjectURL(previewUrl);
   }, [previewUrl]);
+
+  useEffect(
+    () => () => {
+      if (closeTimer.current !== undefined) window.clearTimeout(closeTimer.current);
+    },
+    [],
+  );
+
+  useEffect(() => {
+    if (!open) return undefined;
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') {
+        setOpen(false);
+        trigger.current?.focus();
+      }
+    };
+    window.addEventListener('keydown', onKeyDown);
+    return () => window.removeEventListener('keydown', onKeyDown);
+  }, [open]);
+
+  useEffect(() => subscribeToCloseAccountMenu(() => setOpen(false)), []);
+
+  useEffect(() => {
+    if (!open) return undefined;
+    const onPointerDown = (event: PointerEvent) => {
+      if (event.target instanceof Node && !container.current?.contains(event.target)) {
+        setOpen(false);
+      }
+    };
+    document.addEventListener('pointerdown', onPointerDown);
+    return () => document.removeEventListener('pointerdown', onPointerDown);
+  }, [open]);
 
   async function upload(file: File | undefined) {
     if (!file) return;
@@ -103,68 +151,125 @@ export function ProfileAvatar() {
     }
   }
 
-  return (
-    <div className="flex items-center gap-3">
-      <div
-        aria-label={user?.fullName ? `${user.fullName} profile photo` : 'Profile initials'}
-        className="relative grid size-12 shrink-0 place-items-center overflow-hidden rounded-full bg-brand-soft text-sm font-semibold text-brand-fg"
-      >
-        {user && (previewUrl || hasAvatar) ? (
-          <Image
-            alt=""
-            className="absolute inset-0 size-12 rounded-full object-cover"
-            height={48}
-            key={`${user.id}-${version}`}
-            src={previewUrl ?? `/api/users/${user.id}/avatar?v=${version}`}
-            unoptimized
-            onError={() => {
-              if (!previewUrl) setHasAvatar(false);
-            }}
-            width={48}
-          />
-        ) : null}
-        <span aria-hidden="true">{initials(user?.fullName ?? null)}</span>
-      </div>
-      <div className="min-w-0">
-        {user?.fullName ? (
-          <p className="max-w-40 truncate text-sm leading-tight font-semibold">{user.fullName}</p>
-        ) : null}
-        <Button
-          aria-describedby={`${inputId}-hint`}
-          className="profile-photo-trigger"
-          disabled={busy || !user?.tenantId}
-          onClick={() => input.current?.click()}
-          size="small"
-          type="button"
-          variant="quiet"
-        >
-          {busy ? 'Saving…' : 'Change photo'}
-        </Button>
-        <input
-          accept="image/png,image/jpeg,image/webp"
-          aria-label="Choose profile photo"
-          className="sr-only"
-          disabled={busy || !user?.tenantId}
-          id={inputId}
-          onChange={(event) => void upload(event.currentTarget.files?.[0])}
-          ref={input}
-          tabIndex={-1}
-          type="file"
+  function openOnHover() {
+    if (closeTimer.current !== undefined) window.clearTimeout(closeTimer.current);
+    setOpen(true);
+  }
+
+  function closeOnLeave() {
+    closeTimer.current = window.setTimeout(() => setOpen(false), 140);
+  }
+
+  const avatar = (
+    <span
+      aria-label={user?.fullName ? `${user.fullName} profile photo` : 'Profile initials'}
+      className={`relative grid ${compact ? 'size-9' : 'size-10'} shrink-0 place-items-center overflow-hidden rounded-full bg-brand-soft text-sm font-semibold text-brand-fg`}
+    >
+      {user && (previewUrl || hasAvatar) ? (
+        <Image
+          alt=""
+          className={`absolute inset-0 ${compact ? 'size-9' : 'size-10'} rounded-full object-cover`}
+          height={compact ? 36 : 40}
+          key={`${user.id}-${version}`}
+          src={previewUrl ?? `/api/users/${user.id}/avatar?v=${version}`}
+          unoptimized
+          onError={() => {
+            if (!previewUrl) setHasAvatar(false);
+          }}
+          width={compact ? 36 : 40}
         />
-        <span className="sr-only" id={`${inputId}-hint`}>
-          PNG, JPEG, or WebP image, smaller than 5 MB.
-        </span>
-        <p
-          aria-live={
-            message && /could not|ended|readable|choose an organisation/i.test(message)
-              ? 'assertive'
-              : 'polite'
-          }
-          className={message ? 'max-w-48 text-xs text-fg-muted' : 'sr-only'}
+      ) : null}
+      <span aria-hidden="true">{initials(user?.fullName ?? null)}</span>
+    </span>
+  );
+
+  return (
+    <div
+      className="account-menu relative"
+      ref={container}
+      onBlur={(event) => {
+        if (!event.currentTarget.contains(event.relatedTarget)) setOpen(false);
+      }}
+    >
+      <button
+        aria-controls={panelId}
+        aria-expanded={open}
+        aria-label={user?.fullName ? `Account menu for ${user.fullName}` : 'Account menu'}
+        className="account-menu-trigger"
+        onClick={() => setOpen(true)}
+        onPointerEnter={(event) => {
+          if (event.pointerType === 'mouse') openOnHover();
+        }}
+        onPointerLeave={(event) => {
+          if (event.pointerType === 'mouse') closeOnLeave();
+        }}
+        ref={trigger}
+        type="button"
+      >
+        {avatar}
+        <span className="account-menu-trigger-name">{user?.fullName ?? 'Account'}</span>
+        <Icon className="size-4 shrink-0 text-fg-muted" name="chevron" />
+      </button>
+      {open ? (
+        <section
+          aria-label="Account options"
+          className="account-menu-panel"
+          id={panelId}
+          onPointerEnter={(event) => {
+            if (event.pointerType === 'mouse') openOnHover();
+          }}
+          onPointerLeave={(event) => {
+            if (event.pointerType === 'mouse') closeOnLeave();
+          }}
         >
-          {message || (busy ? 'Optimising and saving your photo…' : '')}
-        </p>
-      </div>
+          <div className="account-menu-identity">
+            {avatar}
+            <div className="min-w-0">
+              <p className="truncate text-sm font-semibold text-fg">
+                {user?.fullName ?? 'Account'}
+              </p>
+              <p className="truncate text-xs text-fg-muted">{user?.email ?? 'Signed-in account'}</p>
+            </div>
+          </div>
+          <Button
+            aria-describedby={`${inputId}-hint`}
+            className="account-menu-item profile-photo-trigger"
+            disabled={busy || !user?.tenantId}
+            onClick={() => input.current?.click()}
+            size="small"
+            type="button"
+            variant="quiet"
+          >
+            <Icon className="size-4" name="camera" />
+            {busy ? 'Saving photo…' : 'Change photo'}
+          </Button>
+          <input
+            accept="image/png,image/jpeg,image/webp"
+            aria-label="Choose profile photo"
+            className="sr-only"
+            disabled={busy || !user?.tenantId}
+            id={inputId}
+            onChange={(event) => void upload(event.currentTarget.files?.[0])}
+            ref={input}
+            tabIndex={-1}
+            type="file"
+          />
+          <span className="sr-only" id={`${inputId}-hint`}>
+            PNG, JPEG, or WebP image, smaller than 5 MB.
+          </span>
+          <p
+            aria-live={
+              message && /could not|ended|readable|choose an organisation/i.test(message)
+                ? 'assertive'
+                : 'polite'
+            }
+            className={message ? 'px-3 py-1 text-xs text-fg-muted' : 'sr-only'}
+          >
+            {message || (busy ? 'Optimising and saving your photo…' : '')}
+          </p>
+          {children ? <div className="account-menu-actions">{children}</div> : null}
+        </section>
+      ) : null}
     </div>
   );
 }
