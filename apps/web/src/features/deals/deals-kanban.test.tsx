@@ -51,6 +51,9 @@ describe('DealsKanban', () => {
     ]);
     expect(screen.getByRole('heading', { name: 'Passed · outcome' })).toBeInTheDocument();
     expect(
+      screen.getByRole('region', { name: /Scroll horizontally to see every stage/ }),
+    ).toHaveAttribute('tabindex', '0');
+    expect(
       within(screen.getByRole('region', { name: 'IC Review stage, 1 deals' })).getByText(
         'Northstar Systems',
       ),
@@ -85,6 +88,59 @@ describe('DealsKanban', () => {
     fireEvent.drop(closed, { dataTransfer: transfer });
     expect(onInvalidMove).toHaveBeenCalledWith(
       'Approve the IC review first, then move the Signed deal to Closed.',
+    );
+  });
+
+  it('moves an eligible deal when dropped in the next stage', () => {
+    const deal = { ...icDeal, stage: 'sourcing' as const };
+    const onMove = vi.fn<(dealId: string, stage: Stage) => void>();
+    const onInvalidMove = vi.fn<(message: string) => void>();
+    render(
+      <DealsKanban deals={[deal]} disabled={false} onInvalidMove={onInvalidMove} onMove={onMove} />,
+    );
+    const card = screen.getByText(deal.name).closest('article')!;
+    const destination = screen.getByRole('region', { name: 'Screening stage, 0 deals' });
+    const transfer = dataTransfer();
+    fireEvent.dragStart(card, { dataTransfer: transfer });
+    fireEvent.dragOver(destination, { dataTransfer: transfer });
+    expect(screen.getByText('Drop to move to Screening.')).toBeVisible();
+    expect(transfer.dropEffect).toBe('move');
+    fireEvent.drop(destination, { dataTransfer: transfer });
+    expect(onMove).toHaveBeenCalledWith(deal.id, 'screening');
+    expect(onInvalidMove).not.toHaveBeenCalled();
+  });
+
+  it('shows the exact fields required before progressing a deal', () => {
+    const deal = {
+      ...icDeal,
+      stage: 'screening' as const,
+      sector: null,
+      amount: null,
+      expected_close_date: null,
+    };
+    const onInvalidMove = vi.fn<(message: string) => void>();
+    render(
+      <DealsKanban
+        deals={[deal]}
+        disabled={false}
+        onInvalidMove={onInvalidMove}
+        onMove={vi.fn<(dealId: string, stage: Stage) => void>()}
+      />,
+    );
+    const card = screen.getByText(deal.name).closest('article')!;
+    const destination = screen.getByRole('region', { name: 'Due Diligence stage, 0 deals' });
+    const transfer = dataTransfer();
+    fireEvent.dragStart(card, { dataTransfer: transfer });
+    fireEvent.dragOver(destination, { dataTransfer: transfer });
+    expect(
+      screen.getByText(
+        'Add deal size and expected close date and sector before moving to Due Diligence.',
+      ),
+    ).toBeVisible();
+    expect(transfer.dropEffect).toBe('none');
+    fireEvent.drop(destination, { dataTransfer: transfer });
+    expect(onInvalidMove).toHaveBeenCalledWith(
+      'Add deal size and expected close date and sector before moving to Due Diligence.',
     );
   });
 });

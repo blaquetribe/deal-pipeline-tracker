@@ -188,7 +188,7 @@ describe('authentication forms', () => {
     expect(mocks.reloadCurrentPage).toHaveBeenCalledOnce();
   });
 
-  it('renders no tenant switch control for one tenant and reports a tenant-load error', async () => {
+  it('shows the active organisation without a switch control for one tenant', async () => {
     mocks.sessionRead.mockResolvedValueOnce({
       activeTenantId: '11111111-1111-4111-8111-111111111111',
       tenants: [{ tenantId: '11111111-1111-4111-8111-111111111111', tenantName: 'Alpha' }],
@@ -196,6 +196,7 @@ describe('authentication forms', () => {
     const view = render(<TenantSwitcher />);
     await waitFor(() => expect(mocks.sessionRead).toHaveBeenCalled());
     expect(screen.queryByRole('combobox')).not.toBeInTheDocument();
+    expect(screen.getByLabelText('Active organisation')).toHaveTextContent('Alpha');
     view.unmount();
     mocks.sessionRead.mockRejectedValueOnce(new Error('Could not load tenants.'));
     render(<TenantSwitcher />);

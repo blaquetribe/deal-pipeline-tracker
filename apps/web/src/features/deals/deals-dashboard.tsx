@@ -18,8 +18,10 @@ import Link from 'next/link';
 import { useEffect, useId, useRef, useState } from 'react';
 import type { FormEvent } from 'react';
 
+import { subscribeToDealsChanged } from '../notifications';
 import { StageBadge } from '../pipeline';
 import { Button } from '../ui/button';
+import { Icon } from '../ui/icon';
 import { Input } from '../ui/input';
 import { SelectControl } from '../ui/select-control';
 import { createDeal, moveDealStage, readDashboardSummary, readDeals, updateDeal } from './api';
@@ -70,12 +72,12 @@ export function DealsDashboard() {
   const closeDateId = useId();
   const editDialogRef = useRef<HTMLDialogElement>(null);
   const editId = useId();
-  const createForm = useRef<HTMLDetailsElement>(null);
+  const createForm = useRef<HTMLDivElement>(null);
   const [stage, setStage] = useState<Stage | ''>('');
   const [search, setSearch] = useState('');
   const [appliedSearch, setAppliedSearch] = useState('');
   const [offset, setOffset] = useState(0);
-  const [view, setView] = useState<'list' | 'board'>('list');
+  const [view, setView] = useState<'list' | 'board'>('board');
   const [result, setResult] = useState<DealListResponse | null>(null);
   const [summary, setSummary] = useState<DashboardSummary | null>(null);
   const [summaryError, setSummaryError] = useState<string | null>(null);
@@ -85,12 +87,12 @@ export function DealsDashboard() {
   const [createError, setCreateError] = useState<string | null>(null);
   const [createMessage, setCreateMessage] = useState<string | null>(null);
   const [creating, setCreating] = useState(false);
-  const [moveTargets, setMoveTargets] = useState<Record<string, Stage | ''>>({});
+  const [createOpen, setCreateOpen] = useState(false);
+  const [openMoveMenu, setOpenMoveMenu] = useState<string | null>(null);
   const [movingDeal, setMovingDeal] = useState<string | null>(null);
   const [updatingDeal, setUpdatingDeal] = useState<string | null>(null);
   const [actionToast, setActionToast] = useState<ActionToast | null>(null);
   const [editingDeal, setEditingDeal] = useState<DealListResponse['items'][number] | null>(null);
-
   useEffect(() => {
     if (!actionToast) return undefined;
     const timer = window.setTimeout(() => setActionToast(null), 6_000);
@@ -102,42 +104,56 @@ export function DealsDashboard() {
     const query = new URLSearchParams({ limit: String(PAGE_SIZE), offset: String(offset) });
     if (stage) query.set('stage', stage);
     if (appliedSearch) query.set('search', appliedSearch);
-    void readDeals(query)
-      .then((response) => {
-        if (active) setResult(response);
-      })
-      .catch((cause: unknown) => {
-        if (active) {
-          setError(cause instanceof Error ? cause.message : 'Deals could not be loaded.');
-          setResult(null);
-        }
-      })
-      .finally(() => {
-        if (active) setLoading(false);
-      });
+    const load = () => {
+      void readDeals(query)
+        .then((response) => {
+          if (active) setResult(response);
+        })
+        .catch((cause: unknown) => {
+          if (active) {
+            setError(cause instanceof Error ? cause.message : 'Deals could not be loaded.');
+            setResult(null);
+          }
+        })
+        .finally(() => {
+          if (active) setLoading(false);
+        });
+    };
+    load();
+    const unsubscribe = subscribeToDealsChanged(() => {
+      setLoading(true);
+      setError(null);
+      load();
+    });
     return () => {
       active = false;
+      unsubscribe();
     };
   }, [appliedSearch, offset, stage]);
 
   useEffect(() => {
     let active = true;
-    void readDashboardSummary()
-      .then((response) => {
-        if (active) {
-          setSummary(response);
-          setSummaryError(null);
-        }
-      })
-      .catch((cause: unknown) => {
-        if (active) {
-          setSummaryError(
-            cause instanceof Error ? cause.message : 'Pipeline summary could not be loaded.',
-          );
-        }
-      });
+    const loadSummary = () => {
+      void readDashboardSummary()
+        .then((response) => {
+          if (active) {
+            setSummary(response);
+            setSummaryError(null);
+          }
+        })
+        .catch((cause: unknown) => {
+          if (active) {
+            setSummaryError(
+              cause instanceof Error ? cause.message : 'Pipeline summary could not be loaded.',
+            );
+          }
+        });
+    };
+    loadSummary();
+    const unsubscribe = subscribeToDealsChanged(loadSummary);
     return () => {
       active = false;
+      unsubscribe();
     };
   }, []);
 
@@ -198,6 +214,12 @@ export function DealsDashboard() {
     }
   }, [editingDeal]);
 
+  useEffect(() => {
+    if (!createOpen) return;
+    createForm.current?.scrollIntoView?.({ behavior: 'smooth', block: 'center' });
+    createForm.current?.querySelector<HTMLInputElement>('input[name="name"]')?.focus();
+  }, [createOpen]);
+
   async function refreshSummary() {
     try {
       setSummary(await readDashboardSummary());
@@ -240,7 +262,7 @@ export function DealsDashboard() {
       setResult(refreshed);
       void refreshSummary();
       setLoading(false);
-      if (createForm.current) createForm.current.open = false;
+      setCreateOpen(false);
     } catch (cause) {
       setCreateError(actionErrorMessage(cause, 'The deal could not be created.'));
     } finally {
@@ -248,11 +270,11 @@ export function DealsDashboard() {
     }
   }
 
-  async function moveStage(dealId: string, requestedTarget?: Stage) {
+  async function moveStage(dealId: string, toStage: Stage) {
     const deal = result?.items.find((item) => item.id === dealId);
-    const toStage = requestedTarget ?? moveTargets[dealId];
-    if (!deal || !toStage) return;
+    if (!deal) return;
     setActionToast(null);
+    setOpenMoveMenu(null);
     setMovingDeal(dealId);
     try {
       await moveDealStage(deal.id, toStage, deal.version);
@@ -262,7 +284,6 @@ export function DealsDashboard() {
       const refreshed = await readDeals(query);
       setResult(refreshed);
       void refreshSummary();
-      setMoveTargets((current) => ({ ...current, [dealId]: '' }));
       setActionToast({
         kind: 'success',
         message: `${deal.name} moved to ${STAGE_LABELS[toStage]}.`,
@@ -361,44 +382,89 @@ export function DealsDashboard() {
   }
 
   return (
-    <section aria-labelledby="deals-title" className="mt-8">
-      <div className="flex flex-wrap items-end justify-between gap-4">
-        <div>
-          <h2 className="text-2xl font-semibold" id="deals-title">
-            Deals
-          </h2>
-          <p className="mt-1 text-sm text-fg-muted">
-            Review opportunities across your organisation.
-          </p>
-        </div>
-        <div className="flex flex-wrap items-center gap-3">
-          <p
-            aria-live="polite"
-            className="rounded-control bg-brand-soft px-3 py-1.5 text-sm font-semibold text-brand-fg"
-          >
-            {loading
-              ? 'Loading deals…'
-              : `${result?.total ?? 0} ${result?.total === 1 ? 'deal' : 'deals'}`}
-          </p>
+    <section aria-label="Pipeline deals" className="pipeline-workspace">
+      <header className="pipeline-hero">
+        <div className="pipeline-hero-copy">
+          <p className="pipeline-hero-eyebrow">Investment workspace</p>
+          <h1>Deal pipeline</h1>
+          <p>Move opportunities from sourcing through investment committee and close.</p>
           <Button
+            aria-controls={createOpen ? 'new-deal-form' : undefined}
+            aria-expanded={createOpen}
+            className="pipeline-hero-action"
             onClick={() => {
-              if (!createForm.current) return;
-              createForm.current.open = true;
-              createForm.current.scrollIntoView({ behavior: 'smooth', block: 'center' });
-              createForm.current.querySelector<HTMLInputElement>('input[name="name"]')?.focus();
+              setCreateError(null);
+              setCreateOpen((open) => !open);
             }}
             type="button"
-            variant="primary"
+            variant="secondary"
           >
-            Add deal
+            <Icon className="size-4" name={createOpen ? 'close' : 'plus'} />
+            {createOpen ? 'Close new deal form' : 'Create deal'}
           </Button>
+          {createMessage ? (
+            <p aria-live="polite" className="mt-2 text-xs font-medium text-success-fg">
+              {createMessage}
+            </p>
+          ) : null}
         </div>
+        <div aria-label="Pipeline snapshot" className="pipeline-hero-stats">
+          <div className="pipeline-hero-stat">
+            <span>Deals in view</span>
+            <strong aria-live="polite">{loading ? 'Loading…' : (result?.total ?? 0)}</strong>
+          </div>
+          <div className="pipeline-hero-stat">
+            <span>Open pipeline</span>
+            <strong className="pipeline-hero-currency">
+              {summary?.totalsByCurrency.length
+                ? summary.totalsByCurrency
+                    .map((total) => formatMinorAmount(total.amount, total.currency))
+                    .join(' · ')
+                : summary
+                  ? 'No valued open deals'
+                  : '—'}
+            </strong>
+          </div>
+          <div className="pipeline-hero-stat">
+            <span>Closing in {summary?.windowDays ?? 60} days</span>
+            <strong>{summary?.closingSoonCount ?? '—'}</strong>
+          </div>
+        </div>
+      </header>
+
+      <div className="pipeline-toolbar">
+        <fieldset className="flex flex-wrap items-center justify-between gap-3">
+          <legend className="sr-only">Deals view</legend>
+          <div className="pipeline-view-switch">
+            <Button
+              aria-pressed={view === 'list'}
+              onClick={() => setView('list')}
+              size="small"
+              type="button"
+              variant={view === 'list' ? 'primary' : 'quiet'}
+            >
+              List
+            </Button>
+            <Button
+              aria-pressed={view === 'board'}
+              onClick={() => setView('board')}
+              size="small"
+              type="button"
+              variant={view === 'board' ? 'primary' : 'quiet'}
+            >
+              Board
+            </Button>
+          </div>
+          {view === 'board' ? (
+            <span className="pipeline-board-help">
+              <Icon className="size-4" name="drag" />
+              Drag deals to move them. For keyboard controls, switch to List.
+            </span>
+          ) : null}
+        </fieldset>
       </div>
 
-      <section aria-labelledby="pipeline-overview-title" className="mt-6 space-y-4">
-        <h3 className="text-xl font-semibold" id="pipeline-overview-title">
-          Pipeline overview
-        </h3>
+      <section aria-label="Pipeline overview" className="pipeline-overview">
         {summaryError ? (
           <div
             className="rounded-panel border border-danger/40 bg-danger-soft p-4 text-danger-fg"
@@ -415,110 +481,94 @@ export function DealsDashboard() {
             </Button>
           </div>
         ) : summary ? (
-          <div aria-busy={false} className="space-y-4">
-            <div className="grid gap-3 sm:grid-cols-2">
-              <article className="pipeline-stat pipeline-stat-value material-card p-4">
-                <h4 className="text-sm text-fg-muted">Open pipeline value</h4>
-                <ul className="mt-2 space-y-1 font-semibold tabular-nums">
-                  {summary.totalsByCurrency.length ? (
-                    summary.totalsByCurrency.map((total) => (
-                      <li key={total.currency}>
-                        {formatMinorAmount(total.amount, total.currency)}
-                      </li>
-                    ))
-                  ) : (
-                    <li>No valued open deals</li>
-                  )}
-                </ul>
-              </article>
-              <article className="pipeline-stat pipeline-stat-closing material-card p-4">
-                <h4 className="text-sm text-fg-muted">Closing soon</h4>
-                <p className="mt-2 text-3xl font-semibold tabular-nums">
-                  {summary.closingSoonCount}
-                </p>
-                <p className="text-sm text-fg-muted">
-                  Within {summary.windowDays} days, including overdue deals
-                </p>
-              </article>
-            </div>
-            <div className="grid gap-4 lg:grid-cols-2">
-              <section aria-labelledby="stage-overview-title" className="material-card p-4">
-                <h4 className="font-semibold" id="stage-overview-title">
-                  Deals by stage
-                </h4>
-                <ul className="mt-3 space-y-1">
-                  {summary.pipelineByStage.map((item) => (
-                    <li key={item.stage}>
-                      <button
-                        aria-label={`Filter deals to ${STAGE_LABELS[item.stage]} (${item.count})`}
-                        aria-pressed={stage === item.stage}
-                        className="stage-overview-link"
-                        onClick={() => changeStage(item.stage)}
-                        type="button"
-                      >
-                        <span>{STAGE_LABELS[item.stage]}</span>
-                        <span className="stage-overview-count">{item.count}</span>
-                      </button>
-                    </li>
-                  ))}
-                </ul>
-              </section>
-              <section aria-labelledby="closing-soon-title" className="material-card p-4">
-                <h4 className="font-semibold" id="closing-soon-title">
-                  Closing soon
-                </h4>
-                {summary.closingSoon.length === 0 ? (
-                  <p className="mt-3 text-sm text-fg-muted">
-                    No active deals have an expected close date in this window.
-                  </p>
-                ) : (
-                  <ol className="mt-3 space-y-3">
-                    {summary.closingSoon.map((deal) => {
-                      const now = clockNow ?? new Date(summary.serverNow);
-                      const currentDays = clockNow
-                        ? daysUntil(deal.expectedCloseDate, clockNow, summary.timeZone)
-                        : deal.closesInDays;
-                      const urgent = currentDays <= 5;
-                      return (
-                        <li
-                          className="flex flex-wrap items-center justify-between gap-3 border-t border-line pt-3"
-                          key={deal.id}
+          <div aria-busy={false}>
+            <details className="pipeline-disclosure material-card p-3">
+              <summary className="flex cursor-pointer list-none items-center justify-between gap-3 font-medium">
+                <span>Stage counts and upcoming close dates</span>
+                <Icon className="size-4 shrink-0" name="chevron" />
+              </summary>
+              <div className="mt-3 grid gap-3 lg:grid-cols-2">
+                <section aria-labelledby="stage-overview-title" className="material-card p-4">
+                  <h4 className="font-semibold" id="stage-overview-title">
+                    Deals by stage
+                  </h4>
+                  <ul className="mt-3 space-y-1">
+                    {summary.pipelineByStage.map((item) => (
+                      <li key={item.stage}>
+                        <button
+                          aria-label={`Filter deals to ${STAGE_LABELS[item.stage]} (${item.count})`}
+                          aria-pressed={stage === item.stage}
+                          className="stage-overview-link"
+                          onClick={() => changeStage(item.stage)}
+                          type="button"
                         >
-                          <div>
-                            <Link
-                              className="font-medium underline focus-visible:outline-2"
-                              href={`/deals/${deal.id}`}
-                            >
-                              {deal.name}
-                            </Link>
-                            <p className="text-sm text-fg-muted">
-                              {STAGE_LABELS[deal.stage]} · {formatCloseDate(deal.expectedCloseDate)}
-                            </p>
-                          </div>
-                          <p
-                            className={
-                              urgent
-                                ? 'rounded-control border border-danger/40 bg-danger-soft px-3 py-1 text-sm font-medium text-danger-fg'
-                                : 'rounded-control border border-line px-3 py-1 text-sm'
-                            }
+                          <span>{STAGE_LABELS[item.stage]}</span>
+                          <span className="stage-overview-count">{item.count}</span>
+                        </button>
+                      </li>
+                    ))}
+                  </ul>
+                </section>
+                <section aria-labelledby="closing-soon-title" className="material-card p-4">
+                  <h4 className="font-semibold" id="closing-soon-title">
+                    Upcoming close dates
+                  </h4>
+                  {summary.closingSoon.length === 0 ? (
+                    <p className="mt-3 text-sm text-fg-muted">
+                      No active deals have an expected close date in this window.
+                    </p>
+                  ) : (
+                    <ol className="mt-3 space-y-3">
+                      {summary.closingSoon.map((deal) => {
+                        const now = clockNow ?? new Date(summary.serverNow);
+                        const currentDays = clockNow
+                          ? daysUntil(deal.expectedCloseDate, clockNow, summary.timeZone)
+                          : deal.closesInDays;
+                        const urgent = currentDays <= 5;
+                        return (
+                          <li
+                            className="flex flex-wrap items-center justify-between gap-3 border-t border-line pt-3"
+                            key={deal.id}
                           >
-                            {formatCloseCountdown(
-                              currentDays,
-                              deal.closesAt,
-                              now,
-                              summary.timeZone,
-                            )}
-                          </p>
-                        </li>
-                      );
-                    })}
-                  </ol>
-                )}
-                {summary.closingSoonCount > summary.closingSoon.length ? (
-                  <p className="mt-3 text-sm text-fg-muted">Showing the 10 nearest close dates.</p>
-                ) : null}
-              </section>
-            </div>
+                            <div>
+                              <Link
+                                className="font-medium underline focus-visible:outline-2"
+                                href={`/deals/${deal.id}`}
+                              >
+                                {deal.name}
+                              </Link>
+                              <p className="text-sm text-fg-muted">
+                                {STAGE_LABELS[deal.stage]} ·{' '}
+                                {formatCloseDate(deal.expectedCloseDate)}
+                              </p>
+                            </div>
+                            <p
+                              className={
+                                urgent
+                                  ? 'rounded-control border border-danger/40 bg-danger-soft px-3 py-1 text-sm font-medium text-danger-fg'
+                                  : 'rounded-control border border-line px-3 py-1 text-sm'
+                              }
+                            >
+                              {formatCloseCountdown(
+                                currentDays,
+                                deal.closesAt,
+                                now,
+                                summary.timeZone,
+                              )}
+                            </p>
+                          </li>
+                        );
+                      })}
+                    </ol>
+                  )}
+                  {summary.closingSoonCount > summary.closingSoon.length ? (
+                    <p className="mt-3 text-sm text-fg-muted">
+                      Showing the 10 nearest close dates.
+                    </p>
+                  ) : null}
+                </section>
+              </div>
+            </details>
           </div>
         ) : (
           <p aria-busy="true" className="text-sm text-fg-muted">
@@ -527,7 +577,7 @@ export function DealsDashboard() {
         )}
       </section>
 
-      <div className="material-card mt-6 flex flex-wrap items-end justify-between gap-4 p-4">
+      <div className="material-card mt-3 flex flex-wrap items-end justify-between gap-4 p-3">
         <form className="flex min-w-64 flex-1 flex-wrap items-end gap-3" onSubmit={applySearch}>
           <div className="min-w-52 flex-1">
             <label className="mb-1 block text-sm font-medium" htmlFor={searchId}>
@@ -568,82 +618,93 @@ export function DealsDashboard() {
         </div>
       </div>
 
-      <details className="material-card mt-4 p-4" id="new-deal-form" ref={createForm}>
-        <summary className="deal-create-trigger">New deal</summary>
-        <form
-          className="mt-4 grid gap-4 sm:grid-cols-2"
-          onSubmit={(event) => void submitDeal(event)}
+      {createOpen ? (
+        <section
+          aria-labelledby="new-deal-heading"
+          className="material-card mt-4 p-4"
+          id="new-deal-form"
+          ref={createForm}
         >
-          <div>
-            <label className="mb-1 block text-sm font-medium" htmlFor={dealNameId}>
-              Deal name
-            </label>
-            <Input className="w-full" id={dealNameId} maxLength={200} name="name" required />
+          <div className="mb-3 flex items-start justify-between gap-3">
+            <div>
+              <h2 className="font-semibold" id="new-deal-heading">
+                Create a deal
+              </h2>
+              <p className="mt-0.5 text-xs text-fg-muted">
+                Add the opportunity basics. You can assign a deal team after creation.
+              </p>
+            </div>
           </div>
-          <div>
-            <label className="mb-1 block text-sm font-medium" htmlFor={sectorId}>
-              Sector
-            </label>
-            <Input className="w-full" id={sectorId} maxLength={100} name="sector" />
-          </div>
-          <div>
-            <label className="mb-1 block text-sm font-medium" htmlFor={amountId}>
-              Deal size
-            </label>
-            <Input
-              className="w-full"
-              id={amountId}
-              inputMode="decimal"
-              name="amount"
-              placeholder="1250000.00"
-              type="text"
-            />
-            <p className="mt-1 text-xs text-fg-muted">
-              Enter the amount in major units; decimals are exact.
-            </p>
-          </div>
-          <div>
-            <label className="mb-1 block text-sm font-medium" htmlFor={currencyId}>
-              Currency
-            </label>
-            <Input
-              autoCapitalize="characters"
-              className="w-full uppercase"
-              defaultValue="ZAR"
-              id={currencyId}
-              maxLength={3}
-              minLength={3}
-              name="currency"
-              pattern="[A-Z]{3}"
-              required
-            />
-          </div>
-          <div className="sm:col-span-2">
-            <label className="mb-1 block text-sm font-medium" htmlFor={closeDateId}>
-              Expected close date
-            </label>
-            <Input id={closeDateId} name="expectedCloseDate" type="date" />
-          </div>
-          {createError && (
-            <p
-              className="rounded-control border border-danger/40 bg-danger-soft p-3 text-sm text-danger-fg sm:col-span-2"
-              role="alert"
-            >
-              {createError}
-            </p>
-          )}
-          <div className="flex items-center gap-3 sm:col-span-2">
-            <Button disabled={creating} type="submit" variant="primary">
-              {creating ? 'Creating…' : 'Create deal'}
-            </Button>
-            {createMessage && (
-              <p aria-live="polite" className="text-sm text-success-fg">
-                {createMessage}
+          <form className="grid gap-4 sm:grid-cols-2" onSubmit={(event) => void submitDeal(event)}>
+            <div>
+              <label className="mb-1 block text-sm font-medium" htmlFor={dealNameId}>
+                Deal name
+              </label>
+              <Input className="w-full" id={dealNameId} maxLength={200} name="name" required />
+            </div>
+            <div>
+              <label className="mb-1 block text-sm font-medium" htmlFor={sectorId}>
+                Sector
+              </label>
+              <Input className="w-full" id={sectorId} maxLength={100} name="sector" />
+            </div>
+            <div>
+              <label className="mb-1 block text-sm font-medium" htmlFor={amountId}>
+                Deal size
+              </label>
+              <Input
+                className="w-full"
+                id={amountId}
+                inputMode="decimal"
+                name="amount"
+                placeholder="1250000.00"
+                type="text"
+              />
+              <p className="mt-1 text-xs text-fg-muted">
+                Enter the amount in major units; decimals are exact.
+              </p>
+            </div>
+            <div>
+              <label className="mb-1 block text-sm font-medium" htmlFor={currencyId}>
+                Currency
+              </label>
+              <Input
+                autoCapitalize="characters"
+                className="w-full uppercase"
+                defaultValue="ZAR"
+                id={currencyId}
+                maxLength={3}
+                minLength={3}
+                name="currency"
+                pattern="[A-Z]{3}"
+                required
+              />
+            </div>
+            <div className="sm:col-span-2">
+              <label className="mb-1 block text-sm font-medium" htmlFor={closeDateId}>
+                Expected close date
+              </label>
+              <Input id={closeDateId} name="expectedCloseDate" type="date" />
+            </div>
+            {createError && (
+              <p
+                className="rounded-control border border-danger/40 bg-danger-soft p-3 text-sm text-danger-fg sm:col-span-2"
+                role="alert"
+              >
+                {createError}
               </p>
             )}
-          </div>
-        </form>
-      </details>
+            <div className="flex items-center gap-2 sm:col-span-2">
+              <Button onClick={() => setCreateOpen(false)} type="button" variant="secondary">
+                Cancel
+              </Button>
+              <Button disabled={creating} type="submit" variant="primary">
+                {creating ? 'Creating…' : 'Create deal'}
+              </Button>
+            </div>
+          </form>
+        </section>
+      ) : null}
 
       {error && (
         <p
@@ -666,70 +727,55 @@ export function DealsDashboard() {
       )}
 
       {result && result.items.length > 0 && (
-        <>
-          <aside aria-label="Stage movement rules" className="material-card mt-4 p-4 text-sm">
-            <h3 className="font-semibold">How deal stages work</h3>
-            <ul className="mt-2 grid gap-2 text-fg-muted md:grid-cols-3">
-              <li>
-                <strong className="text-fg">IC Review → Signed:</strong> IC approval quorum moves an
-                approved deal to Signed automatically.
-              </li>
-              <li>
-                <strong className="text-fg">Signed → Closed:</strong> after signing, move it to
-                Closed. Deal size, sector, and expected close date are required.
-              </li>
-              <li>
-                <strong className="text-fg">Passed:</strong> use this outcome when a deal exits the
-                pipeline. It is separate from progression to Signed and Closed.
-              </li>
-            </ul>
-          </aside>
-          <fieldset className="mt-4 flex flex-wrap items-center justify-between gap-3">
-            <legend className="sr-only">Deals view</legend>
-            <div className="inline-flex items-center gap-1 rounded-lg border border-line-subtle bg-surface-subtle p-1">
-              <Button
-                aria-pressed={view === 'list'}
-                onClick={() => setView('list')}
-                size="small"
-                type="button"
-                variant={view === 'list' ? 'primary' : 'quiet'}
-              >
-                List
-              </Button>
-              <Button
-                aria-pressed={view === 'board'}
-                onClick={() => setView('board')}
-                size="small"
-                type="button"
-                variant={view === 'board' ? 'primary' : 'quiet'}
-              >
-                Board
-              </Button>
-            </div>
-            {view === 'board' && (
-              <span className="text-xs text-fg-muted">
-                Drag cards between allowed stages. Use List for keyboard stage controls.
-              </span>
-            )}
-          </fieldset>
-        </>
+        <details className="pipeline-disclosure material-card mt-3 p-3 text-sm">
+          <summary className="flex cursor-pointer list-none items-center justify-between gap-3 font-semibold">
+            <span>How deal stages work</span>
+            <Icon className="size-4 shrink-0" name="chevron" />
+          </summary>
+          <ul className="mt-2 grid gap-2 text-fg-muted md:grid-cols-3">
+            <li>
+              <strong className="text-fg">IC Review → Signed:</strong> open an IC Review deal and
+              request approval from its IC approval section. The quorum moves approved deals to
+              Signed automatically.
+            </li>
+            <li>
+              <strong className="text-fg">Signed → Closed:</strong> after signing, move it to
+              Closed. Deal size, sector, and expected close date are required.
+            </li>
+            <li>
+              <strong className="text-fg">Passed:</strong> use this outcome when a deal exits the
+              pipeline. It is separate from progression to Signed and Closed.
+            </li>
+          </ul>
+        </details>
       )}
 
       {view === 'board' && result && result.items.length > 0 && (
-        <DealsKanban
-          deals={result.items}
-          disabled={loading || movingDeal !== null}
-          onMove={(dealId, destination) => void moveStage(dealId, destination)}
-          onInvalidMove={(message) => setActionToast({ kind: 'info', message })}
-        />
+        <>
+          <p className="mt-3 text-xs text-fg-muted lg:hidden">
+            Swipe horizontally to see every stage. Drag a deal card to move it.
+          </p>
+          <DealsKanban
+            deals={result.items}
+            disabled={loading || movingDeal !== null}
+            onMove={(dealId, destination) => void moveStage(dealId, destination)}
+            onInvalidMove={(message) => setActionToast({ kind: 'info', message })}
+          />
+        </>
       )}
 
       {view === 'list' && result && result.items.length > 0 && (
         <>
-          <p className="mt-3 text-xs text-fg-muted sm:hidden">
+          <p className="mt-3 text-xs text-fg-muted lg:hidden">
             Swipe the table sideways to see every field and deal action.
           </p>
-          <div aria-busy={loading} className="material-card mt-4 min-w-0 overflow-x-auto">
+          {/* oxlint-disable jsx-a11y/no-noninteractive-tabindex -- Keyboard users need focus to scroll the overflow table. */}
+          <section
+            aria-busy={loading}
+            aria-label="Deals list. Scroll horizontally to see every field and deal action."
+            className="material-card mt-4 min-w-0 overflow-x-auto focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand"
+            tabIndex={0}
+          >
             <table className="w-full min-w-[68rem] border-collapse text-left text-sm">
               <caption className="sr-only">Deals in the active organisation</caption>
               <thead className="border-b border-line text-fg-muted">
@@ -750,7 +796,7 @@ export function DealsDashboard() {
                     Expected close
                   </th>
                   <th className="px-4 py-3 font-medium" scope="col">
-                    Stage action
+                    Move
                   </th>
                   <th className="px-4 py-3 font-medium" scope="col">
                     Deal actions
@@ -783,84 +829,80 @@ export function DealsDashboard() {
                         const destinations = STAGE_TRANSITIONS.filter(
                           ([from]) => from === deal.stage,
                         ).map(([, to]) => to);
-                        const selected = moveTargets[deal.id] ?? '';
-                        const check = selected
-                          ? evaluateMove(deal.stage, selected, [
-                              ...(deal.sector ? ['sector'] : []),
-                              ...(deal.amount !== null ? ['amount'] : []),
-                              ...(deal.expected_close_date ? ['expected_close_date'] : []),
-                            ])
-                          : null;
-                        const missingFields =
-                          check && !check.ok && check.code === 'missing_fields'
-                            ? check.fields.map((field) => {
-                                switch (field) {
-                                  case 'amount':
-                                    return 'deal size';
-                                  case 'sector':
-                                    return 'sector';
-                                  case 'expected_close_date':
-                                    return 'expected close date';
-                                  default:
-                                    return field;
-                                }
-                              })
-                            : [];
-                        const moveHelpId = `move-help-${deal.id}`;
                         return destinations.length === 0 ? (
                           <span className="text-fg-muted">Final stage</span>
                         ) : (
-                          <div className="flex min-w-56 flex-col items-start gap-2">
-                            <label className="sr-only" htmlFor={`move-stage-${deal.id}`}>
-                              Next stage for {deal.name}
-                            </label>
-                            <SelectControl
-                              aria-describedby={selected ? moveHelpId : undefined}
-                              className="w-full"
-                              disabled={movingDeal === deal.id || loading}
-                              id={`move-stage-${deal.id}`}
-                              onChange={(event) => {
-                                const parsed = stageSchema.safeParse(event.currentTarget.value);
-                                const targetStage = parsed.success ? parsed.data : '';
-                                setMoveTargets((current) => ({
-                                  ...current,
-                                  [deal.id]: targetStage,
-                                }));
-                              }}
-                              value={selected}
-                            >
-                              <option value="">Choose next stage…</option>
-                              {destinations.map((destination) => (
-                                <option key={destination} value={destination}>
-                                  {STAGE_LABELS[destination]}
-                                </option>
-                              ))}
-                            </SelectControl>
+                          <div className="min-w-36">
+                            {deal.stage === 'ic_review' ? (
+                              <Link
+                                className="mb-2 inline-block text-sm font-medium text-brand-fg underline underline-offset-4 focus-visible:outline-2"
+                                href={`/deals/${deal.id}#approval-title`}
+                              >
+                                Open IC approval
+                              </Link>
+                            ) : null}
                             <Button
-                              className="w-full"
-                              disabled={
-                                !selected ||
-                                missingFields.length > 0 ||
-                                movingDeal === deal.id ||
-                                loading
+                              aria-expanded={openMoveMenu === deal.id}
+                              className="w-full justify-between"
+                              disabled={movingDeal === deal.id || loading}
+                              onClick={() =>
+                                setOpenMoveMenu((current) => (current === deal.id ? null : deal.id))
                               }
-                              onClick={() => void moveStage(deal.id)}
                               size="small"
                               type="button"
-                              variant="primary"
+                              variant="secondary"
                             >
-                              {movingDeal === deal.id
-                                ? 'Moving deal…'
-                                : selected
-                                  ? `Move to ${STAGE_LABELS[selected]}`
-                                  : 'Choose a stage'}
+                              <span>{movingDeal === deal.id ? 'Moving…' : 'Move to…'}</span>
+                              <span aria-hidden="true">{openMoveMenu === deal.id ? '▴' : '▾'}</span>
                             </Button>
-                            {selected ? (
-                              <p className="text-xs text-fg-muted" id={moveHelpId}>
-                                {missingFields.length > 0
-                                  ? `Add ${missingFields.join(' and ')} before moving to ${STAGE_LABELS[selected]}.`
-                                  : `Move from ${STAGE_LABELS[deal.stage]} to ${STAGE_LABELS[selected]}.`}
-                              </p>
+                            {openMoveMenu === deal.id ? (
+                              <fieldset className="mt-2 space-y-1 rounded-control border border-line bg-surface-raised p-2">
+                                <legend className="sr-only">Available moves for {deal.name}</legend>
+                                <p className="px-2 pb-1 text-xs text-fg-muted">
+                                  Move from {STAGE_LABELS[deal.stage]}
+                                </p>
+                                {destinations.map((destination) => {
+                                  const check = evaluateMove(deal.stage, destination, [
+                                    ...(deal.sector ? ['sector'] : []),
+                                    ...(deal.amount !== null ? ['amount'] : []),
+                                    ...(deal.expected_close_date ? ['expected_close_date'] : []),
+                                  ]);
+                                  const missingFields =
+                                    !check.ok && check.code === 'missing_fields'
+                                      ? check.fields.map((field) => {
+                                          switch (field) {
+                                            case 'amount':
+                                              return 'deal size';
+                                            case 'sector':
+                                              return 'sector';
+                                            case 'expected_close_date':
+                                              return 'expected close date';
+                                            default:
+                                              return field;
+                                          }
+                                        })
+                                      : [];
+                                  return (
+                                    <div key={destination}>
+                                      <Button
+                                        className="w-full justify-start"
+                                        disabled={missingFields.length > 0 || loading}
+                                        onClick={() => void moveStage(deal.id, destination)}
+                                        size="small"
+                                        type="button"
+                                        variant="quiet"
+                                      >
+                                        Move to {STAGE_LABELS[destination]}
+                                      </Button>
+                                      {missingFields.length > 0 ? (
+                                        <p className="px-2 pb-1 text-xs text-fg-muted">
+                                          Requires {missingFields.join(' and ')}
+                                        </p>
+                                      ) : null}
+                                    </div>
+                                  );
+                                })}
+                              </fieldset>
                             ) : null}
                           </div>
                         );
@@ -885,7 +927,8 @@ export function DealsDashboard() {
                 ))}
               </tbody>
             </table>
-          </div>
+          </section>
+          {/* oxlint-enable jsx-a11y/no-noninteractive-tabindex */}
         </>
       )}
 
@@ -910,6 +953,20 @@ export function DealsDashboard() {
                 Update the core details used across your pipeline and reports.
               </p>
             </header>
+            {editingDeal.stage === 'ic_review' ? (
+              <aside className="rounded-control border border-line bg-surface-raised p-3">
+                <p className="text-sm text-fg-muted">
+                  IC approval requests are made in the approval section. A Deal Lead or another user
+                  with approval-request access can submit one there.
+                </p>
+                <Link
+                  className="mt-2 inline-block text-sm font-medium text-brand-fg underline underline-offset-4 focus-visible:outline-2"
+                  href={`/deals/${editingDeal.id}#approval-title`}
+                >
+                  Open IC approval
+                </Link>
+              </aside>
+            ) : null}
             <div className="deal-edit-fields">
               <label htmlFor={`${editId}-name`}>
                 <span>Deal name</span>

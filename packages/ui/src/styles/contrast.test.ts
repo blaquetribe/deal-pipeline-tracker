@@ -13,6 +13,7 @@ const read = (file: string) =>
     /\/\*[\s\S]*?\*\//g,
     '',
   );
+const controlsCss = read('./controls.css');
 
 function blocks(css: string) {
   return [...css.matchAll(/([^{}]+)\{([^{}]*)\}/g)].map(([, selector, body]) => ({
@@ -134,6 +135,15 @@ describe.each([
     expect(
       contrast(resolve(vars, 'control-border'), resolve(vars, 'control-surface')),
     ).toBeGreaterThanOrEqual(3);
+  });
+
+  it('keeps disabled action labels readable on a neutral surface', () => {
+    expect(controlsCss).toMatch(
+      /button\[data-ui-button\]:disabled\s*\{[^}]*background:\s*var\(--surface-subtle\)[^}]*color:\s*var\(--fg-muted\)/s,
+    );
+    expect(
+      contrast(resolve(vars, 'fg-muted'), resolve(vars, 'surface-subtle')),
+    ).toBeGreaterThanOrEqual(4.5);
   });
 
   // Hover and subtle fills sit on a card; everything else sits on the canvas.

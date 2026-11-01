@@ -2,6 +2,10 @@
 
 **Source:** one composite image supplied by the owner: sign-in, dashboard, deal list, deal detail, activity and audit trail, mobile view, style guide. It is **not stored in the repo**: it carries CVC branding and a photograph, and it has AI-image artefacts (garbled labels such as "Owners/Clocks", overlapping text), so its text is not treated as requirements. Decisions are in [ADR 0009](../decisions/0009-ui-direction-from-mockup.md).
 
+## System UI refresh (2026-10-31)
+
+The owner requested a cohesive end-to-end UI/UX pass after reviewing the live application. The shared frame now follows DoorSprint's practical structure: persistent workspace navigation, a compact account bar, and page content in a clear reading column. Keep the product's navy/blue identity, but use a quiet neutral canvas, opaque surfaces, restrained borders and shadows, and one consistent control scale. Avoid layered gradients, translucent glass panels, oversized page titles, and platform-default select styling. On phones, keep primary navigation reachable at the bottom and leave enough content padding above it. Role settings are restricted to users with role-management access; the nav stays focused on everyday work. These are presentation and discoverability changes only: Postgres remains authoritative for access and workflow.
+
 Every item below is classified **Adopt**, **Adapt**, **Reject** or **Missing** (needed by us but absent from the mockup), with the reason.
 
 ## Adopt (as shown)
@@ -65,3 +69,14 @@ Every item below is classified **Adopt**, **Adapt**, **Reject** or **Missing** (
 - Seven stage colours with near-duplicates (Sourcing and Screening both blue, Signed and Closed both green): the text label carries the meaning, so keep it.
 - The donut omits Passed and shows one currency symbol for all deals.
 - Row actions ("...") need an accessible name; filters and tabs need real `tablist`/`combobox` semantics.
+
+## CRM reference follow-up (2026-10-31)
+
+The Sell Bridge reference reinforces a narrow navigation rail, compact cards, neutral surfaces, and dense but readable tables. Apply those hierarchy and density ideas to the investment pipeline without copying affiliate-deal content or its hero treatment. The current pass places List/Board immediately below Pipeline's heading, collapses secondary summaries, removes repeated creation actions, and colors stage badges while keeping the labels. The always-mounted top-bar bell provides persistent realtime connection state; tenant-scoped deal updates send only a content-free refresh hint.
+
+The 8081 live review confirms the connected state and stage-color treatment. At the compact 905 px viewport, My Work, Pipeline List/Board, Team, role management, Approvals, closing-alert settings, deal detail, and the notification panel were reviewed without changing demo data. In response to feedback that the earlier compact styling was not a sufficient redesign, Pipeline now opens on the Board and presents portfolio context in a stronger hero, separates progression lanes from outcomes, and keeps List available as an alternate working mode. This remains a design iteration, not closeout: wider desktop and phone review, standalone auth/edit-dialog pass, and fresh screenshots are still needed. Refresh the presentation only after these steps.
+
+
+## System redesign implementation review (2026-11-01)
+
+The current shell applies DoorSprint's compact header/sidebar hierarchy and consistent shared tokens to the deal tracker, while using the CRM reference's dense board/list information structure. The live UI now opens Pipeline on its stage board, uses a portfolio hero for the key counts, keeps Passed outside progression, and leaves List available for keyboard stage movement and dense editing. The design retains text on every stage badge, uses semantic stage accents, keeps realtime state visible in the shared header, and uses a focused modal for deal metadata. Team management remains role-gated. Fresh evidence for the Pipeline, edit modal, and Owner Team view is in `docs/evidence/ui/16-18`; older captures remain historical. The final walkthrough deck uses these current captures and diagrams for other feature paths.

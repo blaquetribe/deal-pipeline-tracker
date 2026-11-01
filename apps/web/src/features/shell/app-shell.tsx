@@ -3,40 +3,36 @@ import type { ReactNode } from 'react';
 
 import { ProfileAvatar, SignOutButton, TenantSwitcher } from '../auth';
 import { NotificationBell } from '../notifications';
+import { Icon } from '../ui/icon';
+import { OpenNotificationsAction } from './open-notifications-action';
 import { ThemeToggle } from './theme-toggle';
 
 type AppPage = 'my-work' | 'pipeline' | 'team' | 'approvals' | 'roles' | 'settings';
 
 const navigation = [
-  { href: '/', label: 'My Work', page: 'my-work' },
-  { href: '/pipeline', label: 'Pipeline', page: 'pipeline' },
-  { href: '/team', label: 'Team', page: 'team' },
-  { href: '/approvals', label: 'Approvals', page: 'approvals' },
-  { href: '/settings', label: 'Settings', page: 'settings' },
+  { href: '/', label: 'My Work', page: 'my-work', icon: 'work' },
+  { href: '/pipeline', label: 'Pipeline', page: 'pipeline', icon: 'pipeline' },
+  { href: '/team', label: 'Team', page: 'team', icon: 'team' },
+  { href: '/approvals', label: 'Approvals', page: 'approvals', icon: 'approval' },
 ] as const;
-
-const pageDescriptions: Record<AppPage, string> = {
-  'my-work': 'Your workspace',
-  pipeline: 'Investment pipeline',
-  team: 'Team and invitations',
-  approvals: 'IC approval queue',
-  roles: 'Roles and permissions',
-  settings: 'Organisation settings',
-};
 
 function PrimaryLinks({ currentPage }: { readonly currentPage: AppPage }) {
   return (
     <>
-      {navigation.map(({ href, label, page }) => (
-        <Link
-          aria-current={currentPage === page ? 'page' : undefined}
-          className={`app-nav-link ${currentPage === page ? 'app-nav-link-active' : ''}`}
-          href={href}
-          key={page}
-        >
-          {label}
-        </Link>
-      ))}
+      {navigation.map(({ href, label, page, icon }) => {
+        const active = currentPage === page || (currentPage === 'roles' && page === 'team');
+        return (
+          <Link
+            aria-current={active ? 'page' : undefined}
+            className={`app-nav-link ${active ? 'app-nav-link-active' : ''}`}
+            href={href}
+            key={page}
+          >
+            <Icon className="size-[1.125rem] shrink-0" name={icon} />
+            {label}
+          </Link>
+        );
+      })}
     </>
   );
 }
@@ -49,53 +45,73 @@ export function AppShell({
   readonly children: ReactNode;
 }) {
   return (
-    <div className="grid min-w-0 grid-cols-1 gap-5 lg:grid-cols-[13rem_minmax(0,1fr)] xl:gap-8">
-      <aside className="app-sidebar material-glass flex flex-col gap-5 rounded-panel p-4 lg:sticky lg:top-6 lg:h-[calc(100vh-3rem)] lg:self-start">
-        <Link aria-label="Deal Pipeline Tracker home" className="flex items-center gap-3" href="/">
+    <div className="-m-4 grid h-svh min-h-0 min-w-0 grid-cols-1 overflow-hidden bg-canvas sm:-m-6 lg:grid-cols-[15rem_minmax(0,1fr)] xl:-m-8">
+      <aside className="app-sidebar material-glass hidden min-h-0 flex-col gap-5 overflow-y-auto overscroll-contain p-4 lg:flex">
+        <Link
+          aria-label="Deal Pipeline Tracker home"
+          className="flex items-center gap-3 px-1 py-2"
+          href="/"
+        >
           <span
             aria-hidden="true"
-            className="app-brand-mark grid size-11 shrink-0 place-items-center rounded-panel text-sm font-bold tracking-wide text-fg-on-brand"
+            className="app-brand-mark grid size-10 shrink-0 place-items-center rounded-lg text-sm font-bold tracking-wide text-fg-on-brand"
           >
             DP
           </span>
-          <span className="text-base font-semibold tracking-tight text-white">Deal Pipeline</span>
+          <span className="app-shell-title text-[0.95rem] font-semibold tracking-tight">
+            Deal Pipeline
+          </span>
         </Link>
-        <nav aria-label="Workspace navigation" className="hidden flex-col gap-1 lg:flex">
+        <p className="app-sidebar-eyebrow px-3 text-[0.68rem] font-semibold tracking-[0.14em] uppercase">
+          Workspace
+        </p>
+        <nav aria-label="Workspace navigation" className="-mt-4 flex flex-col gap-1">
           <PrimaryLinks currentPage={currentPage} />
         </nav>
-        <nav
-          aria-label="Workspace navigation"
-          className="flex max-w-full gap-1 overflow-x-auto lg:hidden"
-        >
-          <PrimaryLinks currentPage={currentPage} />
-        </nav>
-        <div className="mt-auto hidden rounded-panel border border-white/10 bg-white/5 p-3 lg:block">
-          <p className="text-xs font-semibold text-white">Private workspace</p>
-          <p className="mt-1 text-xs leading-relaxed text-white/70">
+        <div className="app-sidebar-note mt-auto rounded-lg border p-3">
+          <p className="text-xs font-semibold">Private workspace</p>
+          <p className="mt-1 text-xs leading-relaxed">
             Deals and activity stay scoped to your organisation.
           </p>
         </div>
       </aside>
 
-      <div className="min-w-0">
-        <header className="app-topbar material-glass mb-8 flex flex-wrap items-center justify-between gap-4 rounded-panel p-4">
-          <div>
-            <p className="text-xs font-semibold tracking-[0.12em] text-brand-fg uppercase">
-              Deal Pipeline Tracker
-            </p>
-            <p className="mt-1 text-sm font-medium text-fg-muted">
-              {pageDescriptions[currentPage]}
-            </p>
+      <div className="flex h-full min-h-0 min-w-0 flex-col overflow-hidden">
+        <header className="app-topbar material-glass relative z-30 grid flex-none grid-cols-[minmax(0,1fr)_auto] items-center gap-x-3 gap-y-2 border-x-0 border-t-0 px-4 py-2 sm:px-6 lg:gap-x-5 lg:px-8">
+          <div className="col-start-1 row-start-1 flex min-w-0 items-center gap-2 lg:hidden">
+            <span
+              aria-hidden="true"
+              className="app-brand-mark grid size-8 shrink-0 place-items-center rounded-lg text-xs font-bold text-fg-on-brand"
+            >
+              DP
+            </span>
+            <span className="truncate text-sm font-semibold text-fg">Deal Pipeline</span>
           </div>
-          <div className="flex flex-wrap items-center gap-3">
+          <div className="col-start-1 row-start-2 min-w-0 lg:col-start-1 lg:row-start-1">
             <TenantSwitcher />
-            <ThemeToggle />
-            <NotificationBell />
-            <ProfileAvatar />
-            <SignOutButton />
+          </div>
+          <div className="col-start-2 row-start-1 flex min-w-0 items-center justify-end gap-2">
+            <NotificationBell compact />
+            <ProfileAvatar compact>
+              <OpenNotificationsAction />
+              <Link className="account-menu-item" href="/settings">
+                <Icon className="size-4" name="settings" />
+                Settings
+              </Link>
+              <ThemeToggle />
+              <SignOutButton />
+            </ProfileAvatar>
           </div>
         </header>
-        {children}
+        <nav
+          aria-label="Workspace navigation"
+          className="app-mobile-nav fixed inset-x-3 bottom-3 z-40 flex max-w-[calc(100vw-1.5rem)] gap-1 overflow-x-auto rounded-xl border p-1.5 lg:hidden"
+        >
+          <PrimaryLinks currentPage={currentPage} />
+        </nav>
+        <div className="app-content-area min-h-0 min-w-0 flex-1 overflow-y-auto overscroll-contain">
+          {children}
+        </div>
       </div>
     </div>
   );

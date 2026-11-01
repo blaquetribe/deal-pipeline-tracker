@@ -5,7 +5,10 @@ import Link from 'next/link';
 import { useCallback, useEffect, useRef, useState } from 'react';
 
 import { Button } from '../ui/button';
+import { Icon } from '../ui/icon';
 import { markNotificationRead, readNotifications } from './api';
+import { subscribeToOpenNotifications } from './notification-events';
+import { publishDealsChanged } from './realtime-events';
 
 const MAX_NOTIFICATIONS = 50;
 const PENDING_READ_AT = 'pending';
@@ -49,11 +52,25 @@ function isConnectedMessage(data: string): boolean {
   }
 }
 
+function isDealsChangedMessage(data: string): boolean {
+  try {
+    const message: unknown = JSON.parse(data);
+    return (
+      typeof message === 'object' &&
+      message !== null &&
+      'type' in message &&
+      message.type === 'deals_changed'
+    );
+  } catch {
+    return false;
+  }
+}
+
 function mergeNotification(current: readonly Notification[], next: Notification): Notification[] {
   return [next, ...current.filter((item) => item.id !== next.id)].slice(0, MAX_NOTIFICATIONS);
 }
 
-export function NotificationBell() {
+export function NotificationBell({ compact = false }: { readonly compact?: boolean }) {
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -100,6 +117,10 @@ export function NotificationBell() {
           setConnected(true);
           return;
         }
+        if (isDealsChangedMessage(event.data)) {
+          publishDealsChanged();
+          return;
+        }
         const notification = parseMessage(event.data);
         if (!notification) return;
         setNotifications((current) => mergeNotification(current, notification));
@@ -135,6 +156,15 @@ export function NotificationBell() {
       socket?.close();
     };
   }, [refresh]);
+
+  useEffect(
+    () =>
+      subscribeToOpenNotifications(() => {
+        setFilter('unread');
+        setOpen(true);
+      }),
+    [],
+  );
 
   const unreadCount = notifications.filter((item) => item.read_at === null).length;
   const visibleNotifications =
@@ -178,11 +208,25 @@ export function NotificationBell() {
         aria-label={`Notifications${unreadCount > 0 ? `, ${unreadCount} unread` : ''}`}
         aria-expanded={open}
         aria-controls="notification-panel"
+        title={`Live updates ${connected ? 'connected' : 'reconnecting'}`}
         onClick={() => setOpen((value) => !value)}
-        className="text-sm"
+        className={compact ? 'notification-trigger' : 'account-menu-item'}
+        size="small"
         variant="secondary"
       >
-        Notifications{unreadCount > 0 ? ` (${unreadCount})` : ''}
+        <Icon className="size-4" name="bell" />
+        {compact ? (
+          <>
+            <span className="sr-only">Notifications</span>
+            {unreadCount > 0 ? <span className="notification-count">{unreadCount}</span> : null}
+            <span
+              aria-hidden="true"
+              className={`realtime-indicator ${connected ? 'is-live' : ''}`}
+            />
+          </>
+        ) : (
+          <>Notifications{unreadCount > 0 ? ` (${unreadCount})` : ''}</>
+        )}
       </Button>
       <span className="sr-only" aria-live="polite">
         {announcement}
@@ -237,6 +281,13 @@ export function NotificationBell() {
               Refresh
             </Button>
           </div>
+          <output className="mt-1 flex items-center gap-2 text-xs text-fg-muted">
+            <span
+              aria-hidden="true"
+              className={`realtime-indicator ${connected ? 'is-live' : ''}`}
+            />
+            {connected ? 'Live updates connected' : 'Reconnecting to live updates'}
+          </output>
           <div className="mt-3 flex flex-wrap items-center justify-between gap-2">
             <fieldset className="flex gap-1">
               <legend className="sr-only">Notification filter</legend>

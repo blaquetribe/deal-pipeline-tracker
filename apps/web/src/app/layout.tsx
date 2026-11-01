@@ -18,7 +18,6 @@ export default async function RootLayout({ children }: { readonly children: Reac
   return (
     <html lang="en" className={theme === 'dark' ? 'dark' : ''}>
       <body>
-        <div aria-hidden="true" className="app-background" />
         <a
           className="sr-only rounded-control bg-surface-raised text-fg focus:not-sr-only focus:absolute focus:start-2 focus:top-2 focus:px-3 focus:py-2"
           href="#main"

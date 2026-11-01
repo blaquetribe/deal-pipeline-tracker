@@ -164,7 +164,7 @@ describe('RoleManagement', () => {
     expect(screen.queryByRole('status')).not.toBeInTheDocument();
   });
 
-  it('shows read-only roles to members without role management permission', async () => {
+  it('keeps role settings out of view for members without role management permission', async () => {
     vi.stubGlobal(
       'fetch',
       vi.fn<() => Promise<Response>>(async () =>
@@ -173,8 +173,11 @@ describe('RoleManagement', () => {
     );
     render(<RoleManagement />);
 
-    expect(await screen.findByText(/An Owner with role management access/)).toBeInTheDocument();
+    expect(
+      await screen.findByRole('heading', { name: 'Role management is for organisation owners' }),
+    ).toBeInTheDocument();
     expect(screen.queryByRole('button', { name: 'Create custom role' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('list', { name: 'Roles' })).not.toBeInTheDocument();
     expect(
       screen.queryByRole('button', { name: 'Edit Investment Reviewer' }),
     ).not.toBeInTheDocument();

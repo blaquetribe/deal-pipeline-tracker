@@ -312,8 +312,100 @@ Running log feeding the README reflection required by the brief. Add an entry pe
 - **What went wrong or was surprising:** the previous UI loaded notifications without separating unread from read, so a successful read mutation changed only the badge and left the item visually present.
 
 
-### 2026-10-31 / PR #47 closeout verification
-- **What Codex did:** merged PR #47 at the owner's direction (squash commit `de8435f`), verified the live approval flow in the isolated demo, visually reviewed the current light-theme edit dialog and role-gated Team navigation, and ran a random-object R2 PUT/GET/DELETE/absence smoke test against the documented bucket/prefix.
-- **What the human decided or corrected:** directed the merge and asked to resolve the incomplete approval, screenshot, and environment verification items.
-- **How it was verified:** IC approval reached the configured 1-of-1 quorum and moved the deal from IC Review to Signed with both immutable activity events. Team’s role-management link appears only in the manager-gated Team view and is absent from global navigation. R2 round-trip passed. PR #47 PR #48 was opened for the closeout notes. Its CI and Secret scan failed with no steps and its dependent checks were skipped, consistent with the GitHub account billing/spending-limit block seen on PR #47; no green CI is claimed.
-- **What went wrong or was surprising:** the CUA previews could be reviewed, but macOS screen capture grabbed an unrelated foreground app; that image was discarded, so the requested repository screenshots remain outstanding. Production SMTP settings are absent; Docker Desktop/amd64 are unavailable in this arm64 session; and two-session stage contention coverage remains outstanding.
+### 2026-10-31 / Compact pipeline stage actions
+- **What Codex did:** replaced each List row's tall select-plus-disabled-button stack with a compact “Move to…” disclosure. The action list contains only stage-machine destinations; unmet required fields are shown beside disabled options; selecting a valid destination calls the existing versioned API and toast path. Updated README usage guidance and regression tests.
+- **What the human decided or corrected:** called out the repeated stage controls as unintuitive and asked for a better UI idea.
+- **How it was verified:** focused dashboard tests cover available/blocked destinations, the IC Review → Signed approval rule, successful moves, and API rejection feedback.
+- **What went wrong or was surprising:** initial focused tests found that `stageSchema` also validates the page-level filter, so its import must remain after removing the per-row select.
+
+
+### 2026-10-31 / IC approval request discoverability
+- **What Codex did:** made the approval request path explicit from Pipeline: stage guidance now says to open an IC Review deal and request approval in its IC approval section; each IC Review row and the IC Review edit dialog link directly to that section. The role-gated deal-page action is labelled “Request IC approval” and now explains who receives it and which quorum applies.
+- **What the human decided or corrected:** pointed out that the UI described quorum-driven signing but gave no visible request path, and challenged the lack of approval request in the edit experience.
+- **How it was verified:** component coverage checks the row and edit-dialog link targets, guidance copy, role-gated request button, and API submission path. Existing Postgres and API authorization remain unchanged.
+- **What went wrong or was surprising:** the request action already existed on the deal detail page, but the pipeline never connected its IC Review guidance to that action; the label “Submit for approval” also did not match the language used elsewhere.
+
+
+### 2026-10-31 / Compact deal activity timeline
+- **What Codex did:** changed the deal activity feed from oversized individual cards to a compact vertical timeline with smaller type, actor/time metadata, and a bounded scroll region. Older events remain cursor-paginated and are loaded on demand inside the history panel.
+- **What the human decided or corrected:** called out that the event cards were oversized and would make users scroll endlessly as the audit history grows.
+- **How it was verified:** component coverage checks the labelled history region and ordered event list; focused detail tests and repository checks pass.
+- **What went wrong or was surprising:** the feed already used cursor pagination, but its full-width cards still dominated the page and every fetched page expanded the document height.
+
+
+### 2026-10-31 / Reconcile IC approval guidance with role permissions
+- **What Codex did:** made the Approvals inbox and deal detail explain who can submit an unrequested IC approval. The copy uses the existing API `canRequest` flag; the built-in Deal Lead can request, Owners configure quorum, and IC Members decide. Updated README, handoff, project/feature progress, and tests to match the database role grants.
+- **What the human decided or corrected:** during the Owner walkthrough, the user noticed the queue said to open a deal to submit a request even though no request button appeared for the Owner.
+- **How it was verified:** focused tests cover requester and non-requester queue states and the Owner-facing deal detail message. Full suite and quality/build checks are recorded after execution in the current handoff and PR.
+- **What went wrong or was surprising:** the database permission model was correct; the queue's static copy ignored the same `canRequest` signal already controlling the deal-page action. The retained 8081 audit timeline also showed a completed Deal Lead request, IC approval, and Signed transition despite the older handoff saying no vote had been written; handoff/progress notes now match the persisted events.
+- **Follow-up:** the Owner correctly pointed out that identifying a Deal Lead still did not reveal the exact UI action. Both the queue and deal detail now name **Request IC approval** and the **IC approval** section; the Owner detail links to Team to find a Deal Lead. Focused tests verify the action wording and Owner navigation.
+
+
+### 2026-10-31 / System UI and UX refresh
+- **What Codex did:** started a project-wide interface pass on `codex/system-ui-rework`, based on the merged `main`. The shared layer now uses a neutral canvas, opaque surfaces, restrained shadows, a stable branded sidebar, a compact account bar, and bottom navigation on phones. Members without role-management access no longer see the organisation's role catalog. Existing permissions and deal workflow behavior are unchanged.
+- **What the human decided or corrected:** the Owner said the interface still felt disconnected and asked for a complete UI/UX rework, using DoorSprint as the visual reference. The owner expects refreshed screenshots and the walkthrough deck after visual review.
+- **How it was verified:** light/dark token contrast tests pass (168 assertions), full Vitest passes (712 passed, 1 skipped), typecheck, lint, formatting, stylelint, and production build pass. The existing port-8081 walkthrough stack is being rebuilt from web-only sources; visual captures and the final presentation refresh are pending.
+- **What went wrong or was surprising:** the prior visual direction used an animated multicolour canvas and translucent glass treatments around otherwise plain cards. These effects competed with the deal information and reduced visual consistency. They have been replaced in the shared design layer first so all routes inherit the same material and control behavior.
+- **Latest review:** the single-tenant Owner session hid the tenant selector and left the header without organisation context. The shared header now renders the active organisation name for a single-tenant user and keeps the multi-tenant selector. Auth and shell tests (17), full Vitest (712 passed, 1 skipped), typecheck, lint, stylelint, format check, and build pass. Repository screenshots and the walkthrough deck have not yet been refreshed.
+- **Follow-up from the Owner's review:** workspace navigation now pairs concise labels with consistent SVG icons. The profile trigger opens an account panel (hover/click) containing signed-in identity, photo update, Settings, Notifications, theme, and Sign out; it supports Escape, focus return, keyboard navigation, and outside dismissal. Seven focused component tests, web typecheck, targeted lint/stylelint, and production web build passed. The 8081 app was reviewed at desktop and 390 px; that mobile check exposed and fixed low-contrast/clipped bottom navigation. A mis-scoped test command executed the full suite; six API WebSocket cases could not bind loopback in the sandbox (`EPERM`). No current full-suite pass is claimed. Screenshot repository evidence and the presentation remain open.
+
+### 2026-10-31 / Compact Team roster
+- **What Codex did:** replaced the Team page's tall member cards with compact responsive rows grouping identity/status, role chips, and access controls. Role removal is now a compact icon action with a member- and role-specific accessible name. No role policy, invitation, or API behavior changed.
+- **What the human decided or corrected:** showed the roster cards alongside a denser CRM board reference and reiterated that the interface needs modern, information-dense hierarchy.
+- **How it was verified:** focused Team management tests pass (4); web typecheck, targeted oxlint, stylelint, formatting, production web container build, and live desktop review on the retained 8081 stack pass.
+- **What went wrong or was surprising:** role assignment and deactivation controls had been distributed across unnecessarily tall cards. The row layout improves scan density while preserving all current permissions. Narrow viewport review and saved repository screenshots remain pending.
+
+### 2026-10-31 / Viewport-contained workspace scrolling
+- **What Codex did:** made the shared app shell viewport-height with a stationary desktop sidebar and account bar. Vertical scrolling is contained to the main content pane; the sidebar scrolls independently if its own contents exceed the available height. Mobile bottom navigation remains fixed.
+- **What the human decided or corrected:** asked for the main content to use the viewport height below the header and scroll vertically while the sidebar stays put.
+- **How it was verified:** focused `AppShell` tests (3), format check, lint, stylelint, typecheck and `git diff --check` pass. Rebuilt only the web service in the isolated `dpt-walkthrough` stack and visually verified the sidebar and top bar remain stationary while Team content scrolls.
+- **What changed outside the shell:** no database, API, authorization, or deal workflow behavior changed. Broader refreshed screenshot evidence and the final presentation are still pending.
+
+### 2026-10-31 / Compact responsive account bar
+- **What Codex did:** reduced header control sizing, put the active organisation on one baseline, grouped display/notification actions, and compacted the profile/avatar treatment. The mobile layout uses two intentional rows and mounts the account controls once.
+- **What the human decided or corrected:** called out that the header looked oversized and fragmented rather than like a modern application.
+- **How it was verified:** focused shell, avatar, auth-form and notification tests pass (26); formatting, lint, stylelint, typecheck and the production web image build pass. The refreshed header was reviewed on the live seeded deal-detail page.
+- **What changed outside the header:** no authentication, organisation switching, notifications, database or authorization behavior changed.
+
+### 2026-10-31 / Shared visual density pass
+- **What Codex did:** introduced a tighter shared type ramp and spacing increment, reduced common input/button heights, tightened content gutters and page heading rhythm, and brought card corners and the custom deal trigger into the same scale.
+- **What the human decided or corrected:** reported that system-wide type and padding still felt too large and that the overall screens lacked visual harmony.
+- **How it was verified:** the web and UI test projects pass (345 tests); format, lint, stylelint, typecheck, `git diff --check`, and the production web build pass. Rebuilt only the isolated 8081 web service and visually reviewed Team.
+- **Remaining visual work:** review pipeline, deal detail, approvals, auth and narrow viewports with the new scale; then update screenshot evidence and the final presentation. No application/data behavior changed.
+### 2026-10-31 / Persistent realtime, stage colors, and pipeline hierarchy
+- **What Codex did:** kept the notification WebSocket mounted in the shared top bar, added visible connection state, and extended the authenticated RLS-filtered relay to emit a content-free deal-change hint. Pipeline, My Work, and deal detail refresh from that hint. Added an additive publication migration, per-stage semantic badge colors, an early List/Board control, and collapsed secondary Pipeline summaries. No deal row, audit event, invitation, or approval was changed during live review.
+- **What the human decided or corrected:** supplied a dense CRM dashboard reference, said the current UI still lacked sufficient craft, called out missing visible realtime and stage colors, and set the next-day handoff deadline. The final presentation remains the last implementation task after UI review and screenshot refresh.
+- **How it was verified:** full Vitest passes (719 passed, 1 skipped); pgTAP passes (662 assertions, 35 files); typecheck, lint, stylelint, formatting, web/API container builds pass. The 8081 database applied the new migration with reseeding disabled. The signed-in browser shows “Live updates connected” and distinct stage colors across Pipeline; My Work, Team, Approvals, role management, Closing alerts, account menu, and deal detail were also reviewed. A follow-up at 905 px exposed hidden horizontal overflow cues; after adding tablet-visible cues and keyboard-focusable scroll regions plus an account-menu Notifications action that opens the existing panel, focused shell/notification/pipeline tests (35), web build, typecheck, lint, stylelint, and formatting passed.
+- **What remains open:** live data mutation was not used to demonstrate a second session, current screenshots have not been saved into the repository, and wider desktop/remaining route visual review is still in progress.
+
+### 2026-10-31 / Account notification entry point and follow-up verification
+- **What Codex did:** made Notifications available from the account popover while reusing the single mounted notification panel and socket. Corrected a server/client component boundary found during live runtime review.
+- **What the human decided or corrected:** reiterated that the UI needs a full walkthrough and system-wide improvement, visible realtime, and clear stage colors before the final presentation.
+- **How it was verified:** full Vitest passes (720 passed, 1 skipped) when run with loopback access for the API WebSocket tests; typecheck, lint, stylelint, format check and `git diff --check` pass. The 8081 browser visibly reports “Live updates connected”; the account menu opens the existing notification panel. Pipeline Board/List, My Work, Team, Approvals, role management, closing alerts and deal detail were read-only reviewed.
+- **What remains open:** fresh screenshots were reviewed inline but are not saved in the repo; the final presentation is intentionally deferred until UI review is complete. No second-session write event was generated. The Podman service log could not be read from the current sandbox because its socket connection was denied; the live app remains available in the browser.
+
+### 2026-10-31 / Board-first Pipeline redesign
+- **What Codex did:** replaced the initial table-first Pipeline composition with a portfolio hero, single create action, compact List/Board switch, board-first entry, per-stage lane accents, and a distinct visual outcome area for Passed. Kept the table view and existing authorization/stage transition rules. Updated progress and handoff notes and rebuilt only the `dpt-walkthrough` web container on port 8081.
+- **What the human decided or corrected:** explicitly said the preceding compact styling was not the substantial redesign requested and asked why the work was not being executed. The redesign is being judged against the running application and across routes, not by isolated CSS adjustments.
+- **How it was verified:** focused pipeline tests (26 passed), full Vitest (720 passed, 1 skipped), typecheck, lint, stylelint, format check, standalone web build, and web image build pass. Opened the rebuilt 8081 Pipeline and read-only reviewed Team, Approvals, deal detail, and My Work. No demo records were changed.
+- **What remains open:** wider and phone visual review, auth/edit-dialog review, saved screenshot evidence, and the final walkthrough presentation. The presentation remains last by request.
+
+
+### 2026-11-01 / System UI evidence and final walkthrough
+- **What Codex did:** captured current light-theme screenshots of the board-first Pipeline, deal edit modal, and Owner Team controls. Replaced the stale 20-slide deck with an editable 14-slide product walkthrough that explains the user flows and implementation decisions; marked earlier screenshots as historical and updated README, handoff, progress, feature, design, and presentation notes.
+- **What the human decided or corrected:** required a substantial system-wide UI/UX redesign, current screenshot evidence, updated documentation, and the presentation only after the redesign.
+- **How it was verified:** browser navigation used the documented seeded Owner on the isolated 8081 app; no deal or audit record was changed. Rendered the entire deck and visually inspected the montage plus detailed slides.
+- **What remains open:** a refreshed mobile screenshot; the previous mobile captures are historical. Final local validation passes: 720 Vitest tests (1 skipped), typecheck, lint, stylelint, format check, workspace build, presentation integrity, and slide overflow check.
+
+### 2026-11-01 / PR #50 coverage follow-up
+- **What Codex did:** addressed the initial CI coverage failure without changing the configured threshold. Added focused component tests for invitation registration and sign-in handoff, avatar upload errors and missing names, team permissions and failed role/member actions, multi-field deal updates and rejected stage moves, eligible/blocked Kanban drops, My Work close alerts and decision filtering, and shell/realtime custom event behavior. Updated the handoff and project progress with exact local coverage results and PR status.
+- **What the human decided or corrected:** requested continuation through completion and has repeatedly required CI to pass before merging.
+- **How it was verified:** the full coverage suite passes (749 tests passed, 1 skipped; 85.27% branch coverage, above the 85% floor). Typecheck, lint, stylelint, format check, and full workspace build pass. The PR follow-up CI run still needs to complete before merge.
+- **What went wrong or was surprising:** the first PR CI run exposed a global branch-coverage regression despite all tests passing. The local test suite also requires localhost binding for realtime WebSocket tests; the run was repeated with the repository's permitted local-network environment.
+
+
+### 2026-11-02 / PR #50 merge and closeout reconciliation
+- **What Codex did:** merged PR #50 after all required GitHub Actions checks passed, fast-forwarded local `main`, and reconciled the handoff, progress, README, UI evidence index, and storage verification notes. Preserved the already-recorded approval and R2 verification results while correcting stale statements about the UI, presentation, and CI status.
+- **What the human decided or corrected:** directed that all open PRs be merged and the work continue from clean `main`, with the standing requirement that PR checks pass before merge.
+- **How it was verified:** GitHub reports success for typecheck/lint/test/build, coverage, secret scan, pgTAP, Docker web/API/gateway builds and scans, and Compose smoke. The publish job was skipped as designed for a pull request. The retained audit ledger records the request, approval, and stage transition; the scoped R2 smoke verified PUT, byte-identical GET, DELETE, and object absence. Local main was fast-forwarded to the merge commit.
+- **What remains open:** refreshed mobile screenshot evidence, production SMTP and Docker Desktop/amd64 validation, and two-session `move_stage` contention coverage remain outstanding. At the time of this note, the closeout documentation was being reconciled in PR #48; its refreshed checks must pass before merge.

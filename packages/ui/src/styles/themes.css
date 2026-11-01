@@ -8,27 +8,25 @@
 .light {
   color-scheme: light;
 
-  --canvas: var(--ink-50);
-  --ambient-base: var(--ink-100);
-  --ambient-1: rgb(76, 132, 255, 0.34);
-  --ambient-2: rgb(124, 92, 245, 0.28);
-  --ambient-3: rgb(20, 184, 166, 0.2);
-  --ambient-4: rgb(236, 72, 153, 0.14);
-  --ambient-grid: rgb(35, 51, 77, 0.045);
-  --surface: rgb(255, 255, 255, 0.92);
+  --canvas: #f4f6f9;
+  --ambient-base: #f4f6f9;
+  --ambient-1: transparent;
+  --ambient-2: transparent;
+  --ambient-3: transparent;
+  --ambient-4: transparent;
+  --ambient-grid: transparent;
+  --surface: #fff;
   --surface-raised: var(--ink-0);
-  --surface-subtle: rgb(255, 255, 255, 0.55);
-  --surface-hover: rgb(23, 25, 28, 0.05);
+  --surface-subtle: #f7f9fc;
+  --surface-hover: rgb(23, 25, 28, 0.045);
   --overlay: rgb(9, 11, 16, 0.4);
-  --glass-fill: rgb(255, 255, 255, 0.62);
-  --glass-fill-strong: rgb(255, 255, 255, 0.84);
-  --glass-border: rgb(255, 255, 255, 0.8);
-  --glass-border-inner: rgb(255, 255, 255, 0.6);
-  --glass-highlight: rgb(255, 255, 255, 0.88);
-  --glass-shadow:
-    0 1px 2px rgb(20, 28, 45, 0.04), 0 8px 24px rgb(20, 28, 45, 0.07),
-    0 24px 64px rgb(20, 28, 45, 0.08);
-  --card-shadow: 0 1px 2px rgb(20, 28, 45, 0.05), 0 4px 14px rgb(20, 28, 45, 0.06);
+  --glass-fill: #fff;
+  --glass-fill-strong: #fff;
+  --glass-border: var(--ink-200);
+  --glass-border-inner: transparent;
+  --glass-highlight: transparent;
+  --glass-shadow: 0 1px 2px rgb(20, 28, 45, 0.04), 0 4px 12px rgb(20, 28, 45, 0.035);
+  --card-shadow: 0 1px 2px rgb(20, 28, 45, 0.035);
   --fg: var(--ink-900);
   --fg-muted: var(--ink-800);
   --fg-subtle: var(--ink-700);
@@ -73,24 +71,23 @@
 
   --canvas: var(--ink-950);
   --ambient-base: var(--ink-950);
-  --ambient-1: rgb(48, 107, 255, 0.3);
-  --ambient-2: rgb(124, 92, 245, 0.28);
-  --ambient-3: rgb(20, 184, 166, 0.18);
-  --ambient-4: rgb(236, 72, 153, 0.14);
-  --ambient-grid: rgb(255, 255, 255, 0.028);
-  --surface: rgb(21, 24, 32, 0.92);
-  --surface-raised: var(--ink-850);
-  --surface-subtle: rgb(26, 30, 40, 0.55);
+  --ambient-1: transparent;
+  --ambient-2: transparent;
+  --ambient-3: transparent;
+  --ambient-4: transparent;
+  --ambient-grid: transparent;
+  --surface: #141a24;
+  --surface-raised: #1a2230;
+  --surface-subtle: #19212d;
   --surface-hover: rgb(255, 255, 255, 0.06);
   --overlay: rgb(0, 0, 0, 0.6);
-  --glass-fill: rgb(18, 21, 28, 0.62);
-  --glass-fill-strong: rgb(20, 23, 31, 0.84);
-  --glass-border: rgb(255, 255, 255, 0.15);
-  --glass-border-inner: rgb(255, 255, 255, 0.06);
-  --glass-highlight: rgb(255, 255, 255, 0.13);
-  --glass-shadow:
-    0 1px 2px rgb(0, 0, 0, 0.18), 0 12px 32px rgb(0, 0, 0, 0.26), 0 30px 90px rgb(0, 0, 0, 0.3);
-  --card-shadow: 0 1px 2px rgb(0, 0, 0, 0.3), 0 6px 18px rgb(0, 0, 0, 0.28);
+  --glass-fill: #141a24;
+  --glass-fill-strong: #1a2230;
+  --glass-border: rgb(255, 255, 255, 0.12);
+  --glass-border-inner: transparent;
+  --glass-highlight: transparent;
+  --glass-shadow: 0 1px 2px rgb(0, 0, 0, 0.2), 0 4px 12px rgb(0, 0, 0, 0.12);
+  --card-shadow: 0 1px 2px rgb(0, 0, 0, 0.18);
   --fg: var(--ink-50);
   --fg-muted: var(--ink-300);
   --fg-subtle: var(--ink-500);

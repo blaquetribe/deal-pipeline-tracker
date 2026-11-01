@@ -1,8 +1,17 @@
-import { cleanup, createEvent, fireEvent, render, screen, waitFor } from '@testing-library/react';
+import {
+  act,
+  cleanup,
+  createEvent,
+  fireEvent,
+  render,
+  screen,
+  waitFor,
+} from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { markNotificationRead, readNotifications } from './api';
 import { NotificationBell } from './notification-bell';
+import { requestOpenNotifications } from './notification-events';
 
 vi.mock('./api', () => ({
   markNotificationRead: vi.fn<() => Promise<void>>(async () => undefined),
@@ -118,9 +127,13 @@ describe('notification bell', () => {
     expect(screen.getByText('Live updates reconnecting.')).toBeInTheDocument();
     FakeWebSocket.instances[0]?.message({ type: 'status', status: 'connected' });
     expect(await screen.findByText('Live updates connected.')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Notifications' })).toHaveAttribute(
+      'title',
+      'Live updates connected',
+    );
     FakeWebSocket.instances[0]?.message({ type: 'notification', data: row });
     expect(await screen.findByText('New closing soon alert: Example deal.')).toBeInTheDocument();
-    expect(screen.getByRole('link', { name: /^Example deal$/ })).toHaveAttribute(
+    expect(screen.getByRole('link', { name: 'Open deal' })).toHaveAttribute(
       'href',
       row.payload.href,
     );
@@ -141,6 +154,28 @@ describe('notification bell', () => {
     fireEvent(link, click);
     await waitFor(() => expect(markNotificationRead).toHaveBeenCalledWith(row.id));
     expect(screen.getByRole('button', { name: 'Notifications' })).toBeInTheDocument();
+  });
+
+  it('publishes deal invalidation events received over the authenticated socket', () => {
+    const changed = vi.fn<() => void>();
+    window.addEventListener('dpt:deals-changed', changed);
+    render(<NotificationBell compact />);
+    FakeWebSocket.instances[0]?.message({ type: 'deals_changed' });
+    expect(changed).toHaveBeenCalledOnce();
+    window.removeEventListener('dpt:deals-changed', changed);
+  });
+
+  it('opens the mounted notification panel from the account menu action', async () => {
+    vi.mocked(readNotifications).mockResolvedValue([row]);
+    render(<NotificationBell />);
+
+    act(() => requestOpenNotifications());
+
+    expect(await screen.findByRole('region', { name: 'Notifications' })).toBeVisible();
+    expect(screen.getByRole('link', { name: 'Open deal' })).toHaveAttribute(
+      'href',
+      row.payload.href,
+    );
   });
 
   it('removes handled notifications from Unread while retaining them in All', async () => {
