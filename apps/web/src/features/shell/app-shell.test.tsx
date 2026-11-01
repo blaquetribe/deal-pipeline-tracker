@@ -1,6 +1,7 @@
-import { render, screen, within } from '@testing-library/react';
+import { fireEvent, render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import type { ReactNode } from 'react';
+import { renderToString } from 'react-dom/server';
 import { describe, expect, it, vi } from 'vitest';
 
 vi.mock('next/link', () => ({
@@ -93,5 +94,28 @@ describe('AppShell', () => {
     expect(screen.getByRole('button', { name: 'Switch to light mode' })).toHaveTextContent(
       'Light mode',
     );
+  });
+
+  it('renders the light theme as the server snapshot', () => {
+    expect(renderToString(<ThemeToggle />)).toContain('Dark mode');
+  });
+
+  it('marks the saved preference secure on HTTPS', async () => {
+    document.documentElement.classList.remove('dark');
+    render(<ThemeToggle />);
+    const cookieSetter = vi.spyOn(document, 'cookie', 'set');
+    const browserWindow = window;
+    vi.stubGlobal(
+      'window',
+      new Proxy(browserWindow, {
+        get(target, property) {
+          if (property === 'location') return { protocol: 'https:' };
+          return Reflect.get(target, property, target) as unknown;
+        },
+      }),
+    );
+    fireEvent.click(screen.getByRole('button', { name: 'Switch to dark mode' }));
+    expect(cookieSetter).toHaveBeenCalledWith(expect.stringContaining('; Secure'));
+    vi.unstubAllGlobals();
   });
 });

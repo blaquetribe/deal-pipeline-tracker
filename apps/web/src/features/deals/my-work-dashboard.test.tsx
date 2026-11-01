@@ -152,4 +152,98 @@ describe('MyWorkDashboard', () => {
     expect(screen.queryByText('Database error detail')).not.toBeInTheDocument();
     expect(screen.getByRole('heading', { name: 'Assigned to you' })).toBeVisible();
   });
+
+  it('shows actionable close-date updates and filters decisions to the current reviewer', async () => {
+    mocks.readNotifications.mockResolvedValueOnce([
+      {
+        id: 'bbbbbbbb-0000-4000-8000-000000000002',
+        kind: 'closing_soon',
+        payload: {
+          dealName: energyDeal.name,
+          thresholdDays: 2,
+          closeDate: '2026-11-02',
+          overdue: false,
+          href: `/deals/${energyDeal.id}`,
+        },
+        created_at: '2026-10-31T08:00:00.000Z',
+        read_at: null,
+      },
+      {
+        id: 'bbbbbbbb-0000-4000-8000-000000000003',
+        kind: 'closing_soon',
+        payload: {
+          dealName: 'Past due deal',
+          thresholdDays: 0,
+          closeDate: '2026-10-30',
+          overdue: true,
+          href: `/deals/${energyDeal.id}`,
+        },
+        created_at: '2026-10-31T08:00:00.000Z',
+        read_at: '2026-10-31T09:00:00.000Z',
+      },
+    ]);
+    mocks.readDeals.mockResolvedValueOnce({
+      total: 3,
+      items: [
+        energyDeal,
+        { ...energyDeal, id: 'aaaaaaaa-0000-4000-8000-000000000003' },
+        { ...energyDeal, id: 'aaaaaaaa-0000-4000-8000-000000000004' },
+      ],
+    });
+    mocks.readDealApprovalStatus
+      .mockResolvedValueOnce({
+        requestId: null,
+        status: null,
+        requiredApprovals: null,
+        configuredApprovals: 0,
+        approvedCount: 0,
+        pendingCount: 0,
+        rejectedCount: 0,
+        currentUserDecision: null,
+        delegatedSlots: [],
+        canRequest: false,
+        canDecide: false,
+        canConfigure: false,
+        canManageAbsence: false,
+        canReassign: false,
+      })
+      .mockResolvedValueOnce({
+        requestId: 'eeeeeeee-0000-4000-8000-000000000002',
+        status: 'pending',
+        requiredApprovals: 2,
+        configuredApprovals: 2,
+        approvedCount: 1,
+        pendingCount: 1,
+        rejectedCount: 0,
+        currentUserDecision: 'approve',
+        delegatedSlots: [],
+        canRequest: false,
+        canDecide: true,
+        canConfigure: false,
+        canManageAbsence: false,
+        canReassign: false,
+      })
+      .mockResolvedValueOnce({
+        requestId: 'eeeeeeee-0000-4000-8000-000000000003',
+        status: 'pending',
+        requiredApprovals: 2,
+        configuredApprovals: 2,
+        approvedCount: 1,
+        pendingCount: 1,
+        rejectedCount: 0,
+        currentUserDecision: null,
+        delegatedSlots: [],
+        canRequest: false,
+        canDecide: true,
+        canConfigure: false,
+        canManageAbsence: false,
+        canReassign: false,
+      });
+    render(<MyWorkDashboard />);
+    expect(await screen.findByText('Closing in 2 days · 2026-11-02')).toBeVisible();
+    expect(screen.getByText('Closing date passed · 2026-10-30')).toBeVisible();
+    const queue = screen.getByRole('region', { name: 'Waiting on your review' });
+    expect(within(queue).getAllByRole('heading', { level: 3 })).toHaveLength(1);
+    expect(within(queue).getByRole('heading', { name: energyDeal.name })).toBeVisible();
+  });
 });

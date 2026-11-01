@@ -1,4 +1,4 @@
-import { render, screen, waitFor, within } from '@testing-library/react';
+import { fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
@@ -100,6 +100,28 @@ describe('TeamManagement', () => {
     expect(screen.getByLabelText('Work email')).toBeEnabled();
   });
 
+  it('validates the invitation and reports a rejected invitation request', async () => {
+    const user = userEvent.setup();
+    render(<TeamManagement />);
+    const form = await screen
+      .findByRole('button', { name: 'Send invitation' })
+      .then((button) => button.closest('form'));
+    expect(form).not.toBeNull();
+    await user.type(screen.getByLabelText('Work email'), 'invalid');
+    await user.selectOptions(screen.getByLabelText('Role after acceptance'), 'deal_lead');
+    fireEvent.submit(form!);
+    expect(await screen.findByRole('alert')).toHaveTextContent(/email/i);
+    expect(mocks.request).not.toHaveBeenCalled();
+
+    await user.clear(screen.getByLabelText('Work email'));
+    await user.type(screen.getByLabelText('Work email'), 'new.member@example.test');
+    mocks.request.mockRejectedValueOnce(new Error('Invitation delivery is unavailable.'));
+    await user.click(screen.getByRole('button', { name: 'Send invitation' }));
+    expect(await screen.findByRole('alert')).toHaveTextContent(
+      'Invitation delivery is unavailable.',
+    );
+  });
+
   it('hides role administration but preserves safe assignment choices for a member manager', async () => {
     mocks.readAssignableRoles.mockResolvedValueOnce({
       canManageRoles: false,
@@ -149,5 +171,80 @@ describe('TeamManagement', () => {
     await user.click(within(latestMemberRow!).getByRole('button', { name: 'Deactivate' }));
     await user.click(within(latestMemberRow!).getByRole('button', { name: 'Confirm deactivate' }));
     await waitFor(() => expect(mocks.deactivateMember).toHaveBeenCalledWith('member-id'));
+  });
+
+  it('explains roster restrictions and empty role states', async () => {
+    mocks.readAssignableRoles.mockResolvedValueOnce({
+      canManageRoles: false,
+      roles: [{ id: 'member-id', key: 'deal_member', name: 'Deal Team Member' }],
+    });
+    mocks.readTeamMembers.mockResolvedValueOnce({
+      members: [
+        {
+          userId: 'self-id',
+          email: 'owner@example.test',
+          fullName: 'Tara Owner',
+          deactivatedAt: null,
+          roles: [],
+        },
+        {
+          userId: 'blocked-id',
+          email: 'blocked@example.test',
+          fullName: 'Privileged Member',
+          deactivatedAt: null,
+          roles: [{ key: 'owner', name: 'Owner', isSystem: true }],
+        },
+        { userId: 'empty-id', email: null, fullName: null, deactivatedAt: null, roles: [] },
+        {
+          userId: 'inactive-id',
+          email: 'inactive@example.test',
+          fullName: 'Inactive Member',
+          deactivatedAt: '2026-10-01T00:00:00Z',
+          roles: [],
+        },
+      ],
+    });
+    render(<TeamManagement />);
+
+    expect(
+      await screen.findByText(
+        'Only an Owner can change access for a member with privileged roles.',
+      ),
+    ).toBeVisible();
+    expect(screen.getByRole('heading', { name: 'Invited teammate' })).toBeVisible();
+    expect(screen.getAllByText('No roles assigned')).toHaveLength(3);
+    expect(screen.getByText('Deactivated')).toBeVisible();
+    const inactiveRow = screen.getByRole('heading', { name: 'Inactive Member' }).closest('li');
+    expect(inactiveRow).not.toBeNull();
+    expect(
+      within(inactiveRow!).queryByRole('button', { name: 'Deactivate' }),
+    ).not.toBeInTheDocument();
+  });
+
+  it('keeps roster actions available after assignment, removal, or deactivation errors', async () => {
+    mocks.grantRole.mockRejectedValueOnce('network');
+    mocks.revokeRole.mockRejectedValueOnce('network');
+    mocks.deactivateMember.mockRejectedValueOnce('network');
+    const user = userEvent.setup();
+    render(<TeamManagement />);
+    const row = await screen
+      .findByRole('heading', { name: 'Mina Member' })
+      .then((heading) => heading.closest('li'));
+    expect(row).not.toBeNull();
+
+    await user.selectOptions(within(row!).getByLabelText('Add role to Mina Member'), 'deal_lead');
+    await user.click(within(row!).getByRole('button', { name: 'Add role' }));
+    expect(await screen.findByRole('alert')).toHaveTextContent('The role could not be assigned.');
+
+    await user.click(
+      within(row!).getByRole('button', { name: 'Remove IC Member from Mina Member' }),
+    );
+    expect(await screen.findByRole('alert')).toHaveTextContent('The role could not be removed.');
+
+    await user.click(within(row!).getByRole('button', { name: 'Deactivate' }));
+    await user.click(within(row!).getByRole('button', { name: 'Confirm deactivate' }));
+    expect(await screen.findByRole('alert')).toHaveTextContent(
+      'The member could not be deactivated.',
+    );
   });
 });

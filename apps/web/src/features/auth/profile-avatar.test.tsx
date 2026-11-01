@@ -97,4 +97,62 @@ describe('ProfileAvatar', () => {
     expect(screen.getByRole('button', { name: 'Change photo' })).toBeDisabled();
     expect(screen.getByText('Choose an organisation before changing your photo.')).toBeVisible();
   });
+
+  it.each([
+    [413, 'Choose an image under 5 MB.'],
+    [415, 'Choose a readable PNG, JPEG, or WebP photo.'],
+    [401, 'Your session ended. Sign in again to update your photo.'],
+    [500, 'Your photo could not be saved. Try again.'],
+  ])('explains avatar upload response %i', async (status, message) => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async () => new Response(null, { status })),
+    );
+    render(<ProfileAvatar />);
+    await userEvent.click(
+      await screen.findByRole('button', { name: 'Account menu for Tara Example' }),
+    );
+    const fileInput = screen.getByLabelText('Choose profile photo');
+    fireEvent.change(fileInput, {
+      target: { files: [new File(['image bytes'], 'avatar.png', { type: 'image/png' })] },
+    });
+    expect(await screen.findByText(message)).toBeVisible();
+    expect(fileInput).toHaveValue('');
+  });
+
+  it('closes the account panel when focus moves outside it', async () => {
+    const user = userEvent.setup();
+    render(
+      <>
+        <ProfileAvatar />
+        <button type="button">Outside</button>
+      </>,
+    );
+    await user.click(await screen.findByRole('button', { name: 'Account menu for Tara Example' }));
+    await user.click(screen.getByRole('button', { name: 'Outside' }));
+    expect(screen.queryByRole('region', { name: 'Account options' })).not.toBeInTheDocument();
+  });
+
+  it('falls back to initials when the saved avatar cannot be loaded', async () => {
+    const { container } = render(<ProfileAvatar />);
+    expect(
+      await screen.findByRole('button', { name: 'Account menu for Tara Example' }),
+    ).toBeVisible();
+    const image = container.querySelector('img');
+    expect(image).not.toBeNull();
+    fireEvent.error(image!);
+    expect(screen.getByText('TE')).toBeVisible();
+  });
+
+  it('uses a neutral account label when the profile has no name', async () => {
+    mocks.read.mockResolvedValueOnce({
+      ...session,
+      user: { ...session.user, fullName: null },
+    });
+    render(<ProfileAvatar />);
+    expect(await screen.findByRole('button', { name: 'Account menu' })).toBeVisible();
+    await userEvent.click(screen.getByRole('button', { name: 'Account menu' }));
+    expect(screen.getAllByText('?')).toHaveLength(2);
+    expect(screen.getByText('person@example.test')).toBeVisible();
+  });
 });

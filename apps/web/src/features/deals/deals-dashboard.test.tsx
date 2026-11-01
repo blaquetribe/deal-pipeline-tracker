@@ -517,6 +517,69 @@ describe('DealsDashboard', () => {
     await waitFor(() => expect(fetch).toHaveBeenCalledTimes(6));
   });
 
+  it('saves all changed deal fields together', async () => {
+    const editDeal = { ...deal, expected_close_time: '15:30:00' };
+    const fetch = vi.fn<(input: RequestInfo | URL, init?: RequestInit) => Promise<Response>>(
+      async (input, init) => {
+        const url = input instanceof Request ? input.url : String(input);
+        if (url === '/api/auth/session')
+          return new Response(
+            JSON.stringify({
+              csrfToken: 'csrf-test',
+              user: {
+                id: 'aaaaaaaa-0000-4000-8000-000000000002',
+                email: 'person@example.test',
+                fullName: 'Test User',
+              },
+              tenantId: 'aaaaaaaa-0000-4000-8000-000000000003',
+            }),
+            { status: 200 },
+          );
+        if (init?.method === 'PUT')
+          return new Response(JSON.stringify({ version: 2 }), { status: 200 });
+        const isSummary = url.endsWith('/dashboard-summary');
+        return new Response(
+          JSON.stringify(isSummary ? dashboardSummary : { total: 1, items: [editDeal] }),
+          { status: 200 },
+        );
+      },
+    );
+    vi.stubGlobal('fetch', fetch);
+    const user = userEvent.setup();
+    render(<DealsDashboard />);
+    fireEvent.click(screen.getByRole('button', { name: 'List' }));
+    await screen.findByRole('row', { name: /Northstar Systems/ });
+    await user.click(screen.getByRole('button', { name: 'Edit Northstar Systems' }));
+    const dialog = screen.getByRole('dialog', { name: 'Edit Northstar Systems' });
+    async function updateField(label: string, value: string) {
+      const field = within(dialog).getByLabelText(new RegExp(label));
+      await user.clear(field);
+      await user.type(field, value);
+    }
+    await updateField('Deal name', 'Northstar Updated');
+    await updateField('Sector', 'Healthcare');
+    await updateField('Deal size', '987.65');
+    await updateField('Currency', 'USD');
+    await updateField('Expected close date', '2027-04-01');
+    await updateField('Expected close time', '16:45');
+    await user.click(within(dialog).getByRole('button', { name: 'Save changes' }));
+    expect(await screen.findByRole('status')).toHaveTextContent('Northstar Systems updated.');
+    const update = fetch.mock.calls.find(([, init]) => init?.method === 'PUT');
+    expect(update?.[1]).toEqual(
+      expect.objectContaining({
+        body: JSON.stringify({
+          expectedVersion: 1,
+          name: 'Northstar Updated',
+          sector: 'Healthcare',
+          amount: '98765',
+          currency: 'USD',
+          expectedCloseDate: '2027-04-01',
+          expectedCloseTime: '16:45',
+        }),
+      }),
+    );
+  });
+
   it('shows a useful message and skips the update when no deal fields changed', async () => {
     const fetch = stubFetch({ total: 1, items: [deal] });
     const user = userEvent.setup();
@@ -531,6 +594,107 @@ describe('DealsDashboard', () => {
     expect(fetch).not.toHaveBeenCalledWith(
       `/api/deals/${deal.id}`,
       expect.objectContaining({ method: 'PUT' }),
+    );
+  });
+
+  it('shows the API error when a stage move is rejected', async () => {
+    const fetch = vi.fn<(input: RequestInfo | URL, init?: RequestInit) => Promise<Response>>(
+      async (input, init) => {
+        const url = input instanceof Request ? input.url : String(input);
+        if (url === '/api/auth/session') {
+          return new Response(
+            JSON.stringify({
+              csrfToken: 'csrf-test',
+              user: {
+                id: 'aaaaaaaa-0000-4000-8000-000000000002',
+                email: 'u@example.test',
+                fullName: 'User',
+              },
+              tenantId: 'aaaaaaaa-0000-4000-8000-000000000003',
+            }),
+            { status: 200 },
+          );
+        }
+        if (init?.method === 'POST')
+          return new Response(
+            JSON.stringify({
+              error: {
+                code: 'approval_required',
+                message: 'Approval is required before moving this deal.',
+              },
+            }),
+            { status: 409 },
+          );
+        const isSummary = url.endsWith('/dashboard-summary');
+        return new Response(
+          JSON.stringify(isSummary ? dashboardSummary : { total: 1, items: [deal] }),
+          { status: 200 },
+        );
+      },
+    );
+    vi.stubGlobal('fetch', fetch);
+    const user = userEvent.setup();
+    render(<DealsDashboard />);
+    fireEvent.click(screen.getByRole('button', { name: 'List' }));
+    await screen.findByRole('row', { name: /Northstar Systems/ });
+    await user.click(screen.getByRole('button', { name: 'Move to…' }));
+    await user.click(screen.getByRole('button', { name: 'Move to Screening' }));
+
+    expect(await screen.findByRole('alert')).toHaveTextContent('Approval is required');
+  });
+
+  it('reports a list load failure and lets the user retry', async () => {
+    let fail = true;
+    const fetch = vi.fn<(input: RequestInfo | URL, init?: RequestInit) => Promise<Response>>(
+      async (input) => {
+        const url = input instanceof Request ? input.url : String(input);
+        if (url === '/api/auth/session')
+          return new Response(
+            JSON.stringify({
+              csrfToken: 'csrf-test',
+              user: {
+                id: 'aaaaaaaa-0000-4000-8000-000000000002',
+                email: 'u@example.test',
+                fullName: 'User',
+              },
+              tenantId: 'aaaaaaaa-0000-4000-8000-000000000003',
+            }),
+            { status: 200 },
+          );
+        if (url.endsWith('/dashboard-summary'))
+          return new Response(JSON.stringify(dashboardSummary), { status: 200 });
+        if (fail)
+          return new Response(
+            JSON.stringify({ error: { code: 'temporary_failure', message: 'Temporary failure' } }),
+            { status: 503 },
+          );
+        return new Response(JSON.stringify({ total: 1, items: [deal] }), { status: 200 });
+      },
+    );
+    vi.stubGlobal('fetch', fetch);
+    render(<DealsDashboard />);
+    fireEvent.click(screen.getByRole('button', { name: 'List' }));
+    expect(await screen.findByRole('alert')).toHaveTextContent('Temporary failure');
+    fail = false;
+    const user = userEvent.setup();
+    await user.type(screen.getByRole('searchbox', { name: 'Search deals' }), 'Northstar');
+    await user.click(screen.getByRole('button', { name: 'Search' }));
+    expect(await screen.findByRole('row', { name: /Northstar Systems/ })).toBeVisible();
+  });
+
+  it('does not create a deal when the amount cannot be parsed', async () => {
+    const fetch = stubFetch({ total: 0, items: [] });
+    const user = userEvent.setup();
+    render(<DealsDashboard />);
+    await screen.findByText('No deals found');
+    await user.click(screen.getByRole('button', { name: 'Create deal' }));
+    await user.type(screen.getByRole('textbox', { name: 'Deal name' }), 'Northstar Systems');
+    await user.type(screen.getByRole('textbox', { name: 'Deal size' }), 'not money');
+    await user.click(screen.getByRole('button', { name: 'Create deal' }));
+    expect(await screen.findByRole('alert')).toHaveTextContent(/amount/i);
+    expect(fetch).not.toHaveBeenCalledWith(
+      '/api/deals',
+      expect.objectContaining({ method: 'POST' }),
     );
   });
 });
