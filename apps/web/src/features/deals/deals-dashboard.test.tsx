@@ -16,6 +16,22 @@ const deal = {
   expected_close_date: '2027-03-31',
   expected_close_time: '15:30:00',
   created_at: '2026-10-28T10:00:00+00:00',
+  created_by: null,
+  updated_at: '2026-10-28T10:00:00+00:00',
+  updated_by: null,
+  assigned_to: [],
+  approved_by: [],
+  rejected: false,
+  rejection_reason: null,
+  approval: {
+    requestId: null,
+    status: null,
+    requestedBy: null,
+    approvers: [],
+    rejectionReason: null,
+    approvedBy: [],
+    rejected: false,
+  },
 };
 
 const dashboardSummary: DashboardSummary = {
@@ -27,6 +43,31 @@ const dashboardSummary: DashboardSummary = {
   totalsByCurrency: [{ currency: 'ZAR', amount: '123456789012345' }],
   closingSoonCount: 0,
   closingSoon: [],
+};
+
+const closingDealMetadata = {
+  created_by: { userId: 'bbbbbbbb-0000-4000-8000-000000000001', displayName: 'Amara Ndlovu' },
+  updated_at: '2026-10-28T10:00:00+00:00',
+  updated_by: { userId: 'bbbbbbbb-0000-4000-8000-000000000002', displayName: 'Lerato Molefe' },
+  assigned_to: [
+    {
+      userId: 'bbbbbbbb-0000-4000-8000-000000000003',
+      displayName: 'Sibusiso Dlamini',
+      role: 'lead' as const,
+    },
+  ],
+  approved_by: [{ userId: 'bbbbbbbb-0000-4000-8000-000000000004', displayName: 'Naledi Khumalo' }],
+  rejected: true,
+  rejection_reason: 'Quorum no longer reachable',
+  approval: {
+    requestId: null,
+    status: null,
+    requestedBy: null,
+    approvers: [],
+    rejectionReason: null,
+    approvedBy: [],
+    rejected: false,
+  },
 };
 
 function stubFetch(body: unknown, status = 200, summary = dashboardSummary) {
@@ -72,11 +113,100 @@ describe('DealsDashboard', () => {
     expect(screen.getAllByText(/R 1 234 567 890 123,45/)).toHaveLength(2);
     expect(screen.getByText('31 Mar 2027')).toBeVisible();
     expect(fetch).toHaveBeenCalledWith(
-      '/api/deals?limit=25&offset=0',
+      '/api/deals?limit=25&offset=0&sort=created&direction=desc',
       expect.objectContaining({
         credentials: 'same-origin',
         cache: 'no-store',
       }),
+    );
+  });
+
+  it('shows the audit trail in the list and composes table filters and sort controls', async () => {
+    const routedDeal = {
+      ...deal,
+      stage: 'ic_review',
+      created_by: { userId: 'bbbbbbbb-0000-4000-8000-000000000001', displayName: 'Amara Ndlovu' },
+      updated_by: { userId: 'bbbbbbbb-0000-4000-8000-000000000002', displayName: 'Lerato Molefe' },
+      assigned_to: [
+        {
+          userId: 'bbbbbbbb-0000-4000-8000-000000000003',
+          displayName: 'Sibusiso Dlamini',
+          role: 'lead',
+        },
+      ],
+      approval: {
+        requestId: 'bbbbbbbb-0000-4000-8000-000000000004',
+        status: 'rejected',
+        requestedBy: {
+          userId: 'bbbbbbbb-0000-4000-8000-000000000005',
+          displayName: 'Amara Ndlovu',
+        },
+        approvers: [
+          {
+            userId: 'bbbbbbbb-0000-4000-8000-000000000006',
+            displayName: 'Naledi Khumalo',
+            decision: 'reject',
+            reason: 'Quorum no longer reachable',
+          },
+        ],
+        rejectionReason: 'Quorum no longer reachable',
+        approvedBy: [],
+        rejected: true,
+      },
+      rejected: true,
+      rejection_reason: 'Quorum no longer reachable',
+    };
+    const fetch = stubFetch({ total: 1, items: [routedDeal] });
+    const user = userEvent.setup();
+    render(<DealsDashboard />);
+    fireEvent.click(screen.getByRole('button', { name: 'List' }));
+
+    const row = await screen.findByRole('row', { name: /Northstar Systems/ });
+    expect(row).toHaveTextContent('Amara Ndlovu');
+    expect(row).toHaveTextContent('Lerato Molefe');
+    expect(row).toHaveTextContent('Sibusiso Dlamini');
+    expect(row).toHaveTextContent('Rejected by Naledi Khumalo');
+    expect(row).toHaveTextContent('Quorum no longer reachable');
+
+    fireEvent.change(screen.getByRole('textbox', { name: 'Filter sector' }), {
+      target: { value: 'Energy' },
+    });
+    fireEvent.change(screen.getByRole('textbox', { name: 'Assigned to' }), {
+      target: { value: 'Sibusiso' },
+    });
+    await user.selectOptions(screen.getByRole('combobox', { name: 'IC approval' }), 'rejected');
+    await waitFor(() =>
+      expect(fetch).toHaveBeenLastCalledWith(
+        '/api/deals?limit=25&offset=0&sort=created&direction=desc&sector=Energy&assignedTo=Sibusiso&approvalStatus=rejected',
+        expect.objectContaining({ credentials: 'same-origin' }),
+      ),
+    );
+    await user.click(screen.getByRole('button', { name: /Deal/ }));
+    await waitFor(() =>
+      expect(fetch).toHaveBeenLastCalledWith(
+        '/api/deals?limit=25&offset=0&sort=name&direction=asc&sector=Energy&assignedTo=Sibusiso&approvalStatus=rejected',
+        expect.objectContaining({ credentials: 'same-origin' }),
+      ),
+    );
+    await user.click(screen.getByRole('button', { name: /Deal/ }));
+    await waitFor(() =>
+      expect(fetch).toHaveBeenLastCalledWith(
+        '/api/deals?limit=25&offset=0&sort=name&direction=desc&sector=Energy&assignedTo=Sibusiso&approvalStatus=rejected',
+        expect.objectContaining({ credentials: 'same-origin' }),
+      ),
+    );
+    fireEvent.change(screen.getByRole('textbox', { name: 'Filter sector' }), {
+      target: { value: '' },
+    });
+    fireEvent.change(screen.getByRole('textbox', { name: 'Assigned to' }), {
+      target: { value: '' },
+    });
+    await user.selectOptions(screen.getByRole('combobox', { name: 'IC approval' }), '');
+    await waitFor(() =>
+      expect(fetch).toHaveBeenLastCalledWith(
+        '/api/deals?limit=25&offset=0&sort=name&direction=desc',
+        expect.objectContaining({ credentials: 'same-origin' }),
+      ),
     );
   });
 
@@ -94,7 +224,9 @@ describe('DealsDashboard', () => {
     expect(guidance).toHaveTextContent(
       'open an IC Review deal and request approval from its IC approval section.',
     );
-    expect(guidance).toHaveTextContent('The quorum moves approved deals to Signed automatically.');
+    expect(guidance).toHaveTextContent(
+      'A rejected request stays in IC Review; the deal moves to Signed only when the approval quorum is reached.',
+    );
     expect(screen.getByRole('link', { name: 'Open IC approval' })).toHaveAttribute(
       'href',
       `/deals/${deal.id}#approval-title`,
@@ -133,7 +265,7 @@ describe('DealsDashboard', () => {
 
     await waitFor(() =>
       expect(fetch).toHaveBeenCalledWith(
-        '/api/deals?limit=25&offset=0&stage=sourcing',
+        '/api/deals?limit=25&offset=0&sort=created&direction=desc&stage=sourcing',
         expect.objectContaining({ credentials: 'same-origin' }),
       ),
     );
@@ -183,6 +315,33 @@ describe('DealsDashboard', () => {
     fireEvent.dragEnd(card, { dataTransfer });
   });
 
+  it('names the fields that block a move into IC Review', async () => {
+    stubFetch({
+      total: 1,
+      items: [
+        {
+          ...deal,
+          stage: 'due_diligence',
+          sector: null,
+          amount: null,
+          expected_close_date: null,
+        },
+      ],
+    });
+    const user = userEvent.setup();
+    render(<DealsDashboard />);
+    fireEvent.click(screen.getByRole('button', { name: 'List' }));
+    await screen.findByRole('row', { name: /Northstar Systems/ });
+    await user.click(screen.getByRole('button', { name: 'Move to…' }));
+
+    const moveButton = screen.getByRole('button', { name: 'Move to IC Review' });
+    expect(moveButton).toBeDisabled();
+    expect(moveButton.parentElement).toHaveTextContent(/Requires/);
+    expect(moveButton.parentElement).toHaveTextContent(/deal size/);
+    expect(moveButton.parentElement).toHaveTextContent(/sector/);
+    expect(moveButton.parentElement).toHaveTextContent(/expected close date/);
+  });
+
   it('submits stage and search filters and provides an empty state', async () => {
     const fetch = stubFetch({ total: 0, items: [] });
     const user = userEvent.setup();
@@ -194,7 +353,7 @@ describe('DealsDashboard', () => {
     await user.selectOptions(screen.getByRole('combobox', { name: 'Pipeline stage' }), 'screening');
     await waitFor(() => expect(fetch).toHaveBeenCalledTimes(4));
     expect(fetch.mock.calls[3]?.[0]).toBe(
-      '/api/deals?limit=25&offset=0&stage=screening&search=Northstar',
+      '/api/deals?limit=25&offset=0&sort=created&direction=desc&stage=screening&search=Northstar',
     );
     expect(screen.getByText('Try changing the search or stage filter.')).toBeVisible();
   });
@@ -324,6 +483,7 @@ describe('DealsDashboard', () => {
           expectedCloseTime: null,
           closesInDays: 12,
           closesAt: null,
+          ...closingDealMetadata,
         },
       ],
     };
@@ -340,6 +500,11 @@ describe('DealsDashboard', () => {
     expect(screen.getAllByText(/R 1 234 567 890 123,45/)).toHaveLength(1);
     expect(screen.getByText('Closing in 60 days')).toBeVisible();
     expect(screen.getByRole('heading', { name: 'Upcoming close dates' })).toBeVisible();
+    expect(
+      screen.getByText(
+        /Created by Amara Ndlovu · Updated by Lerato Molefe · Assigned to Sibusiso Dlamini \(lead\) · Approved by Naledi Khumalo · Rejected: Quorum no longer reachable/,
+      ),
+    ).toBeVisible();
   });
 
   it('creates a deal using exact minor units and refreshes the list', async () => {

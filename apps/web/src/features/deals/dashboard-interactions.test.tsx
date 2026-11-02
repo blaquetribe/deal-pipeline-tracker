@@ -32,6 +32,22 @@ const deal = {
   expected_close_date: '2027-03-31',
   expected_close_time: null,
   created_at: '2026-10-28T10:00:00+00:00',
+  created_by: null,
+  updated_at: '2026-10-28T10:00:00+00:00',
+  updated_by: null,
+  assigned_to: [],
+  approved_by: [],
+  rejected: false,
+  rejection_reason: null,
+  approval: {
+    requestId: null,
+    status: null,
+    requestedBy: null,
+    approvers: [],
+    rejectionReason: null,
+    approvedBy: [],
+    rejected: false,
+  },
 };
 
 const summary: DashboardSummary = {
@@ -43,6 +59,25 @@ const summary: DashboardSummary = {
   totalsByCurrency: [],
   closingSoonCount: 0,
   closingSoon: [],
+};
+
+const closingDealMetadata = {
+  created_by: null,
+  updated_at: '2026-10-28T10:00:00+00:00',
+  updated_by: null,
+  assigned_to: [],
+  approved_by: [],
+  rejected: false,
+  rejection_reason: null,
+  approval: {
+    requestId: null,
+    status: null,
+    requestedBy: null,
+    approvers: [],
+    rejectionReason: null,
+    approvedBy: [],
+    rejected: false,
+  },
 };
 
 beforeEach(() => {
@@ -168,6 +203,7 @@ describe('DealsDashboard interactions', () => {
           expectedCloseTime: null,
           closesInDays: 0,
           closesAt: '2026-10-28T10:30:00.000Z',
+          ...closingDealMetadata,
         },
       ],
     });
@@ -204,6 +240,7 @@ describe('DealsDashboard interactions', () => {
           expectedCloseTime: null,
           closesInDays: 2,
           closesAt: null,
+          ...closingDealMetadata,
         },
       ],
     });

@@ -223,6 +223,38 @@ export function DealsKanban({
                             {closeDateLabel(deal.expected_close_date)}
                           </p>
                         </div>
+                        <div className="mt-2 space-y-1 text-[0.68rem] text-fg-muted">
+                          <p className="truncate">
+                            Assigned:{' '}
+                            {deal.assigned_to.length
+                              ? deal.assigned_to
+                                  .map(
+                                    (person) =>
+                                      `${person.displayName ?? 'Unnamed'} (${person.role})`,
+                                  )
+                                  .join(', ')
+                              : 'Unassigned'}
+                          </p>
+                          {deal.approved_by.length ? (
+                            <p className="truncate">
+                              Approved by{' '}
+                              {deal.approved_by
+                                .map((person) => person.displayName ?? 'Unknown')
+                                .join(', ')}
+                            </p>
+                          ) : null}
+                          {deal.rejected ? (
+                            <p className="line-clamp-2 text-danger-fg">
+                              Rejected{deal.rejection_reason ? ` · ${deal.rejection_reason}` : ''}
+                            </p>
+                          ) : null}
+                          <p className="truncate">
+                            Created by {deal.created_by?.displayName ?? 'Unknown'}
+                          </p>
+                          <p className="truncate">
+                            Updated by {deal.updated_by?.displayName ?? 'System'}
+                          </p>
+                        </div>
                       </article>
                     </li>
                   ))}

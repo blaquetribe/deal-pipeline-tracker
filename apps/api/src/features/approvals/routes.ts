@@ -10,6 +10,7 @@ import {
   approvalReassignmentBodySchema,
   approvalReassignmentOptionsSchema,
   approvalRequestBodySchema,
+  eligibleDealApproversSchema,
   dealApprovalStatusSchema,
 } from '@dpt/shared';
 import { z } from 'zod';
@@ -26,6 +27,26 @@ export interface ApprovalRoutesOptions {
 }
 
 export function createApprovalRoutes({ userRpc }: ApprovalRoutesOptions): Route[] {
+  const eligibleApprovers = sessionRoute({
+    method: 'GET',
+    path: '/deals/:dealId/approval-approvers',
+    body: noBody,
+    permission: 'deal.request_approval',
+    handler: async ({ params, session }) => {
+      const dealId = uuidSchema.safeParse(params.dealId);
+      if (!dealId.success) throw new HttpError(400, 'invalid_request', 'The deal id is invalid.');
+      return {
+        body: eligibleDealApproversSchema.parse(
+          await userRpc.call(
+            'eligible_deal_approvers',
+            { p_deal: dealId.data },
+            session.accessToken,
+          ),
+        ),
+      };
+    },
+  });
+
   const status = sessionRoute({
     method: 'GET',
     path: '/deals/:dealId/approval',
@@ -56,8 +77,12 @@ export function createApprovalRoutes({ userRpc }: ApprovalRoutesOptions): Route[
       }
       const requestId = uuidSchema.parse(
         await userRpc.call(
-          'request_approval',
-          { p_deal: dealId.data, p_expected_version: body.expectedVersion },
+          'request_approval_to',
+          {
+            p_deal: dealId.data,
+            p_expected_version: body.expectedVersion,
+            p_approver_memberships: body.approverMembershipIds,
+          },
           session.accessToken,
         ),
       );
@@ -350,6 +375,7 @@ export function createApprovalRoutes({ userRpc }: ApprovalRoutesOptions): Route[
   });
 
   return [
+    eligibleApprovers,
     status,
     request,
     decide,

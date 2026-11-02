@@ -15,7 +15,7 @@ import {
   type Stage,
 } from '@dpt/shared';
 import Link from 'next/link';
-import { useEffect, useId, useRef, useState } from 'react';
+import { useCallback, useEffect, useId, useRef, useState } from 'react';
 import type { FormEvent } from 'react';
 
 import { subscribeToDealsChanged } from '../notifications';
@@ -74,6 +74,13 @@ export function DealsDashboard() {
   const editId = useId();
   const createForm = useRef<HTMLDivElement>(null);
   const [stage, setStage] = useState<Stage | ''>('');
+  const [sectorFilter, setSectorFilter] = useState('');
+  const [assignedTo, setAssignedTo] = useState('');
+  const [approvalStatus, setApprovalStatus] = useState('');
+  const [sort, setSort] = useState<
+    'name' | 'stage' | 'amount' | 'expectedClose' | 'created' | 'updated'
+  >('created');
+  const [direction, setDirection] = useState<'asc' | 'desc'>('desc');
   const [search, setSearch] = useState('');
   const [appliedSearch, setAppliedSearch] = useState('');
   const [offset, setOffset] = useState(0);
@@ -93,6 +100,24 @@ export function DealsDashboard() {
   const [updatingDeal, setUpdatingDeal] = useState<string | null>(null);
   const [actionToast, setActionToast] = useState<ActionToast | null>(null);
   const [editingDeal, setEditingDeal] = useState<DealListResponse['items'][number] | null>(null);
+
+  const dealsQuery = useCallback(
+    (pageOffset = offset) => {
+      const query = new URLSearchParams({
+        limit: String(PAGE_SIZE),
+        offset: String(pageOffset),
+        sort,
+        direction,
+      });
+      if (stage) query.set('stage', stage);
+      if (appliedSearch) query.set('search', appliedSearch);
+      if (sectorFilter.trim()) query.set('sector', sectorFilter.trim());
+      if (assignedTo.trim()) query.set('assignedTo', assignedTo.trim());
+      if (approvalStatus) query.set('approvalStatus', approvalStatus);
+      return query;
+    },
+    [offset, sort, direction, stage, appliedSearch, sectorFilter, assignedTo, approvalStatus],
+  );
   useEffect(() => {
     if (!actionToast) return undefined;
     const timer = window.setTimeout(() => setActionToast(null), 6_000);
@@ -101,9 +126,7 @@ export function DealsDashboard() {
 
   useEffect(() => {
     let active = true;
-    const query = new URLSearchParams({ limit: String(PAGE_SIZE), offset: String(offset) });
-    if (stage) query.set('stage', stage);
-    if (appliedSearch) query.set('search', appliedSearch);
+    const query = dealsQuery();
     const load = () => {
       void readDeals(query)
         .then((response) => {
@@ -129,7 +152,7 @@ export function DealsDashboard() {
       active = false;
       unsubscribe();
     };
-  }, [appliedSearch, offset, stage]);
+  }, [dealsQuery]);
 
   useEffect(() => {
     let active = true;
@@ -255,9 +278,7 @@ export function DealsDashboard() {
       formElement.reset();
       setCreateMessage('Deal created.');
       setLoading(true);
-      const query = new URLSearchParams({ limit: String(PAGE_SIZE), offset: String(offset) });
-      if (stage) query.set('stage', stage);
-      if (appliedSearch) query.set('search', appliedSearch);
+      const query = dealsQuery();
       const refreshed = await readDeals(query);
       setResult(refreshed);
       void refreshSummary();
@@ -368,6 +389,34 @@ export function DealsDashboard() {
       setOffset(0);
       setAppliedSearch(nextSearch);
     }
+  }
+
+  function sortBy(key: 'name' | 'stage' | 'amount' | 'expectedClose' | 'created' | 'updated') {
+    setDirection((current) => (sort === key ? (current === 'asc' ? 'desc' : 'asc') : 'asc'));
+    setSort(key);
+    setOffset(0);
+  }
+
+  function sortHeader(
+    key: 'name' | 'stage' | 'amount' | 'expectedClose' | 'created' | 'updated',
+    label: string,
+  ) {
+    const active = sort === key;
+    const ariaSort = !active ? 'none' : direction === 'asc' ? 'ascending' : 'descending';
+    return (
+      <th aria-sort={ariaSort} className="px-3 py-2 font-medium" scope="col">
+        <button
+          className="inline-flex items-center gap-1 hover:text-fg focus-visible:outline-2"
+          onClick={() => sortBy(key)}
+          type="button"
+        >
+          {label}
+          <span aria-hidden="true" className="text-xs">
+            {active ? (direction === 'asc' ? '↑' : '↓') : '↕'}
+          </span>
+        </button>
+      </th>
+    );
   }
 
   function changeStage(value: string) {
@@ -541,6 +590,24 @@ export function DealsDashboard() {
                                 {STAGE_LABELS[deal.stage]} ·{' '}
                                 {formatCloseDate(deal.expectedCloseDate)}
                               </p>
+                              <p className="mt-1 max-w-2xl text-xs text-fg-muted">
+                                Created by {deal.created_by?.displayName ?? 'Unknown'} · Updated by{' '}
+                                {deal.updated_by?.displayName ?? 'System'} · Assigned to{' '}
+                                {deal.assigned_to?.length
+                                  ? deal.assigned_to
+                                      .map(
+                                        (person) =>
+                                          `${person.displayName ?? 'Unnamed'} (${person.role})`,
+                                      )
+                                      .join(', ')
+                                  : 'Unassigned'}
+                                {deal.approved_by?.length
+                                  ? ` · Approved by ${deal.approved_by.map((person) => person.displayName ?? 'Unknown').join(', ')}`
+                                  : ''}
+                                {deal.rejected
+                                  ? ` · Rejected${deal.rejection_reason ? `: ${deal.rejection_reason}` : ''}`
+                                  : ''}
+                              </p>
                             </div>
                             <p
                               className={
@@ -617,6 +684,59 @@ export function DealsDashboard() {
           </SelectControl>
         </div>
       </div>
+      <fieldset
+        className="material-card mt-2 flex flex-wrap items-end gap-3 p-3"
+        aria-label="Additional deal filters"
+      >
+        <div className="w-40">
+          <label className="mb-1 block text-xs font-medium" htmlFor="deal-sector-filter">
+            Filter sector
+          </label>
+          <Input
+            id="deal-sector-filter"
+            onChange={(event) => {
+              setSectorFilter(event.currentTarget.value);
+              setOffset(0);
+            }}
+            placeholder="All sectors"
+            value={sectorFilter}
+          />
+        </div>
+        <div className="w-48">
+          <label className="mb-1 block text-xs font-medium" htmlFor="deal-assignee-filter">
+            Assigned to
+          </label>
+          <Input
+            id="deal-assignee-filter"
+            onChange={(event) => {
+              setAssignedTo(event.currentTarget.value);
+              setOffset(0);
+            }}
+            placeholder="Search a person"
+            value={assignedTo}
+          />
+        </div>
+        <div className="w-44">
+          <label className="mb-1 block text-xs font-medium" htmlFor="deal-approval-filter">
+            IC approval
+          </label>
+          <SelectControl
+            id="deal-approval-filter"
+            onChange={(event) => {
+              setApprovalStatus(event.currentTarget.value);
+              setOffset(0);
+            }}
+            value={approvalStatus}
+          >
+            <option value="">Any approval state</option>
+            <option value="none">No request</option>
+            <option value="pending">Pending</option>
+            <option value="approved">Approved</option>
+            <option value="rejected">Rejected</option>
+          </SelectControl>
+        </div>
+        <p className="pb-2 text-xs text-fg-muted">Filters update the list as you change them.</p>
+      </fieldset>
 
       {createOpen ? (
         <section
@@ -735,8 +855,9 @@ export function DealsDashboard() {
           <ul className="mt-2 grid gap-2 text-fg-muted md:grid-cols-3">
             <li>
               <strong className="text-fg">IC Review → Signed:</strong> open an IC Review deal and
-              request approval from its IC approval section. The quorum moves approved deals to
-              Signed automatically.
+              request approval from its IC approval section. An eligible IC Member can approve or
+              reject there. A rejected request stays in IC Review; the deal moves to Signed only
+              when the approval quorum is reached.
             </li>
             <li>
               <strong className="text-fg">Signed → Closed:</strong> after signing, move it to
@@ -776,24 +897,27 @@ export function DealsDashboard() {
             className="material-card mt-4 min-w-0 overflow-x-auto focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand"
             tabIndex={0}
           >
-            <table className="w-full min-w-[68rem] border-collapse text-left text-sm">
+            <table className="w-full min-w-[112rem] border-collapse text-left text-sm">
               <caption className="sr-only">Deals in the active organisation</caption>
               <thead className="border-b border-line text-fg-muted">
                 <tr>
-                  <th className="px-4 py-3 font-medium" scope="col">
-                    Deal
-                  </th>
-                  <th className="px-4 py-3 font-medium" scope="col">
-                    Stage
-                  </th>
-                  <th className="px-4 py-3 font-medium" scope="col">
+                  {sortHeader('name', 'Deal')}
+                  {sortHeader('stage', 'Stage')}
+                  <th className="px-3 py-2 font-medium" scope="col">
                     Sector
                   </th>
-                  <th className="px-4 py-3 text-right font-medium" scope="col">
-                    Size
+                  {sortHeader('amount', 'Size')}
+                  {sortHeader('expectedClose', 'Expected close')}
+                  {sortHeader('created', 'Created')}
+                  {sortHeader('updated', 'Last updated')}
+                  <th className="px-3 py-2 font-medium" scope="col">
+                    Assigned to
                   </th>
-                  <th className="px-4 py-3 font-medium" scope="col">
-                    Expected close
+                  <th className="px-3 py-2 font-medium" scope="col">
+                    IC decision
+                  </th>
+                  <th className="px-3 py-2 font-medium" scope="col">
+                    Rejection reason
                   </th>
                   <th className="px-4 py-3 font-medium" scope="col">
                     Move
@@ -806,7 +930,7 @@ export function DealsDashboard() {
               <tbody className="divide-y divide-line">
                 {result.items.map((deal) => (
                   <tr key={deal.id}>
-                    <th className="px-4 py-4 font-semibold" scope="row">
+                    <th className="px-3 py-3 font-semibold" scope="row">
                       <Link
                         className="underline focus-visible:outline-2"
                         href={`/deals/${deal.id}`}
@@ -814,17 +938,61 @@ export function DealsDashboard() {
                         {deal.name}
                       </Link>
                     </th>
-                    <td className="px-4 py-4">
+                    <td className="px-3 py-3">
                       <StageBadge stage={deal.stage} />
                     </td>
-                    <td className="px-4 py-4 text-fg-muted">{deal.sector ?? 'Not set'}</td>
-                    <td className="px-4 py-4 text-right tabular-nums">
+                    <td className="px-3 py-3 text-fg-muted">{deal.sector ?? 'Not set'}</td>
+                    <td className="px-3 py-3 text-right tabular-nums">
                       {formatMinorAmount(deal.amount, deal.currency)}
                     </td>
-                    <td className="px-4 py-4 text-fg-muted">
+                    <td className="px-3 py-3 text-fg-muted">
                       {formatCloseDate(deal.expected_close_date)}
                     </td>
-                    <td className="px-4 py-4">
+                    <td className="px-3 py-3 text-xs">
+                      <span className="block">{deal.created_by?.displayName ?? 'Unknown'}</span>
+                      <time className="text-fg-muted" dateTime={deal.created_at}>
+                        {formatCloseDate(deal.created_at.slice(0, 10))}
+                      </time>
+                    </td>
+                    <td className="px-3 py-3 text-xs">
+                      <span className="block">{deal.updated_by?.displayName ?? 'System'}</span>
+                      <time className="text-fg-muted" dateTime={deal.updated_at}>
+                        {formatCloseDate(deal.updated_at.slice(0, 10))}
+                      </time>
+                    </td>
+                    <td className="px-3 py-3 text-xs">
+                      {deal.assigned_to.length ? (
+                        deal.assigned_to.map((person) => (
+                          <span className="block" key={`${person.userId}-${person.role}`}>
+                            {person.displayName ?? 'Unnamed'}{' '}
+                            <span className="text-fg-muted">· {person.role}</span>
+                          </span>
+                        ))
+                      ) : (
+                        <span className="text-fg-muted">Unassigned</span>
+                      )}
+                    </td>
+                    <td className="px-3 py-3 text-xs">
+                      <span>{deal.approval.status ?? 'No request'}</span>
+                      {deal.approval.approvers
+                        .filter((person) => person.decision === 'approve')
+                        .map((person) => (
+                          <span className="block text-fg-muted" key={person.userId}>
+                            Approved by {person.displayName ?? 'Unknown'}
+                          </span>
+                        ))}
+                      {deal.approval.approvers
+                        .filter((person) => person.decision === 'reject')
+                        .map((person) => (
+                          <span className="block text-danger-fg" key={person.userId}>
+                            Rejected by {person.displayName ?? 'Unknown'}
+                          </span>
+                        ))}
+                    </td>
+                    <td className="max-w-56 px-3 py-3 text-xs whitespace-normal text-fg-muted">
+                      {deal.approval.rejectionReason ?? '—'}
+                    </td>
+                    <td className="px-3 py-3">
                       {(() => {
                         const destinations = STAGE_TRANSITIONS.filter(
                           ([from]) => from === deal.stage,

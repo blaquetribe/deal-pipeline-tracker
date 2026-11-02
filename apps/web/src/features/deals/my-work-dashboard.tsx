@@ -261,6 +261,22 @@ export function MyWorkDashboard() {
                         {STAGE_LABELS[deal.stage]}
                       </span>
                     </div>
+                    <p className="text-[0.6875rem] text-fg-muted sm:col-span-2">
+                      Assigned to{' '}
+                      {deal.assigned_to?.length
+                        ? deal.assigned_to
+                            .map((person) => `${person.displayName ?? 'Unnamed'} (${person.role})`)
+                            .join(', ')
+                        : 'Unassigned'}
+                      {' · '}Created by {deal.created_by?.displayName ?? 'Unknown'} · Updated by{' '}
+                      {deal.updated_by?.displayName ?? 'System'}
+                      {deal.approved_by?.length
+                        ? ` · Approved by ${deal.approved_by.map((person) => person.displayName ?? 'Unknown').join(', ')}`
+                        : ''}
+                      {deal.rejected
+                        ? ` · Rejected${deal.rejection_reason ? `: ${deal.rejection_reason}` : ''}`
+                        : ''}
+                    </p>
                     {step === null ? (
                       <p className="rounded-control bg-surface-subtle px-2.5 py-1.5 text-xs text-fg-muted sm:text-right">
                         Passed · this deal is no longer progressing.

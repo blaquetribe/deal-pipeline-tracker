@@ -99,6 +99,18 @@ describe('user-scoped Realtime feed', () => {
       table: 'deal_events',
       filter: 'tenant_id=eq.tenant-a',
     });
+    expect(mockState.changeFilters).toContainEqual({
+      event: 'INSERT',
+      schema: 'public',
+      table: 'tenant_change_signals',
+      filter: 'tenant_id=eq.tenant-a',
+    });
+    expect(mockState.changeFilters).toContainEqual({
+      event: 'UPDATE',
+      schema: 'public',
+      table: 'tenant_change_signals',
+      filter: 'tenant_id=eq.tenant-a',
+    });
     mockState.callbacks[1]?.({ new: { id: 'deal-private-row' } });
     expect(onDealsChanged).toHaveBeenCalledOnce();
     mockState.status?.('SUBSCRIBED');

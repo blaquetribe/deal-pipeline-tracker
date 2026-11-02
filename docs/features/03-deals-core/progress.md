@@ -1,7 +1,7 @@
 # 03 Deals core: progress
 
-Status: done (core deal flows, closing-soon dashboard, server-side alerts, and user-context work dashboard are implemented)
-Owner/branch: main
+Status: in progress (audit-rich List query and deal metadata follow-up on `codex/deal-audit-approver-routing`)
+Owner/branch: Codex / `codex/deal-audit-approver-routing`
 Depends on: 01, 02
 
 ## Goal
@@ -16,6 +16,8 @@ Deal CRUD, stage state machine, notes UI, pipeline overview, closing soon. Cover
 Key decisions, schema/API shape, links to ADRs.
 - Deal responsibility is stored in `deal_assignees` as owner, lead or member; it does not grant visibility. Assignment mutations require `deal.edit`, active tenant membership, an expected deal version and produce a ledger event.
 - The first list contract is `list_deals`: tenant scope comes from the server-side active session, filters and pagination are bounded in Postgres, and `amount` crosses JSON as an integer string (E10).
+- The sortable List uses the additive `list_deals_table` query. It accepts a strict sort allow-list, stable tie-break, bounded paging, and composable stage/search/sector/assignee/approval filters. Shared deal projections include database-attributed creator/updater, assignees, decision makers, rejection state/reason, and approval request summary.
+- Audit timestamps and actor IDs are set by a database trigger; create/update request schemas do not accept them. The tenant-authorized metadata helper is reused in List, detail, My Work, dashboard close cards, and Board projections.
 - The deal list provides a compact keyboard-accessible “Move to…” action that opens only legal destinations and names any missing required fields; choosing a valid destination submits the move. Board view adds drag-and-drop as an enhancement to those controls, using the existing database stage machine and version checks. The board currently covers the same bounded, paginated result set as List view.
 - API routes use the authenticated user JWT and Postgres remains the authorization boundary. No browser Supabase client was added.
 
@@ -34,6 +36,9 @@ Key decisions, schema/API shape, links to ADRs.
 - [x] Server-side closing alerts and delivery through the Feature 02 mailer and Feature 05 realtime path (see `closing-soon.md` and `docs/features/05-realtime/progress.md`).
 - [x] Progress and handoff docs updated for this slice.
 - [x] Board view with seven stages, valid-transition drop targets, reduced-motion-aware feedback, and preserved keyboard move controls.
+- [x] Implement the sortable audit-rich List and shared deal metadata migration; fresh local pgTAP and application tests pass.
+- [x] Keep audit metadata visible in Board, My Work, approval queue, Pipeline closing-soon, and deal detail projections.
+- [ ] Save refreshed evidence for the sortable List/audit fields and the new approver-selection form. Browser captures were inspected on 2026-11-02 but were not written into this folder.
 
 ## Tests
 What is covered, where it lives, how to run it.
@@ -56,6 +61,9 @@ Dated notes: what changed, what was learned, problems.
 
 ## Deviations / debt
 Anything that differs from the plan or is deferred (also mirror in README "next steps").
+
+- 2026-11-02: Added server-attributed `created_by`, `updated_by`, and `updated_at` to deal projections, plus assigned-team and IC outcome/requester metadata across List, Board, detail, My Work, Approvals, and upcoming-close cards. List now supports server-side sorting and composable search/stage/sector/assignee/approval filters. Audit identities and timestamps remain read-only. Full Vitest passes (756 passed, 1 skipped; 85.15% branches), production build and 679 pgTAP assertions across 36 files pass. Requester-visible IC routing and sortable List were confirmed in the isolated UI. Repository screenshots for the new List/audit fields remain outstanding; the current browser tool only exposed inline capture output.
+- 2026-11-02: Opened the refreshed Pipeline on the isolated port-8082 app and verified the sortable audit-rich List: created/updated actors and timestamps, assigned members, IC status, rejection reason, sorting controls, filters, and edit entry are visible. This was a read-only review. The browser capture is present in the task conversation but was not persisted to `docs/evidence/ui/`; the evidence index must not imply it is a committed screenshot.
 
 - 2026-10-31: replaced the table-row inline deal editor with a native modal dialog using responsive field columns, clear optional-field labels, focused initial input, and persistent Cancel/Save actions. The edit API, exact decimal parsing, and optimistic version check are unchanged. Added regression coverage; rebuilt Compose review confirmed the dialog and compact table in light mode. Refreshed screenshot evidence remains open. See ADR 0028.
 

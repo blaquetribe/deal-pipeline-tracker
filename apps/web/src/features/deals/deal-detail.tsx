@@ -6,6 +6,7 @@ import type {
   Deal,
   DealActivityResponse,
   DealApprovalStatus,
+  EligibleDealApprovers,
 } from '@dpt/shared';
 import Link from 'next/link';
 import { useEffect, useId, useState } from 'react';
@@ -30,6 +31,7 @@ import {
   readDeal,
   readDealActivity,
   readDealApprovalStatus,
+  readEligibleDealApprovers,
   requestDealApproval,
   reassignApprovalApprover,
   setApprovalAbsence,
@@ -84,6 +86,8 @@ export function DealDetail({ dealId }: DealDetailProps) {
   const [deal, setDeal] = useState<Deal | null>(null);
   const [activity, setActivity] = useState<DealActivityResponse | null>(null);
   const [approval, setApproval] = useState<DealApprovalStatus | null>(null);
+  const [eligibleApprovers, setEligibleApprovers] = useState<EligibleDealApprovers | null>(null);
+  const [selectedApprovers, setSelectedApprovers] = useState<string[]>([]);
   const [absences, setAbsences] = useState<ApprovalAbsence[]>([]);
   const [reassignmentOptions, setReassignmentOptions] =
     useState<ApprovalReassignmentOptions | null>(null);
@@ -129,6 +133,26 @@ export function DealDetail({ dealId }: DealDetailProps) {
     };
   }, [dealId]);
 
+  useEffect(() => {
+    let active = true;
+    if (!approval?.canRequest) {
+      return undefined;
+    }
+    void readEligibleDealApprovers(dealId)
+      .then((options) => {
+        if (active) setEligibleApprovers(options);
+      })
+      .catch((cause: unknown) => {
+        if (active)
+          setApprovalError(
+            cause instanceof Error ? cause.message : 'Eligible approvers could not be loaded.',
+          );
+      });
+    return () => {
+      active = false;
+    };
+  }, [approval?.canRequest, dealId]);
+
   async function reload() {
     setError(null);
     setDeal(null);
@@ -166,7 +190,8 @@ export function DealDetail({ dealId }: DealDetailProps) {
     setApprovalError(null);
     setApprovalBusy(true);
     try {
-      await requestDealApproval(deal.id, deal.version);
+      await requestDealApproval(deal.id, deal.version, selectedApprovers);
+      setSelectedApprovers([]);
       await refreshApprovalData();
     } catch (cause) {
       setApprovalError(
@@ -378,6 +403,28 @@ export function DealDetail({ dealId }: DealDetailProps) {
             <dt className="text-sm text-fg-muted">Created</dt>
             <dd>
               <time dateTime={deal.created_at}>{formatDate(deal.created_at)}</time>
+              <span className="block text-sm text-fg-muted">
+                by {deal.created_by?.displayName ?? 'Unknown'}
+              </span>
+            </dd>
+          </div>
+          <div>
+            <dt className="text-sm text-fg-muted">Last updated</dt>
+            <dd>
+              <time dateTime={deal.updated_at}>{formatDate(deal.updated_at)}</time>
+              <span className="block text-sm text-fg-muted">
+                by {deal.updated_by?.displayName ?? 'System'}
+              </span>
+            </dd>
+          </div>
+          <div className="sm:col-span-2">
+            <dt className="text-sm text-fg-muted">Assigned to</dt>
+            <dd>
+              {deal.assigned_to.length
+                ? deal.assigned_to
+                    .map((person) => `${person.displayName ?? 'Unnamed'} (${person.role})`)
+                    .join(' · ')
+                : 'Unassigned'}
             </dd>
           </div>
         </dl>
@@ -403,7 +450,39 @@ export function DealDetail({ dealId }: DealDetailProps) {
           )}
           {approval.status === 'approved' ? <p className="mt-2">Approval quorum reached.</p> : null}
           {approval.status === 'rejected' ? (
-            <p className="mt-2">Approval request failed because quorum was no longer reachable.</p>
+            <div className="mt-2 space-y-1">
+              <p>Approval request failed because quorum was no longer reachable.</p>
+              {deal.approval.rejectionReason ? (
+                <p className="text-sm text-danger-fg">Reason: {deal.approval.rejectionReason}</p>
+              ) : null}
+            </div>
+          ) : null}
+          {deal.approval.requestedBy ? (
+            <p className="mt-2 text-sm text-fg-muted">
+              Requested by {deal.approval.requestedBy.displayName ?? 'Unknown'}.
+            </p>
+          ) : null}
+          {deal.approval.approvers.length ? (
+            <ul aria-label="Approver decisions" className="mt-3 space-y-1 text-sm">
+              {deal.approval.approvers.map((person) => (
+                <li
+                  className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1"
+                  key={person.userId}
+                >
+                  <span>{person.displayName ?? 'Unnamed approver'}</span>
+                  <span
+                    className={person.decision === 'reject' ? 'text-danger-fg' : 'text-fg-muted'}
+                  >
+                    {person.decision === 'approve'
+                      ? 'Approved'
+                      : person.decision === 'reject'
+                        ? 'Rejected'
+                        : 'Awaiting decision'}
+                    {person.reason ? ` · ${person.reason}` : ''}
+                  </span>
+                </li>
+              ))}
+            </ul>
           ) : null}
           {approval.canConfigure ? (
             <form
@@ -459,12 +538,60 @@ export function DealDetail({ dealId }: DealDetailProps) {
           {approval.canRequest ? (
             <div className="mt-4">
               <p className="text-sm text-fg-muted">
-                Send this deal to the eligible IC members for a decision. The request uses the
-                organisation’s current approval quorum.
+                Choose eligible IC approvers for this request. At least{' '}
+                {eligibleApprovers?.requiredApprovals ?? approval.configuredApprovals ?? 1}{' '}
+                approval(s) are required.
               </p>
+              {eligibleApprovers ? (
+                <fieldset className="mt-3 space-y-2 rounded-control border border-line p-3">
+                  <legend className="px-1 text-sm font-medium">Assign request to</legend>
+                  {eligibleApprovers.approvers.map((candidate) => (
+                    <label
+                      className="flex cursor-pointer items-start gap-2 text-sm"
+                      key={candidate.membershipId}
+                    >
+                      <input
+                        checked={selectedApprovers.includes(candidate.membershipId)}
+                        disabled={approvalBusy}
+                        onChange={(event) => {
+                          const checked = event.currentTarget.checked;
+                          setSelectedApprovers((current) =>
+                            checked
+                              ? [...current, candidate.membershipId]
+                              : current.filter((id) => id !== candidate.membershipId),
+                          );
+                        }}
+                        type="checkbox"
+                      />
+                      <span>
+                        {candidate.displayName ?? 'Unnamed'}{' '}
+                        <span className="text-fg-muted">· {candidate.roles.join(', ')}</span>
+                        {candidate.delegatedTo ? (
+                          <span className="block text-xs text-fg-muted">
+                            Covered by {candidate.delegatedTo} during their absence
+                          </span>
+                        ) : null}
+                      </span>
+                    </label>
+                  ))}
+                  {eligibleApprovers.approvers.length === 0 ? (
+                    <p className="text-sm text-danger-fg">No eligible approvers are available.</p>
+                  ) : null}
+                  <p aria-live="polite" className="text-xs text-fg-muted">
+                    {selectedApprovers.length} selected · {eligibleApprovers.requiredApprovals}{' '}
+                    required
+                  </p>
+                </fieldset>
+              ) : (
+                <p className="mt-2 text-sm text-fg-muted">Loading eligible approvers…</p>
+              )}
               <Button
                 className="mt-3"
-                disabled={approvalBusy}
+                disabled={
+                  approvalBusy ||
+                  !eligibleApprovers ||
+                  selectedApprovers.length < eligibleApprovers.requiredApprovals
+                }
                 onClick={() => void submitApprovalRequest()}
                 type="button"
                 variant="primary"
@@ -475,6 +602,10 @@ export function DealDetail({ dealId }: DealDetailProps) {
           ) : null}
           {approval.canDecide ? (
             <div className="mt-4 space-y-3">
+              <p className="text-sm text-fg-muted">
+                Reject records your decision and optional reason. The deal stays in IC Review;
+                Passed is the separate outcome for a deal leaving the pipeline.
+              </p>
               <label className="block text-sm font-medium" htmlFor={rejectionReasonId}>
                 Rejection reason (optional)
               </label>

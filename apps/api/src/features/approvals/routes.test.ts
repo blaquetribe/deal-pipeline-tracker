@@ -17,6 +17,7 @@ function harness(tenantId: string | null = TENANT) {
   const userRpc = {
     call: vi.fn<(name: string, args: Record<string, unknown>, bearer: string) => Promise<unknown>>(
       async (name) => {
+        if (name === 'eligible_deal_approvers') return { requiredApprovals: 1, approvers: [] };
         if (name === 'deal_approval_status') {
           return {
             requestId: null,
@@ -35,7 +36,7 @@ function harness(tenantId: string | null = TENANT) {
             canReassign: false,
           };
         }
-        if (name === 'request_approval') return REQUEST;
+        if (name === 'request_approval_to') return REQUEST;
         if (name === 'decide_approval') return 'pending';
         if (name === 'set_approval_absence') return ABSENCE;
         if (name === 'get_approval_policy')
@@ -83,6 +84,7 @@ describe('approval routes', () => {
   it('declares session access and database permissions for every operation', () => {
     const { routes } = harness();
     expect(describeRoutes(routes)).toEqual([
+      { method: 'GET', path: '/deals/:dealId/approval-approvers', access: 'session' },
       { method: 'GET', path: '/deals/:dealId/approval', access: 'session' },
       { method: 'POST', path: '/deals/:dealId/approval-requests', access: 'session' },
       { method: 'POST', path: '/approval-requests/:requestId/decisions', access: 'session' },
@@ -103,6 +105,7 @@ describe('approval routes', () => {
       { method: 'POST', path: '/approval-requests/:requestId/reassignments', access: 'session' },
     ]);
     expect(routes.map(({ permission }) => permission)).toEqual([
+      'deal.request_approval',
       'deal.view',
       'deal.request_approval',
       'approval.decide',
@@ -141,13 +144,36 @@ describe('approval routes', () => {
     expect(userRpc.call).not.toHaveBeenCalled();
   });
 
+  it('rejects malformed deal ids before looking up eligible approvers', async () => {
+    const { app, userRpc } = harness();
+    const response = await app.request('/deals/not-a-uuid/approval-approvers', {
+      headers: { Cookie: COOKIE },
+    });
+    expect(response.status).toBe(400);
+    expect(userRpc.call).not.toHaveBeenCalled();
+  });
+
+  it('returns eligible approvers through the authenticated caller token', async () => {
+    const { app, userRpc } = harness();
+    const response = await app.request(`/deals/${DEAL}/approval-approvers`, {
+      headers: { Cookie: COOKIE },
+    });
+    expect(response.status).toBe(200);
+    expect(await response.json()).toEqual({ requiredApprovals: 1, approvers: [] });
+    expect(userRpc.call).toHaveBeenCalledWith(
+      'eligible_deal_approvers',
+      { p_deal: DEAL },
+      'caller-jwt',
+    );
+  });
+
   it('requires a signed-in session before requesting approval', async () => {
     const { app, userRpc, resolver } = harness();
     resolver.resolve = vi.fn<(sessionId: string) => Promise<Session | null>>(async () => null);
     const response = await app.request(`/deals/${DEAL}/approval-requests`, {
       method: 'POST',
       headers: jsonHeaders,
-      body: JSON.stringify({ expectedVersion: 2 }),
+      body: JSON.stringify({ expectedVersion: 2, approverMembershipIds: [IC_MEMBER] }),
     });
     expect(response.status).toBe(401);
     expect(userRpc.call).not.toHaveBeenCalled();
@@ -158,13 +184,13 @@ describe('approval routes', () => {
     const response = await app.request(`/deals/${DEAL}/approval-requests`, {
       method: 'POST',
       headers: jsonHeaders,
-      body: JSON.stringify({ expectedVersion: 2 }),
+      body: JSON.stringify({ expectedVersion: 2, approverMembershipIds: [IC_MEMBER] }),
     });
     expect(response.status).toBe(201);
     expect(await response.json()).toEqual({ requestId: REQUEST });
     expect(userRpc.call).toHaveBeenCalledWith(
-      'request_approval',
-      { p_deal: DEAL, p_expected_version: 2 },
+      'request_approval_to',
+      { p_deal: DEAL, p_expected_version: 2, p_approver_memberships: [IC_MEMBER] },
       'caller-jwt',
     );
   });
