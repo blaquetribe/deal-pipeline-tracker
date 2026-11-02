@@ -15,6 +15,22 @@ const icDeal: DealListResponse['items'][number] = {
   expected_close_date: '2027-03-31',
   expected_close_time: null,
   created_at: '2026-10-28T10:00:00+00:00',
+  created_by: { userId: 'bbbbbbbb-0000-4000-8000-000000000001', displayName: 'Amara Ndlovu' },
+  updated_at: '2026-10-28T10:00:00+00:00',
+  updated_by: null,
+  assigned_to: [],
+  approved_by: [],
+  rejected: false,
+  rejection_reason: null,
+  approval: {
+    requestId: null,
+    status: null,
+    requestedBy: null,
+    approvers: [],
+    rejectionReason: null,
+    approvedBy: [],
+    rejected: false,
+  },
 };
 
 function dataTransfer() {
@@ -58,6 +74,37 @@ describe('DealsKanban', () => {
         'Northstar Systems',
       ),
     ).toBeInTheDocument();
+    expect(screen.getByText('Created by Amara Ndlovu')).toBeVisible();
+  });
+
+  it('shows assigned, approved, and rejected audit details on a board card', () => {
+    const auditedDeal: DealListResponse['items'][number] = {
+      ...icDeal,
+      assigned_to: [
+        {
+          userId: 'bbbbbbbb-0000-4000-8000-000000000002',
+          displayName: null,
+          role: 'lead',
+        },
+      ],
+      approved_by: [
+        { userId: 'bbbbbbbb-0000-4000-8000-000000000003', displayName: 'Naledi Khumalo' },
+      ],
+      rejected: true,
+      rejection_reason: 'Quorum no longer reachable',
+    };
+    render(
+      <DealsKanban
+        deals={[auditedDeal]}
+        disabled={false}
+        onInvalidMove={vi.fn<(message: string) => void>()}
+        onMove={vi.fn<(dealId: string, stage: Stage) => void>()}
+      />,
+    );
+
+    expect(screen.getByText('Assigned: Unnamed (lead)')).toBeVisible();
+    expect(screen.getByText('Approved by Naledi Khumalo')).toBeVisible();
+    expect(screen.getByText('Rejected · Quorum no longer reachable')).toBeVisible();
   });
 
   it('explains why IC Review cannot be dragged directly to Signed or Closed', () => {

@@ -4,6 +4,7 @@ import { STAGE_LABELS, type Deal, type DealApprovalStatus } from '@dpt/shared';
 import Link from 'next/link';
 import { useEffect, useState } from 'react';
 
+import { subscribeToDealsChanged } from '../notifications';
 import { readDealApprovalStatus, readDeals } from './api';
 
 type ApprovalRow = { readonly deal: Deal; readonly approval: DealApprovalStatus };
@@ -26,25 +27,36 @@ export function ApprovalsInbox() {
   useEffect(() => {
     let active = true;
     const query = new URLSearchParams({ limit: '100', offset: '0', stage: 'ic_review' });
-    void readDeals(query)
-      .then(async (result) => {
-        const approvals = await Promise.all(
-          result.items.map(async (deal) => ({
-            deal,
-            approval: await readDealApprovalStatus(deal.id),
-          })),
-        );
-        if (active) setRows(approvals);
-      })
-      .catch((cause: unknown) => {
-        if (active)
-          setError(cause instanceof Error ? cause.message : 'IC review items could not be loaded.');
-      })
-      .finally(() => {
-        if (active) setLoading(false);
-      });
+    const refresh = () => {
+      setLoading(true);
+      void readDeals(query)
+        .then(async (result) => {
+          const approvals = await Promise.all(
+            result.items.map(async (deal) => ({
+              deal,
+              approval: await readDealApprovalStatus(deal.id),
+            })),
+          );
+          if (active) {
+            setRows(approvals);
+            setError(null);
+          }
+        })
+        .catch((cause: unknown) => {
+          if (active)
+            setError(
+              cause instanceof Error ? cause.message : 'IC review items could not be loaded.',
+            );
+        })
+        .finally(() => {
+          if (active) setLoading(false);
+        });
+    };
+    refresh();
+    const unsubscribe = subscribeToDealsChanged(refresh);
     return () => {
       active = false;
+      unsubscribe();
     };
   }, []);
 
@@ -92,6 +104,22 @@ export function ApprovalsInbox() {
                   ? 'No request yet. Open the deal and select “Request IC approval” in its IC approval section.'
                   : 'No request yet. Ask a Deal Lead or authorized requester to open the deal and select “Request IC approval” in its IC approval section.'}
               {approval.requiredApprovals ? ` · ${approval.requiredApprovals} required` : ''}
+            </p>
+            <p className="mt-2 text-xs text-fg-muted">
+              Assigned:{' '}
+              {deal.assigned_to?.length
+                ? deal.assigned_to
+                    .map((person) => `${person.displayName ?? 'Unnamed'} (${person.role})`)
+                    .join(', ')
+                : 'Unassigned'}
+              {deal.created_by ? ` · Created by ${deal.created_by.displayName ?? 'Unknown'}` : ''}
+              {deal.updated_by ? ` · Updated by ${deal.updated_by.displayName ?? 'Unknown'}` : ''}
+              {deal.approved_by?.length
+                ? ` · Approved by ${deal.approved_by.map((person) => person.displayName ?? 'Unknown').join(', ')}`
+                : ''}
+              {deal.rejected
+                ? ` · Rejected${deal.rejection_reason ? `: ${deal.rejection_reason}` : ''}`
+                : ''}
             </p>
           </div>
           <div className="flex items-center gap-3">

@@ -11,6 +11,24 @@ const DEAL = 'bbbbbbbb-0000-4000-8000-000000000001';
 const CREATED_DEAL = 'bbbbbbbb-0000-4000-8000-000000000002';
 const USER = 'aaaaaaaa-0000-4000-8000-000000000001';
 const SESSION_COOKIE = `dpt_session=${'A'.repeat(43)}`;
+const DEAL_METADATA = {
+  created_by: null,
+  updated_at: '2026-10-28T10:00:00+00:00',
+  updated_by: null,
+  assigned_to: [],
+  approved_by: [],
+  rejected: false,
+  rejection_reason: null,
+  approval: {
+    requestId: null,
+    status: null,
+    requestedBy: null,
+    approvers: [],
+    rejectionReason: null,
+    approvedBy: [],
+    rejected: false,
+  },
+};
 
 function typedMock<T extends (...args: never[]) => unknown>(implementation: T) {
   return vi.fn<T>(implementation);
@@ -19,7 +37,7 @@ function typedMock<T extends (...args: never[]) => unknown>(implementation: T) {
 function harness(tenantId: string | null = 'cccccccc-0000-4000-8000-000000000001') {
   const userRpc = {
     call: typedMock(async (name: string, _args: Record<string, unknown>, _bearer: string) => {
-      if (name === 'list_deals') {
+      if (name === 'list_deals_table') {
         return {
           total: 1,
           items: [
@@ -34,6 +52,7 @@ function harness(tenantId: string | null = 'cccccccc-0000-4000-8000-000000000001
               expected_close_date: '2027-03-31',
               expected_close_time: null,
               created_at: '2026-10-28T10:00:00+00:00',
+              ...DEAL_METADATA,
             },
           ],
         };
@@ -54,6 +73,7 @@ function harness(tenantId: string | null = 'cccccccc-0000-4000-8000-000000000001
               expected_close_date: '2027-03-31',
               expected_close_time: null,
               created_at: '2026-10-28T10:00:00+00:00',
+              ...DEAL_METADATA,
               assignment_role: 'lead',
             },
           ],
@@ -71,6 +91,7 @@ function harness(tenantId: string | null = 'cccccccc-0000-4000-8000-000000000001
           expected_close_date: '2027-03-31',
           expected_close_time: null,
           created_at: '2026-10-28T10:00:00+00:00',
+          ...DEAL_METADATA,
         };
       }
       if (name === 'deal_dashboard_summary') {
@@ -93,6 +114,7 @@ function harness(tenantId: string | null = 'cccccccc-0000-4000-8000-000000000001
               expectedCloseTime: '14:30:00',
               closesInDays: 1,
               closesAt: '2026-10-29T14:30:00+02:00',
+              ...DEAL_METADATA,
             },
           ],
         };
@@ -394,11 +416,16 @@ describe('deal assignment routes', () => {
       stage: 'sourcing',
     });
     expect(userRpc.call).toHaveBeenCalledWith(
-      'list_deals',
+      'list_deals_table',
       {
         p_tenant: 'cccccccc-0000-4000-8000-000000000001',
         p_stage: 'sourcing',
         p_search: 'north',
+        p_sector: null,
+        p_assigned_to: null,
+        p_approval_status: null,
+        p_sort: 'created',
+        p_direction: 'desc',
         p_limit: 10,
         p_offset: 0,
       },

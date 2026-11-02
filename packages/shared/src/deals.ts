@@ -2,6 +2,31 @@ import { z } from 'zod';
 
 import { stageSchema } from './stages';
 
+export const dealAssigneeRoleSchema = z.enum(['owner', 'lead', 'member']);
+export const dealPersonSchema = z.strictObject({
+  userId: z.uuid(),
+  displayName: z.string().nullable(),
+});
+export const dealAssignmentSummarySchema = z.strictObject({
+  ...dealPersonSchema.shape,
+  role: dealAssigneeRoleSchema,
+});
+export const dealApprovalSummarySchema = z.strictObject({
+  requestId: z.uuid().nullable(),
+  status: z.enum(['pending', 'approved', 'rejected']).nullable(),
+  requestedBy: dealPersonSchema.nullable(),
+  approvers: z.array(
+    z.strictObject({
+      ...dealPersonSchema.shape,
+      decision: z.enum(['approve', 'reject']).nullable(),
+      reason: z.string().nullable(),
+    }),
+  ),
+  rejectionReason: z.string().nullable(),
+  approvedBy: z.array(dealPersonSchema),
+  rejected: z.boolean(),
+});
+
 export const dashboardSummarySchema = z.strictObject({
   serverNow: z.iso.datetime({ offset: true }),
   nextMidnightAt: z.iso.datetime({ offset: true }),
@@ -28,11 +53,18 @@ export const dashboardSummarySchema = z.strictObject({
         .nullable(),
       closesInDays: z.number().int(),
       closesAt: z.iso.datetime({ offset: true }).nullable(),
+      created_by: dealPersonSchema.nullable(),
+      updated_at: z.iso.datetime({ offset: true }),
+      updated_by: dealPersonSchema.nullable(),
+      assigned_to: z.array(dealAssignmentSummarySchema),
+      approved_by: z.array(dealPersonSchema),
+      rejected: z.boolean(),
+      rejection_reason: z.string().nullable(),
+      approval: dealApprovalSummarySchema,
     }),
   ),
 });
 
-export const dealAssigneeRoleSchema = z.enum(['owner', 'lead', 'member']);
 export const dealAssigneeSchema = z.strictObject({
   userId: z.uuid(),
   role: dealAssigneeRoleSchema,
@@ -133,6 +165,13 @@ export const dealAssigneesResponseSchema = z.object({
 export const dealListQuerySchema = z.strictObject({
   stage: stageSchema.optional(),
   search: z.string().trim().max(100).optional(),
+  sector: z.string().trim().max(100).optional(),
+  assignedTo: z.string().trim().max(100).optional(),
+  approvalStatus: z.enum(['none', 'pending', 'approved', 'rejected']).optional(),
+  sort: z
+    .enum(['name', 'stage', 'amount', 'expectedClose', 'created', 'updated'])
+    .default('created'),
+  direction: z.enum(['asc', 'desc']).default('desc'),
   limit: z.coerce.number().int().min(1).max(100).default(25),
   offset: z.coerce.number().int().min(0).max(10_000).default(0),
 });
@@ -151,6 +190,14 @@ export const dealSchema = z.strictObject({
     .regex(/^(?:[01]\d|2[0-3]):[0-5]\d(?::[0-5]\d(?:\.\d+)?)?$/)
     .nullable(),
   created_at: z.iso.datetime({ offset: true }),
+  created_by: dealPersonSchema.nullable(),
+  updated_at: z.iso.datetime({ offset: true }),
+  updated_by: dealPersonSchema.nullable(),
+  assigned_to: z.array(dealAssignmentSummarySchema),
+  approved_by: z.array(dealPersonSchema),
+  rejected: z.boolean(),
+  rejection_reason: z.string().nullable(),
+  approval: dealApprovalSummarySchema,
 });
 
 export const dealDetailResponseSchema = dealSchema;
@@ -212,6 +259,20 @@ export const createNoteBodySchema = z.strictObject({
 
 export const approvalRequestBodySchema = z.strictObject({
   expectedVersion: z.number().int().min(1),
+  approverMembershipIds: z.array(z.uuid()).min(1).max(50),
+});
+
+export const eligibleDealApproversSchema = z.strictObject({
+  requiredApprovals: z.number().int().min(1),
+  approvers: z.array(
+    z.strictObject({
+      membershipId: z.uuid(),
+      userId: z.uuid(),
+      displayName: z.string().nullable(),
+      roles: z.array(z.string().min(1)),
+      delegatedTo: z.string().nullable(),
+    }),
+  ),
 });
 
 export const approvalDecisionBodySchema = z.strictObject({
@@ -327,6 +388,7 @@ export type MyWorkQuery = z.infer<typeof myWorkQuerySchema>;
 export type MyWorkDeal = z.infer<typeof myWorkDealSchema>;
 export type MyWorkResponse = z.infer<typeof myWorkResponseSchema>;
 export type DealApprovalStatus = z.infer<typeof dealApprovalStatusSchema>;
+export type EligibleDealApprovers = z.infer<typeof eligibleDealApproversSchema>;
 export type ApprovalAbsence = z.infer<typeof approvalAbsencesResponseSchema>[number];
 export type ApprovalDelegation = z.infer<typeof approvalDelegationsResponseSchema>[number];
 export type ApprovalReassignmentOptions = z.infer<typeof approvalReassignmentOptionsSchema>;

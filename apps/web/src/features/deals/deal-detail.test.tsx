@@ -17,6 +17,22 @@ const deal = {
   expected_close_date: '2027-03-31',
   expected_close_time: '15:30:00',
   created_at: '2026-10-28T10:00:00+00:00',
+  created_by: null,
+  updated_at: '2026-10-28T10:00:00+00:00',
+  updated_by: null,
+  assigned_to: [],
+  approved_by: [],
+  rejected: false,
+  rejection_reason: null,
+  approval: {
+    requestId: null,
+    status: null,
+    requestedBy: null,
+    approvers: [],
+    rejectionReason: null,
+    approvedBy: [],
+    rejected: false,
+  },
 };
 const activity = {
   events: [
@@ -79,6 +95,84 @@ describe('DealDetail', () => {
     expect(screen.getByText(/R 1 250 000,75/)).toBeVisible();
     expect(screen.getByText('31 Mar 2027 at 15:30')).toBeVisible();
     expect(screen.getByText(/cannot be edited or deleted/)).toBeVisible();
+  });
+
+  it('shows database-attributed approval history and readable actor fallbacks', async () => {
+    const auditedDeal = {
+      ...deal,
+      stage: 'ic_review' as const,
+      created_by: { userId: 'cccccccc-0000-4000-8000-000000000003', displayName: null },
+      updated_by: null,
+      assigned_to: [
+        {
+          userId: 'cccccccc-0000-4000-8000-000000000004',
+          displayName: null,
+          role: 'lead' as const,
+        },
+      ],
+      rejected: true,
+      rejection_reason: 'Quorum no longer reachable',
+      approval: {
+        requestId: 'bbbbbbbb-0000-4000-8000-000000000003',
+        status: 'rejected' as const,
+        requestedBy: { userId: 'cccccccc-0000-4000-8000-000000000005', displayName: null },
+        approvers: [
+          {
+            userId: 'cccccccc-0000-4000-8000-000000000006',
+            displayName: null,
+            decision: 'reject' as const,
+            reason: 'Risk concerns',
+          },
+          {
+            userId: 'cccccccc-0000-4000-8000-000000000007',
+            displayName: 'Naledi Khumalo',
+            decision: null,
+            reason: null,
+          },
+        ],
+        rejectionReason: 'Quorum no longer reachable',
+        approvedBy: [],
+        rejected: true,
+      },
+    };
+    const status: DealApprovalStatus = {
+      ...approvalStatus,
+      requestId: 'bbbbbbbb-0000-4000-8000-000000000003',
+      status: 'rejected',
+      configuredApprovals: 1,
+      requiredApprovals: 1,
+    };
+    vi.stubGlobal(
+      'fetch',
+      vi.fn<(input: RequestInfo | URL) => Promise<Response>>(async (input) => {
+        const url = input instanceof Request ? input.url : String(input);
+        const body = url.endsWith('/activity')
+          ? activity
+          : url.endsWith('/approval')
+            ? status
+            : auditedDeal;
+        return new Response(JSON.stringify(body), {
+          status: 200,
+          headers: { 'Content-Type': 'application/json' },
+        });
+      }),
+    );
+
+    render(<DealDetail dealId={dealId} />);
+
+    expect(await screen.findByRole('heading', { name: 'Northstar Systems' })).toBeVisible();
+    expect(screen.getByText('Created')).toBeVisible();
+    expect(screen.getByText('by Unknown')).toBeVisible();
+    expect(screen.getByText('by System')).toBeVisible();
+    expect(screen.getByText('Unnamed (lead)')).toBeVisible();
+    expect(screen.getByText('Requested by Unknown.')).toBeVisible();
+    expect(
+      screen.getByText('Approval request failed because quorum was no longer reachable.'),
+    ).toBeVisible();
+    expect(screen.getByText('Reason: Quorum no longer reachable')).toBeVisible();
+    expect(screen.getByText('Unnamed approver')).toBeVisible();
+    expect(screen.getByText('Rejected · Risk concerns')).toBeVisible();
+    expect(screen.getByText('Awaiting decision')).toBeVisible();
   });
 
   it('explains who must request IC approval when the current user lacks access', async () => {
@@ -211,6 +305,8 @@ describe('DealDetail', () => {
 
   it('submits an approval request from IC review and refreshes the authoritative status', async () => {
     const icDeal = { ...deal, stage: 'ic_review' as const };
+    const firstApprover = 'dddddddd-0000-4000-8000-000000000001';
+    const secondApprover = 'dddddddd-0000-4000-8000-000000000002';
     let requested = false;
     const fetch = vi.fn<(input: RequestInfo | URL, init?: RequestInit) => Promise<Response>>(
       async (input) => {
@@ -239,6 +335,20 @@ describe('DealDetail', () => {
             },
           );
         }
+        if (url.endsWith('/approval-approvers'))
+          return new Response(
+            JSON.stringify({
+              requiredApprovals: 2,
+              approvers: [firstApprover, secondApprover].map((membershipId, index) => ({
+                membershipId,
+                userId: `eeeeeeee-0000-4000-8000-00000000000${index + 1}`,
+                displayName: `IC Member ${index + 1}`,
+                roles: ['IC Member'],
+                delegatedTo: null,
+              })),
+            }),
+            { status: 200, headers: { 'Content-Type': 'application/json' } },
+          );
         const currentStatus = requested
           ? {
               ...approvalStatus,
@@ -262,15 +372,21 @@ describe('DealDetail', () => {
     const user = userEvent.setup();
 
     render(<DealDetail dealId={dealId} />);
-    expect(
-      await screen.findByText(/Send this deal to the eligible IC members for a decision/),
-    ).toBeVisible();
+    expect(await screen.findByText(/Choose eligible IC approvers/)).toBeVisible();
+    await user.click(await screen.findByLabelText(/IC Member 1/));
+    await user.click(await screen.findByLabelText(/IC Member 2/));
     await user.click(await screen.findByRole('button', { name: 'Request IC approval' }));
 
     expect(await screen.findByText(/Required approvals: 2/)).toBeVisible();
     expect(fetch).toHaveBeenCalledWith(
       `/api/deals/${dealId}/approval-requests`,
-      expect.objectContaining({ method: 'POST', body: JSON.stringify({ expectedVersion: 2 }) }),
+      expect.objectContaining({
+        method: 'POST',
+        body: JSON.stringify({
+          expectedVersion: 2,
+          approverMembershipIds: [firstApprover, secondApprover],
+        }),
+      }),
     );
   });
 
@@ -496,6 +612,11 @@ describe('DealDetail', () => {
 
     render(<DealDetail dealId={dealId} />);
     expect(await screen.findByText(/1 approved · 1 pending · 0 rejected/)).toBeVisible();
+    expect(
+      screen.getByText(
+        'Reject records your decision and optional reason. The deal stays in IC Review; Passed is the separate outcome for a deal leaving the pipeline.',
+      ),
+    ).toBeVisible();
     await user.clear(screen.getByRole('spinbutton', { name: 'Required approvals' }));
     await user.type(screen.getByRole('spinbutton', { name: 'Required approvals' }), '3');
     await user.click(screen.getByRole('checkbox', { name: 'Allow temporary approval delegation' }));

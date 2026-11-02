@@ -43,6 +43,10 @@ export {
   dealListQuerySchema,
   dealListResponseSchema,
   dealSchema,
+  eligibleDealApproversSchema,
+  dealPersonSchema,
+  dealAssignmentSummarySchema,
+  dealApprovalSummarySchema,
   setDealAssigneesBodySchema,
 } from './deals';
 export type {
@@ -56,6 +60,7 @@ export type {
   DealApprovalStatus,
   CreateDealBody,
   Deal,
+  EligibleDealApprovers,
   DealActivityQuery,
   DealActivityResponse,
   MoveDealStageBody,

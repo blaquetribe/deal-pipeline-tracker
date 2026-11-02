@@ -45,6 +45,22 @@ describe('dashboard summary schema', () => {
           expectedCloseTime: '14:30:00',
           closesInDays: 1,
           closesAt: '2026-10-29T14:30:00+02:00',
+          created_by: null,
+          updated_at: '2026-10-28T10:00:00+00:00',
+          updated_by: null,
+          assigned_to: [],
+          approved_by: [],
+          rejected: false,
+          rejection_reason: null,
+          approval: {
+            requestId: null,
+            status: null,
+            requestedBy: null,
+            approvers: [],
+            rejectionReason: null,
+            approvedBy: [],
+            rejected: false,
+          },
         },
       ],
     };
@@ -250,7 +266,12 @@ describe('deal activity schemas', () => {
 
 describe('deal list schemas', () => {
   it('applies bounded defaults and rejects unknown or invalid query values', () => {
-    expect(dealListQuerySchema.parse({})).toEqual({ limit: 25, offset: 0 });
+    expect(dealListQuerySchema.parse({})).toEqual({
+      limit: 25,
+      offset: 0,
+      sort: 'created',
+      direction: 'desc',
+    });
     expect(
       dealListQuerySchema.parse({ stage: 'screening', search: '  north  ', limit: '50' }),
     ).toEqual({
@@ -258,6 +279,8 @@ describe('deal list schemas', () => {
       search: 'north',
       limit: 50,
       offset: 0,
+      sort: 'created',
+      direction: 'desc',
     });
     expect(() => dealListQuerySchema.parse({ stage: 'unknown' })).toThrow(/Invalid option/);
     expect(() => dealListQuerySchema.parse({ tenantId: userA })).toThrow(/tenantId/);
@@ -284,6 +307,22 @@ describe('deal list schemas', () => {
             expected_close_date: '2027-03-31',
             expected_close_time: null,
             created_at: '2026-10-31T10:00:00+00:00',
+            created_by: null,
+            updated_at: '2026-10-31T10:00:00+00:00',
+            updated_by: null,
+            assigned_to: [],
+            approved_by: [],
+            rejected: false,
+            rejection_reason: null,
+            approval: {
+              requestId: null,
+              status: null,
+              requestedBy: null,
+              approvers: [],
+              rejectionReason: null,
+              approvedBy: [],
+              rejected: false,
+            },
             assignment_role: 'lead',
           },
         ],
@@ -309,6 +348,22 @@ describe('deal list schemas', () => {
           expected_close_date: '2027-03-31',
           expected_close_time: '15:30:00',
           created_at: '2026-10-28T10:00:00+00:00',
+          created_by: null,
+          updated_at: '2026-10-28T10:00:00+00:00',
+          updated_by: null,
+          assigned_to: [],
+          approved_by: [],
+          rejected: false,
+          rejection_reason: null,
+          approval: {
+            requestId: null,
+            status: null,
+            requestedBy: null,
+            approvers: [],
+            rejectionReason: null,
+            approvedBy: [],
+            rejected: false,
+          },
         },
       ],
     };
@@ -327,7 +382,9 @@ describe('approval schemas', () => {
     expect(
       approvalPolicyResponseSchema.parse({ requiredApprovals: null, delegationEnabled: false }),
     ).toEqual({ requiredApprovals: null, delegationEnabled: false });
-    expect(approvalRequestBodySchema.parse({ expectedVersion: 2 })).toEqual({ expectedVersion: 2 });
+    expect(
+      approvalRequestBodySchema.parse({ expectedVersion: 2, approverMembershipIds: [userA] }),
+    ).toEqual({ expectedVersion: 2, approverMembershipIds: [userA] });
     expect(
       approvalDecisionBodySchema.parse({ decision: 'reject', reason: 'Needs review' }),
     ).toEqual({

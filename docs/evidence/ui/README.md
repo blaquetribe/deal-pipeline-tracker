@@ -2,7 +2,7 @@
 
 ## Current system redesign
 
-These screenshots were captured on 1 November 2026 from the local Compose application on port 8081, signed in as the fictional Asteron Capital Owner, in the light theme. Navigation was read-only; opening the edit dialog did not submit a change. The screen captures show the refreshed board-first Pipeline, focused deal editor, and Owner team controls. The connected indicator in the shared header was green during capture.
+Screenshots 16–18 were captured on 1 November 2026 from the local Compose application on port 8081, signed in as the fictional Asteron Capital Owner, in the light theme. Navigation was read-only; opening the edit dialog did not submit a change. They show the refreshed board-first Pipeline, focused deal editor, and Owner Team controls. The connected indicator in the shared header was green during capture.
 
 | Screenshot | Screen |
 |---|---|
@@ -10,9 +10,9 @@ These screenshots were captured on 1 November 2026 from the local Compose applic
 | [17-deal-edit-light.png](17-deal-edit-light.png) | Light-theme deal edit dialog opened over Pipeline List; no values changed |
 | [18-team-owner-navigation.png](18-team-owner-navigation.png) | Owner-only team management controls and role creation entry point |
 
-The evidence is from the current local build and uses fictional seed data. The responsive layout and mobile navigation were previously reviewed, but a refreshed mobile screenshot is not included here; screenshots 10 and 15 below are historical and predate the redesign.
+The evidence uses fictional seed data and represents the 1 November UI redesign. The 2 November audit/List and approval-routing follow-up was visually reviewed in the isolated app on port 8082, including List sort controls, filters, audit columns, assignment and approval fields. Those captures were visible in the review session but have not been saved as image files in this repository. The responsive layout and mobile navigation were reviewed earlier, but a refreshed mobile screenshot is not included here; screenshots 10 and 15 below are historical and predate the redesign.
 
-The updated desktop screenshots are committed with PR #50. The missing mobile capture is the only screenshot refresh still outstanding.
+Screenshots 16–18 are committed with PR #50. Remaining evidence: persist current screenshots for the List/audit data and selected-approver UI, then capture a refreshed mobile screen. Do not cite the browser review as a repository screenshot.
 
 ## Historical evidence
 

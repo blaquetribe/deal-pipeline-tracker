@@ -3,6 +3,7 @@
 import type { AssignableRole, TeamMember } from '@dpt/shared';
 import { useEffect, useId, useState, type FormEvent } from 'react';
 
+import { subscribeToDealsChanged } from '../notifications';
 import { Button } from '../ui/button';
 import { Icon } from '../ui/icon';
 import { SelectControl } from '../ui/select-control';
@@ -46,22 +47,27 @@ export function TeamRoster({
 
   useEffect(() => {
     let active = true;
-    void Promise.all([readTeamMembers(), readAuthSession()])
-      .then(([result, session]) => {
-        if (!active) return;
-        setMembers(result.members);
-        setCurrentUserId(session.user.id);
-        setError(null);
-      })
-      .catch((cause: unknown) => {
-        if (active)
-          setError(cause instanceof Error ? cause.message : 'Team members could not be loaded.');
-      })
-      .finally(() => {
-        if (active) setLoading(false);
-      });
+    const refresh = () => {
+      void Promise.all([readTeamMembers(), readAuthSession()])
+        .then(([result, session]) => {
+          if (!active) return;
+          setMembers(result.members);
+          setCurrentUserId(session.user.id);
+          setError(null);
+        })
+        .catch((cause: unknown) => {
+          if (active)
+            setError(cause instanceof Error ? cause.message : 'Team members could not be loaded.');
+        })
+        .finally(() => {
+          if (active) setLoading(false);
+        });
+    };
+    refresh();
+    const unsubscribe = subscribeToDealsChanged(refresh);
     return () => {
       active = false;
+      unsubscribe();
     };
   }, []);
 

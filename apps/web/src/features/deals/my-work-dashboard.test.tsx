@@ -34,6 +34,18 @@ const energyDeal = {
   expected_close_time: null,
   created_at: '2026-10-30T12:00:00.000Z',
   assignment_role: 'lead' as const,
+  assigned_to: [
+    {
+      userId: 'cccccccc-0000-4000-8000-000000000002',
+      displayName: 'Lerato Molefe',
+      role: 'lead' as const,
+    },
+  ],
+  created_by: { userId: 'cccccccc-0000-4000-8000-000000000001', displayName: 'Amara Ndlovu' },
+  updated_by: { userId: 'cccccccc-0000-4000-8000-000000000003', displayName: 'Sibusiso Dlamini' },
+  approved_by: [],
+  rejected: false,
+  rejection_reason: null,
 };
 
 const passedDeal = {
@@ -105,6 +117,7 @@ describe('MyWorkDashboard', () => {
       screen.getByRole('progressbar', { name: 'Asterion Renewable Storage progress' }),
     ).toHaveAttribute('aria-valuetext', 'Stage 3 of 6: Due Diligence');
     expect(screen.getByText('Passed · this deal is no longer progressing.')).toBeVisible();
+    expect(screen.getAllByText(/Assigned to Lerato Molefe \(lead\)/).length).toBeGreaterThan(0);
     expect(
       within(screen.getByRole('region', { name: 'Waiting on your review' })).getByRole('heading', {
         name: 'Asterion Renewable Storage',

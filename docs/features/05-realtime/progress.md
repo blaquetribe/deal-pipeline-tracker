@@ -1,6 +1,6 @@
 # 05 Realtime: progress
 
-Status: done (PR #44 merged to `main` as `d9e86aa`; presence remains cut-list scope)
+Status: in progress (application-wide tenant invalidation follow-up on `codex/deal-audit-approver-routing`; presence remains cut-list scope)
 Owner: feature 05
 Depends on: 03
 
@@ -15,6 +15,7 @@ WebSocket relay of RLS-filtered events, live cache updates, presence. Covers GOT
 - Follow ADR 0002: the browser connects only to the same-origin `/ws` BFF endpoint; the API authenticates the opaque session cookie, validates Origin, binds the connection to the active tenant, and subscribes to Supabase Realtime using the caller's user JWT so PostgreSQL RLS authorizes every delivered row.
 - The stack spike in `docs/features/00-foundation/supabase-stack.md` verified RLS-filtered `postgres_changes` with a user JWT held by the API and verified Caddy WebSocket pass-through. Revalidate it against the merged current stack and add regression tests.
 - Closing-soon notifications follow ADR 0011 and `docs/features/03-deals-core/closing-soon.md`: hourly idempotent database scan, tenant-scoped notifications, audit events, and queued email through the existing Mailer. Presence is explicitly cut-list scope.
+- A one-row-per-tenant content-free signal also invalidates views after membership, role, invitation, approval-policy/absence/delegation, and file changes. The API subscribes to signal INSERT and UPDATE, then relays only the existing `deals_changed` event. Each page reloads via its regular authenticated API path.
 
 ## Tasks
 - [x] Failing tests written (security/negative first)
@@ -25,6 +26,8 @@ WebSocket relay of RLS-filtered events, live cache updates, presence. Covers GOT
 - [x] Alert recipients include active deal assignees, valid active delegates, optional IC/all-member groups, and Owner/Admin fallback
 - [x] Handover and feature documentation updated
 - [x] Final diff review and PR #44 merged
+- [x] Add tenant-change invalidation for deal, team/role/invitation, approval policy/absence/delegation, and file changes.
+- [ ] Verify live delivery across two distinct authenticated browser sessions; merge the follow-up only after required CI passes.
 
 ## Tests
 What is covered, where it lives, how to run it.
@@ -51,6 +54,8 @@ Dated notes: what changed, what was learned, problems.
 - 2026-10-30: PR #44 merged as `d9e86aa`. GitHub Actions checks were marked failed without starting runner steps because of the account billing/spending block; they produced no code diagnostics. Local verification listed above passed.
 - 2026-10-31: Updated the notification bell into an actionable unread queue: unread items are the default, each notification has an explicit Open deal and Mark as read action, bulk read is available, and All retains read history. Marking an item read removes it from the active unread list without deleting notification history. The component still never marks items read merely because the panel was opened. Added regression tests for individual and bulk read behavior; the focused notification suite passes (7 tests).
 - 2026-10-31: UI review found the notification socket was mounted only inside the hover account menu, and deal views did not refresh across sessions. The bell now remains mounted in the shared top bar and shows a connection indicator, accessible title, and explicit status inside its panel. The API relays RLS-filtered immutable `deal_events` inserts as a content-free `deals_changed` signal; every consequential deal mutation appends an event, so Pipeline, My Work, and deal detail refresh their current data without exposing event bodies. Added an additive publication migration for `deal_events`; the API still authenticates the opaque session and uses the caller JWT, while Postgres RLS and the tenant filter authorize each event. The isolated walkthrough DB applied the migration with development reseeding disabled. Full Vitest passes (720 passed, 1 skipped), pgTAP passes (662 assertions across 35 files), typecheck, lint, stylelint, format, and web/API image builds pass. The live 8081 Owner session reports “Live updates connected.” A second-session mutation demo remains unperformed.
+- 2026-11-02: Realtime invalidations now cover tenant membership/role/invitation changes, approval policy/absence/delegation, files, and tenant events. The coalesced signal stores no domain payload and is readable only by current tenant members; INSERT and UPDATE are both subscribed. Full Vitest passes (756 passed, 1 skipped; 85.15% branches) and pgTAP passes (679 assertions across 36 files); distinct-session browser delivery is still unverified.
+- 2026-11-02: Rechecked the app header on port 8082 during the Pipeline List review. It reported **Live updates connected**; this confirms the socket status only. I did not verify event delivery to a second authenticated session.
 
 ## Deviations / debt
 Anything that differs from the plan or is deferred (also mirror in README "next steps").

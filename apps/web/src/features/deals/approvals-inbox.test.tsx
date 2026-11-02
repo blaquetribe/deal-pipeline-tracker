@@ -23,6 +23,28 @@ const deal = {
   expected_close_date: '2026-11-30',
   expected_close_time: null,
   created_at: '2026-10-30T12:00:00.000Z',
+  created_by: { userId: 'cccccccc-0000-4000-8000-000000000001', displayName: 'Amara Ndlovu' },
+  updated_at: '2026-10-30T12:00:00.000Z',
+  updated_by: { userId: 'cccccccc-0000-4000-8000-000000000002', displayName: 'Lerato Molefe' },
+  assigned_to: [
+    {
+      userId: 'cccccccc-0000-4000-8000-000000000003',
+      displayName: 'Sibusiso Dlamini',
+      role: 'lead' as const,
+    },
+  ],
+  approved_by: [{ userId: 'cccccccc-0000-4000-8000-000000000004', displayName: 'Naledi Khumalo' }],
+  rejected: false,
+  rejection_reason: null,
+  approval: {
+    requestId: null,
+    status: null,
+    requestedBy: null,
+    approvers: [],
+    rejectionReason: null,
+    approvedBy: [],
+    rejected: false,
+  },
 };
 
 describe('ApprovalsInbox', () => {
@@ -53,6 +75,12 @@ describe('ApprovalsInbox', () => {
     ).toBeVisible();
     expect(screen.getByText('Your decision needed')).toBeVisible();
     expect(screen.getByText('1 approved · 1 pending · 0 rejected · 2 required')).toBeVisible();
+    expect(screen.getByText(/Assigned: Sibusiso Dlamini \(lead\)/)).toBeVisible();
+    expect(
+      screen.getByText(
+        /Created by Amara Ndlovu · Updated by Lerato Molefe · Approved by Naledi Khumalo/,
+      ),
+    ).toBeVisible();
     expect(screen.getByRole('link', { name: 'Open review' })).toHaveAttribute(
       'href',
       `/deals/${deal.id}`,
@@ -60,6 +88,73 @@ describe('ApprovalsInbox', () => {
     expect(mocks.readDeals).toHaveBeenCalledTimes(1);
     const query = mocks.readDeals.mock.calls[0]?.[0];
     expect(query?.get('stage')).toBe('ic_review');
+  });
+
+  it('renders approval outcomes and audit fallbacks for unassigned deals', async () => {
+    const outcomes = [
+      { requestId: null, status: null, currentUserDecision: null, canDecide: false },
+      {
+        requestId: 'req-approved',
+        status: 'approved',
+        currentUserDecision: 'approve',
+        canDecide: true,
+      },
+      {
+        requestId: 'req-rejected',
+        status: 'rejected',
+        currentUserDecision: 'reject',
+        canDecide: true,
+      },
+      {
+        requestId: 'req-pending',
+        status: 'pending',
+        currentUserDecision: 'approve',
+        canDecide: true,
+      },
+      { requestId: 'req-waiting', status: 'pending', currentUserDecision: null, canDecide: false },
+    ] as const;
+    const deals = outcomes.map((_, index) => ({
+      ...deal,
+      id: `aaaaaaaa-0000-4000-8000-${String(index + 10).padStart(12, '0')}`,
+      name: `Outcome ${index}`,
+      assigned_to: [],
+      created_by: null,
+      updated_by: null,
+      approved_by: [],
+      rejected: index === 2,
+      rejection_reason: index === 2 ? 'Quorum no longer reachable' : null,
+    }));
+    mocks.readDeals.mockResolvedValueOnce({ total: deals.length, items: deals });
+    mocks.readStatus.mockImplementation(async (dealId) => {
+      const index = deals.findIndex((item) => item.id === dealId);
+      const outcome = outcomes[index];
+      return {
+        requestId: outcome?.requestId ?? null,
+        status: outcome?.status ?? null,
+        requiredApprovals: index === 0 ? null : 1,
+        configuredApprovals: 1,
+        approvedCount: 0,
+        pendingCount: 1,
+        rejectedCount: index === 2 ? 1 : 0,
+        currentUserDecision: outcome?.currentUserDecision ?? null,
+        delegatedSlots: [],
+        canRequest: false,
+        canDecide: outcome?.canDecide ?? false,
+        canConfigure: false,
+        canManageAbsence: false,
+        canReassign: false,
+      };
+    });
+
+    render(<ApprovalsInbox />);
+
+    expect(await screen.findByText('Approval not requested')).toBeVisible();
+    expect(screen.getByText('Approved', { selector: 'span' })).toBeVisible();
+    expect(screen.getByText('Rejected', { selector: 'span' })).toBeVisible();
+    expect(screen.getByText('You approved')).toBeVisible();
+    expect(screen.getByText('Waiting for quorum')).toBeVisible();
+    expect(screen.getAllByText(/Assigned: Unassigned/)).toHaveLength(deals.length);
+    expect(screen.getByText(/Rejected: Quorum no longer reachable/)).toBeVisible();
   });
 
   it('explains that an authorized requester must start an unrequested deal', async () => {

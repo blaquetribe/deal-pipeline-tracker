@@ -79,6 +79,26 @@ export async function createRealtimeFeed(options: RealtimeFeedOptions): Promise<
       },
       () => options.onDealsChanged(),
     )
+    .on(
+      'postgres_changes',
+      {
+        event: 'UPDATE',
+        schema: 'public',
+        table: 'tenant_change_signals',
+        filter: `tenant_id=eq.${options.tenantId}`,
+      },
+      () => options.onDealsChanged(),
+    )
+    .on(
+      'postgres_changes',
+      {
+        event: 'INSERT',
+        schema: 'public',
+        table: 'tenant_change_signals',
+        filter: `tenant_id=eq.${options.tenantId}`,
+      },
+      () => options.onDealsChanged(),
+    )
     .subscribe((status) => {
       const value = status.toString();
       if (value === 'SUBSCRIBED') options.onSubscribed();

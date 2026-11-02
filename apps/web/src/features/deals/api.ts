@@ -15,6 +15,7 @@ import {
   approvalReassignmentOptionsSchema,
   approvalRequestBodySchema,
   dealApprovalStatusSchema,
+  eligibleDealApproversSchema,
   dashboardSummarySchema,
   myWorkQuerySchema,
   myWorkResponseSchema,
@@ -53,11 +54,21 @@ export async function readDealApprovalStatus(dealId: string) {
   return dealApprovalStatusSchema.parse(await sessionRead(`/deals/${dealId}/approval`));
 }
 
-export async function requestDealApproval(dealId: string, expectedVersion: number): Promise<void> {
+export async function readEligibleDealApprovers(dealId: string) {
+  return eligibleDealApproversSchema.parse(
+    await sessionRead(`/deals/${dealId}/approval-approvers`),
+  );
+}
+
+export async function requestDealApproval(
+  dealId: string,
+  expectedVersion: number,
+  approverMembershipIds: readonly string[],
+): Promise<void> {
   await sessionRequest(
     `/deals/${dealId}/approval-requests`,
     'POST',
-    approvalRequestBodySchema.parse({ expectedVersion }),
+    approvalRequestBodySchema.parse({ expectedVersion, approverMembershipIds }),
   );
 }
 

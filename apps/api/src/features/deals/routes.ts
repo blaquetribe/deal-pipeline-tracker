@@ -111,11 +111,16 @@ export function createDealRoutes({ userRpc }: DealRoutesOptions): Route[] {
       return {
         body: dealListResponseSchema.parse(
           await userRpc.call(
-            'list_deals',
+            'list_deals_table',
             {
               p_tenant: session.tenantId,
               p_stage: parsed.data.stage ?? null,
               p_search: parsed.data.search ?? null,
+              p_sector: parsed.data.sector ?? null,
+              p_assigned_to: parsed.data.assignedTo ?? null,
+              p_approval_status: parsed.data.approvalStatus ?? null,
+              p_sort: parsed.data.sort,
+              p_direction: parsed.data.direction,
               p_limit: parsed.data.limit,
               p_offset: parsed.data.offset,
             },
