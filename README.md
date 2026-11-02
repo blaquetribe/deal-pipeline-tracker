@@ -178,7 +178,7 @@ scripts/compose-smoke.sh
 
 The smoke test builds a fresh stack, signs in through the gateway as a seeded user, checks that sample deals are visible, runs the seed again to check idempotency, and verifies that only the gateway publishes a port. `docker compose down -v` removes the smoke stack's data when run outside the smoke script.
 
-GitHub Actions runs the quality, database, image, security-scan, and Compose smoke checks. Branch protection is unavailable on the repository's current GitHub plan, but the project merge rule is to merge only after all required checks pass. Earlier runs were blocked before job startup by an account billing limit; PR #50 later passed all required checks, including the clean-clone Compose smoke test. The skipped image-publish job is not a required PR check. Local verification and historical failures are recorded in `docs/HANDOFF.md` and `docs/PROGRESS.md`.
+GitHub Actions runs the quality, database, image, security-scan, and Compose smoke checks. Branch protection is unavailable on the repository's current GitHub plan, but the project merge rule is to merge only after all required checks pass. Earlier runs were blocked before job startup by an account billing limit; PRs #50, #51, and #52 passed their required checks, including clean-clone Compose smoke. The skipped image-publish job is not a required PR check. Local verification and historical failures are recorded in `docs/HANDOFF.md` and `docs/PROGRESS.md`.
 
 ## Project completion and follow-ups
 

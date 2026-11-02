@@ -422,3 +422,9 @@ Running log feeding the README reflection required by the brief. Add an entry pe
 - **What the human decided or corrected:** asked to wrap up by updating the documentation, README, screen evidence, and presentation.
 - **How it was verified:** local coverage passed (756 passed, 1 skipped; 85.15% branch coverage), pgTAP passed (679 assertions across 36 files), and typecheck, lint, stylelint, format check, production build, and `git diff --check` passed. All required PR #51 checks passed before merge.
 - **What remains open:** fresh List and approver-selection screenshots and refreshed mobile evidence were reviewed inline but could not be saved from the available browser capture surface. Two-session realtime event delivery, production SMTP, Docker Desktop/amd64, and two-session `move_stage` contention remain unverified environment checks.
+
+### 2026-11-02 / Documentation closeout PR #52
+- **What Codex did:** reconciled the README, handoff, progress and feature trackers, presentation notes, AI-use log, and screenshot evidence index with PR #51's merged state. Kept unsaved screenshots and unverified cross-session delivery explicitly open.
+- **What the human decided or corrected:** asked to wrap up the project and update its documentation, README, screenshots, and presentation.
+- **How it was verified:** `pnpm format:check`, `git diff --check`, pre-push typecheck and Vitest (756 passed, 1 skipped) passed. PR #52's required typecheck/lint/test/build, coverage, secret scan, advisory review, pgTAP, Docker builds/scans, and Compose smoke checks passed before merge. PR #52 merged as `40946a8`; local `main` is clean.
+- **What remains open:** latest List/approver UI and refreshed mobile images are not saved in the repository; second-session realtime delivery and environment-dependent SMTP, Docker Desktop/amd64, and two-session `move_stage` validation remain outstanding.
