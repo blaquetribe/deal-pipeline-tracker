@@ -1,7 +1,7 @@
 # 03 Deals core: progress
 
-Status: in progress (audit-rich List query and deal metadata follow-up on `codex/deal-audit-approver-routing`)
-Owner/branch: Codex / `codex/deal-audit-approver-routing`
+Status: in progress (audit-rich List and metadata implementation merged; saved evidence remains open)
+Owner/branch: Codex / merged PR #51 (`9b257f4`)
 Depends on: 01, 02
 
 ## Goal
@@ -64,6 +64,7 @@ Anything that differs from the plan or is deferred (also mirror in README "next 
 
 - 2026-11-02: Added server-attributed `created_by`, `updated_by`, and `updated_at` to deal projections, plus assigned-team and IC outcome/requester metadata across List, Board, detail, My Work, Approvals, and upcoming-close cards. List now supports server-side sorting and composable search/stage/sector/assignee/approval filters. Audit identities and timestamps remain read-only. Full Vitest passes (756 passed, 1 skipped; 85.15% branches), production build and 679 pgTAP assertions across 36 files pass. Requester-visible IC routing and sortable List were confirmed in the isolated UI. Repository screenshots for the new List/audit fields remain outstanding; the current browser tool only exposed inline capture output.
 - 2026-11-02: Opened the refreshed Pipeline on the isolated port-8082 app and verified the sortable audit-rich List: created/updated actors and timestamps, assigned members, IC status, rejection reason, sorting controls, filters, and edit entry are visible. This was a read-only review. The browser capture is present in the task conversation but was not persisted to `docs/evidence/ui/`; the evidence index must not imply it is a committed screenshot.
+- 2026-11-02: PR #51 merged this implementation to `main` as `9b257f4` after all required GitHub checks passed. Local verification passed with 756 Vitest tests (1 skipped; 85.15% branch coverage) and 679 pgTAP assertions across 36 files, plus typecheck, lint, stylelint, format check, and build. Current List and approver-routing captures remain visible-only evidence; no screenshot file was saved.
 
 - 2026-10-31: replaced the table-row inline deal editor with a native modal dialog using responsive field columns, clear optional-field labels, focused initial input, and persistent Cancel/Save actions. The edit API, exact decimal parsing, and optimistic version check are unchanged. Added regression coverage; rebuilt Compose review confirmed the dialog and compact table in light mode. Refreshed screenshot evidence remains open. See ADR 0028.
 

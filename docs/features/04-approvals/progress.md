@@ -1,7 +1,7 @@
 # 04 Approvals: progress
 
-Status: in progress (requester-selected IC approver routing added on `codex/deal-audit-approver-routing`; gates beyond IC remain out of scope)
-Owner/branch: Codex / `codex/deal-audit-approver-routing`
+Status: in progress (requester-selected IC approver routing merged; gates beyond IC remain out of scope)
+Owner/branch: Codex / merged PR #51 (`9b257f4`)
 Depends on: 03
 
 ## Goal
@@ -30,7 +30,7 @@ The requester sees eligible tenant members with `approval.decide`, their role na
 - [x] Notification-only SLA escalation for the existing IC gate
 - [x] Record the owner's decision to keep approvals scoped to IC review
 - [x] Add requester-visible eligible approver list and selected recipient slots, revalidated by Postgres.
-- [ ] Merge audit/list/routing/realtime follow-up after required PR checks pass.
+- [x] Merge audit/list/routing/realtime follow-up after required PR checks pass (PR #51, `9b257f4`).
 
 ## Tests
 `supabase/tests/21_approvals.test.sql` covers request and decision security, quorum, and stage locking; `27_approval_delegation.test.sql` covers delegation and SLA escalation; `22_approval_status.test.sql` covers status RPC access; `28_custom_roles.test.sql` covers catalog access, role writes, tenant isolation, SoD, immutable system roles, and audit events. Approval routes are covered by `apps/api/src/features/approvals/routes.test.ts` and `apps/api/src/features/roles/routes.test.ts`; role UI by `apps/web/src/features/roles/role-management.test.tsx`; notification UI and schema by their feature tests. Run `make test-db` and targeted Vitest files, then all CI gates.
@@ -65,4 +65,4 @@ Anything that differs from the plan or is deferred (also mirror in README "next 
 - 2026-10-31: made the missing action discoverable by name: the inbox and deal detail now instruct an authorized requester to open the deal and select **Request IC approval** in its **IC approval** section. An Owner without request access is told the current session cannot submit and, when able to manage approval policy, receives a **Find a Deal Lead in Team** link. Focused UI tests pass (19); permission enforcement remains unchanged.
 - 2026-10-31: reconciled the retained port-8081 demo history with the earlier handoff note: Umzi Diagnostics has an audit event for the Deal Lead request, an IC approval by Naledi Khumalo, and the resulting IC Review → Signed transition. The persisted event chain confirms the 1-of-1 cycle; the prior statement that no vote had been written was stale. No audit data was changed. The failed sign-in rate limit was not cleared or bypassed.
 - 2026-11-02: clarified rejection in the deal detail and walkthrough. An IC Member rejects a vote from **IC approval** and may enter a reason. The deal stays in IC Review; the request becomes terminally rejected only when quorum is unreachable. **Passed** remains the separate terminal pipeline outcome. A disposable port-8082 review database currently contains a pending request assigned to an IC Member; no decision was made in this review.
-- 2026-11-02: the approval request UI now loads the authorized eligible roster, shows each person's approval-bearing role and active delegation, and lets the requester select recipients. The database verifies selected membership IDs against tenant eligibility, SoD, absence, delegation, and quorum before creating request slots. Pending approvers are visible before a vote; delegated votes show the actual decision maker. The isolated Deal Lead walkthrough shows the eligible IC Member and role; no approval was submitted. Full Vitest (756 passed, 1 skipped; 85.15% branches) and pgTAP (679 assertions across 36 files) pass; PR review remains open.
+- 2026-11-02: the approval request UI now loads the authorized eligible roster, shows each person's approval-bearing role and active delegation, and lets the requester select recipients. The database verifies selected membership IDs against tenant eligibility, SoD, absence, delegation, and quorum before creating request slots. Pending approvers are visible before a vote; delegated votes show the actual decision maker. PR #51 merged this implementation to `main` as `9b257f4` after required checks passed. The isolated Deal Lead walkthrough showed the eligible IC Member and role; no approval was submitted in that review.
