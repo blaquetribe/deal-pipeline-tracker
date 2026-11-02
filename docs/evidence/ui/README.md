@@ -12,7 +12,7 @@ Screenshots 16–18 were captured on 1 November 2026 from the local Compose appl
 
 The evidence uses fictional seed data and represents the 1 November UI redesign. The 2 November audit/List and approval-routing follow-up was visually reviewed in the isolated app on port 8082, including List sort controls, filters, audit columns, assignment and approval fields. Those captures were visible in the review session but have not been saved as image files in this repository. The responsive layout and mobile navigation were reviewed earlier, but a refreshed mobile screenshot is not included here; screenshots 10 and 15 below are historical and predate the redesign.
 
-Screenshots 16–18 are committed with PR #50. Remaining evidence: persist current screenshots for the List/audit data and selected-approver UI, then capture a refreshed mobile screen. Do not cite the browser review as a repository screenshot.
+Screenshots 16–18 are committed with PR #50. PR #51 merged the List/audit data, selected-approver UI, and realtime invalidation to `main`, but the browser review captures were not saved as image files. Remaining evidence: save screenshots for those screens and capture a refreshed mobile view. Do not cite the browser review as a repository screenshot.
 
 ## Historical evidence
 
