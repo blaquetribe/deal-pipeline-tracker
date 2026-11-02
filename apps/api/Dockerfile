@@ -1,7 +1,7 @@
 # syntax=docker/dockerfile:1
 # Build context is the repository root:  docker build -f apps/api/Dockerfile .
 
-FROM node:26-alpine@sha256:40cd011b55415bc894e45b02fdd5a5dfde056921b7d23a64c74f80497af48797 AS base
+FROM node:26-alpine@sha256:c6ad9e9c1d80f6eb607c26b4b0a132ff7a2344fad1c78ea3baa2a7d4c8de6d94 AS base
 ENV PNPM_HOME=/pnpm \
     PATH=/pnpm:$PATH \
     HUSKY=0 \
@@ -30,7 +30,7 @@ RUN pnpm --filter @dpt/api build \
     && pnpm --filter @dpt/api deploy --prod /repo/api-deploy
 
 # sharp has native platform bindings; deploy the API's production dependency tree for runtime.
-FROM node:26-alpine@sha256:40cd011b55415bc894e45b02fdd5a5dfde056921b7d23a64c74f80497af48797 AS runtime
+FROM node:26-alpine@sha256:c6ad9e9c1d80f6eb607c26b4b0a132ff7a2344fad1c78ea3baa2a7d4c8de6d94 AS runtime
 ARG IMAGE_SOURCE=https://github.com/blaquetribe/deal-pipeline-tracker
 LABEL org.opencontainers.image.source=${IMAGE_SOURCE} \
       org.opencontainers.image.title="dpt-api"
