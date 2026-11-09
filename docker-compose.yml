@@ -339,7 +339,7 @@ services:
   # Development mail catcher (SMTP :1025, inbox :8025 served under /mail/ by the dev gateway).
   mailpit:
     <<: *hardening
-    image: axllent/mailpit:v1.32.0@sha256:0790692be935ea4420d085694f7985b1f692ca6a8771ab0e0bd8ba75ac180498
+    image: axllent/mailpit:v1.33.0@sha256:9b3a463be15354c0f0eba91697d80e3e0d8a5623ef0e627cacc836bc17fd5231
     user: '65532:65532'
     tmpfs: [/tmp] # Mailpit keeps its message store in a temp file; the root filesystem is read-only
     networks: [edge, internal]
