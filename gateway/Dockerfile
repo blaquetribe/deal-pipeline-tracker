@@ -1,7 +1,7 @@
 # syntax=docker/dockerfile:1
 # Build context is the repository root:  docker build -f gateway/Dockerfile .
 
-FROM caddy:2.11.7-builder-alpine@sha256:ef9b65adf9a224770c6d5f6d1ae1bf99bc3caaa78d8c4bae3ea949ee6984f301 AS caddy-build
+FROM caddy:2.11.8-builder-alpine@sha256:e42a64b3bc70aa3a1387bde85b930e507a378fecae5852d5bfde9dcd37d0b999 AS caddy-build
 RUN xcaddy build v2.11.7 \
       --replace github.com/go-jose/go-jose/v4=github.com/go-jose/go-jose/v4@v4.1.6 \
       --replace golang.org/x/net=golang.org/x/net@v0.60.0 \
