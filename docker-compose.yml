@@ -273,7 +273,7 @@ services:
 
   realtime:
     <<: *vendor
-    image: supabase/realtime:v2.150.1@sha256:a5745cff61c726232003ed9ba72e7284230c31177cfa444aea11c529e28af5e2
+    image: supabase/realtime:v2.174.0@sha256:371621c6d884ce7c677fb98139efb8253b87fa39961cd476ff6575e12bfc6398
     networks:
       internal:
         # Realtime selects its tenant from the first label of the host name, so this alias is
